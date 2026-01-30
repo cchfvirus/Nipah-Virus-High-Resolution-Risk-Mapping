@@ -5,4 +5,4 @@ Nipah virus is one of the world's deadliest emerging diseases, with 40-75% case 
 
 The Problem: Traditional disease risk maps operate at coarse scales (1-10km) and miss the landscape-level transmission pathways that actually drive outbreaks.
 
-The Solution: This framework provides the first high-resolution (100m) Nipah virus risk assessment that integrates climate suitability, population exposure, and real transmission pathway ecology.
+The Solution: This framework provides the first high-resolution (100m) Nipah virus risk assessment that integrates climate suitability, population exposure, and land cover.
