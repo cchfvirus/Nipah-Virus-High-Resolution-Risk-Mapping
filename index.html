@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        
+        .info { 
+            padding: 10px 12px; 
+            background: white; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.2); 
+            border-radius: 5px; 
+            max-width: 320px;
+        }
+        
+        .info h4 { margin: 0 0 5px; color: #333; }
+        .info p { margin: 5px 0; font-size: 12px; color: #666; }
+        
+        .legend {
+            line-height: 20px;
+            color: #555;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            max-width: 200px;
+        }
+        
+        .legend h4 { margin: 0 0 8px; font-size: 14px; }
+        
+        .legend i {
+            width: 20px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.8;
+            border: 1px solid #ccc;
+        }
+        
+        .legend .item { 
+            margin-bottom: 5px; 
+            overflow: hidden; 
+            font-size: 11px;
+        }
+        
+        .legend .gradient-bar {
+            width: 100%;
+            height: 20px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+        }
+        
+        .legend .gradient-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        
+        .layer-control {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+            max-width: 250px;
+        }
+        
+        .layer-control h4 { 
+            margin: 0 0 10px; 
+            font-size: 14px;
+        }
+        
+        .layer-control label {
+            display: block;
+            margin: 8px 0;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .layer-control input[type="radio"] {
+            margin-right: 8px;
+        }
+        
+        .opacity-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .opacity-section h5 {
+            margin: 0 0 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .opacity-control {
+            margin-bottom: 12px;
+        }
+        
+        .opacity-control label {
+            display: block;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .opacity-control input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .opacity-value {
+            float: right;
+            font-weight: bold;
+            color: #333;
+            font-size: 11px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .leaflet-popup-content {
+            margin: 10px;
+            font-size: 12px;
+        }
+        
+        .leaflet-popup-content h3 {
+            margin: 0 0 8px;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .leaflet-popup-content table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .leaflet-popup-content table td {
+            padding: 3px 5px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .leaflet-popup-content table td:first-child {
+            font-weight: bold;
+            color: #666;
+            width: 50%;
+        }
+        
+        .copy-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .copy-notification.show {
+            opacity: 1;
+        }
+        
+        .north-arrow {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #c30b0b;
+        }
+        
+        .north-arrow::before {
+            content: "N";
+        }
+        
+        .north-arrow::after {
+            content: "";
+            position: absolute;
+            top: 8px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid #c30b0b;
+        }
+
+        .export-control {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+        
+        .export-btn {
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 13px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        .export-btn:hover {
+            background: #f0f0f0;
+            border-color: #999;
+        }
+        
+        .export-btn.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        
+        .export-instruction {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(76, 175, 80, 0.95);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+            max-width: 300px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">
+        <div>Loading map layers...</div>
+        <div id="load-status" style="margin-top: 10px; font-size: 12px;"></div>
+    </div>
+    <div id="map"></div>
+    <div class="north-arrow"></div>
+    <div id="copy-notification" class="copy-notification"></div>
+    <div class="export-control">
+        <button id="export-btn" class="export-btn" onclick="toggleExportMode()">📊 Export Cell Data</button>
+    </div>
+    <div id="export-instruction" class="export-instruction">
+        Click and drag to select area, then export to CSV
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+    <script>
+        // Initialize map - centered on Bangladesh and South India region
+        // Coordinates: ~23.5°N, 88.5°E, zoom level 6
+        var map = L.map('map').setView([23.5, 88.5], 6);
+
+        // Create custom panes
+        map.createPane('rasterPane');
+        map.getPane('rasterPane').style.zIndex = 300;
+
+        // Define basemaps
+        var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        });
+
+        var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri',
+            maxZoom: 19
+        });
+
+        var aerialMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri',
+            maxZoom: 19
+        });
+
+        // Add default basemap (OpenStreetMap)
+        osmMap.addTo(map);
+
+        // Store layers and georasters
+        var layers = {};
+        var georasters = {};
+        var currentLayer = null;
+        var loadedCount = 0;
+        var totalLayers = 2; // ENM and Weighted Risk
+        var isExportMode = false;
+        var exportRectangle = null;
+
+        // Layer configurations - TWO LAYERS FOR NIPAH
+        var layerConfigs = {
+            'enm': {
+                file: 'enm_median_suitability_1km.tif',
+                name: 'ENM - Median Suitability (1km)',
+                colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
+                domain: [0, 1],
+                labels: ['Low Suitability', 'High Suitability'],
+                description: 'Ecological niche model showing environmental suitability for Nipah virus transmission',
+                mode: 'lch',
+                continuousLegend: true
+            },
+            'risk': {
+                file: 'weighted_risk_100m.tif',
+                name: 'Weighted Risk Surface (100m)',
+                colors: ['#FFFFBE', '#FFDD00', '#FFAA00', '#FF6600', '#FF0000', '#A80000'],
+                domain: [0, 1],
+                labels: ['Low Risk', 'High Risk'],
+                description: 'Integrated weighted risk assessment for Nipah virus transmission',
+                mode: 'lch',
+                continuousLegend: true
+            }
+        };
+
+        // Measurement tools
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        var drawControl = new L.Control.Draw({
+            position: 'topright',
+            draw: {
+                polyline: {
+                    shapeOptions: { color: '#f357a1', weight: 3 },
+                    metric: true,
+                    feet: false,
+                    showLength: true
+                },
+                polygon: {
+                    shapeOptions: { color: '#f357a1', weight: 3 },
+                    showArea: true,
+                    metric: true
+                },
+                rectangle: {
+                    shapeOptions: {
+                        color: '#4CAF50',
+                        weight: 3,
+                        fillOpacity: 0.1
+                    }
+                },
+                circle: false,
+                marker: false,
+                circlemarker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+
+        map.on(L.Draw.Event.CREATED, function (event) {
+            var layer = event.layer;
+            var type = event.layerType;
+            
+            if (type === 'polyline') {
+                var length = 0;
+                var latlngs = layer.getLatLngs();
+                for (var i = 0; i < latlngs.length - 1; i++) {
+                    length += latlngs[i].distanceTo(latlngs[i + 1]);
+                }
+                layer.bindPopup('<b>Distance:</b> ' + (length / 1000).toFixed(2) + ' km');
+                drawnItems.addLayer(layer);
+            } else if (type === 'polygon') {
+                var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                layer.bindPopup('<b>Area:</b> ' + (area / 1000000).toFixed(2) + ' km²');
+                drawnItems.addLayer(layer);
+            } else if (type === 'rectangle') {
+                if (isExportMode) {
+                    var bounds = layer.getBounds();
+                    exportCellDataToCSV(bounds);
+                    isExportMode = false;
+                    var btn = document.getElementById('export-btn');
+                    var instruction = document.getElementById('export-instruction');
+                    btn.classList.remove('active');
+                    btn.textContent = '📊 Export Cell Data';
+                    instruction.style.display = 'none';
+                } else {
+                    var bounds = layer.getBounds();
+                    var area = (bounds.getNorth() - bounds.getSouth()) * 
+                               (bounds.getEast() - bounds.getWest()) * 111 * 111;
+                    layer.bindPopup('<b>Rectangle Area:</b> ~' + area.toFixed(2) + ' km²');
+                    drawnItems.addLayer(layer);
+                }
+            }
+        });
+
+        function copyCoordinatesToClipboard(lat, lng) {
+            var coordText = lat.toFixed(6) + ', ' + lng.toFixed(6);
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(coordText).then(function() {
+                    showCopyNotification('Coordinates copied: ' + coordText);
+                }).catch(function() {
+                    fallbackCopyTextToClipboard(coordText);
+                });
+            } else {
+                fallbackCopyTextToClipboard(coordText);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.top = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopyNotification('Coordinates copied: ' + text);
+            } catch (err) {
+                showCopyNotification('Failed to copy coordinates', true);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showCopyNotification(message, isError) {
+            var notification = document.getElementById('copy-notification');
+            notification.textContent = message;
+            notification.style.background = isError ? 'rgba(198, 40, 40, 0.9)' : 'rgba(0, 0, 0, 0.8)';
+            notification.classList.add('show');
+            
+            setTimeout(function() {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+
+        function updateStatus(message, isError) {
+            var statusDiv = document.getElementById('load-status');
+            if (isError) {
+                statusDiv.innerHTML += '<div class="error">' + message + '</div>';
+            } else {
+                statusDiv.innerHTML += '<div>' + message + '</div>';
+            }
+            console.log(message);
+        }
+
+        function updateLayerOpacity(layerId, opacity) {
+            if (layers[layerId]) {
+                layers[layerId].setOpacity(opacity);
+            }
+        }
+
+        function getRasterValueAtPoint(layerId, latlng) {
+            if (!georasters[layerId]) return null;
+            
+            try {
+                var georaster = georasters[layerId];
+                var x = latlng.lng;
+                var y = latlng.lat;
+                
+                var xmin = georaster.xmin;
+                var xmax = georaster.xmax;
+                var ymin = georaster.ymin;
+                var ymax = georaster.ymax;
+                var width = georaster.width;
+                var height = georaster.height;
+                
+                if (x < xmin || x > xmax || y < ymin || y > ymax) return null;
+                
+                var pixelWidth = (xmax - xmin) / width;
+                var pixelHeight = (ymax - ymin) / height;
+                
+                var pixelX = Math.floor((x - xmin) / pixelWidth);
+                var pixelY = Math.floor((ymax - y) / pixelHeight);
+                
+                if (pixelX < 0 || pixelX >= width || pixelY < 0 || pixelY >= height) return null;
+                
+                var values = georaster.values;
+                if (values && values[0] && values[0][pixelY]) {
+                    var value = values[0][pixelY][pixelX];
+                    
+                    if (value !== null && value !== undefined && !isNaN(value)) {
+                        if (value === 255 || value === -9999 || value === -3.4e38 || 
+                            Math.abs(value) > 1e10 || value === -32768) {
+                            return null;
+                        }
+                        return value;
+                    }
+                }
+            } catch (error) {
+                console.log('Error getting value:', error);
+            }
+            
+            return null;
+        }
+
+        function toggleExportMode() {
+            isExportMode = !isExportMode;
+            var btn = document.getElementById('export-btn');
+            var instruction = document.getElementById('export-instruction');
+            
+            if (isExportMode) {
+                btn.classList.add('active');
+                btn.textContent = '✓ Export Mode Active';
+                instruction.style.display = 'block';
+                
+                if (!exportRectangle) {
+                    new L.Draw.Rectangle(map, drawControl.options.rectangle).enable();
+                }
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '📊 Export Cell Data';
+                instruction.style.display = 'none';
+            }
+        }
+
+        function exportCellDataToCSV(bounds) {
+            if (!currentLayer || !georasters[currentLayer]) {
+                alert('Please select a raster layer first');
+                return;
+            }
+            
+            var georaster = georasters[currentLayer];
+            var config = layerConfigs[currentLayer];
+            
+            var north = bounds.getNorth();
+            var south = bounds.getSouth();
+            var east = bounds.getEast();
+            var west = bounds.getWest();
+            
+            var xmin = georaster.xmin;
+            var xmax = georaster.xmax;
+            var ymin = georaster.ymin;
+            var ymax = georaster.ymax;
+            var width = georaster.width;
+            var height = georaster.height;
+            
+            var pixelWidth = (xmax - xmin) / width;
+            var pixelHeight = (ymax - ymin) / height;
+            
+            var startCol = Math.max(0, Math.floor((west - xmin) / pixelWidth));
+            var endCol = Math.min(width - 1, Math.ceil((east - xmin) / pixelWidth));
+            var startRow = Math.max(0, Math.floor((ymax - north) / pixelHeight));
+            var endRow = Math.min(height - 1, Math.ceil((ymax - south) / pixelHeight));
+            
+            var numCells = (endCol - startCol + 1) * (endRow - startRow + 1);
+            
+            var message = 'Selected area will export approximately ' + numCells + ' cells.\n\n';
+            message += 'Layer: ' + config.name + '\n';
+            
+            if (numCells > 10000) {
+                message += 'WARNING: This is a large export and may take a while.\n\n';
+            }
+            
+            message += 'Continue with export?';
+            
+            if (!confirm(message)) return;
+            
+            var csv = 'Latitude,Longitude,Value\n';
+            var count = 0;
+            
+            for (var row = startRow; row <= endRow; row++) {
+                for (var col = startCol; col <= endCol; col++) {
+                    var value = georaster.values[0][row][col];
+                    
+                    if (value === null || value === undefined || isNaN(value) || 
+                        value === 255 || value === -9999 || value === -3.4e38 || 
+                        Math.abs(value) > 1e10 || value === -32768) {
+                        continue;
+                    }
+                    
+                    var lng = xmin + (col + 0.5) * pixelWidth;
+                    var lat = ymax - (row + 0.5) * pixelHeight;
+                    
+                    csv += lat.toFixed(6) + ',' + lng.toFixed(6) + ',' + value + '\n';
+                    count++;
+                }
+            }
+            
+            if (count === 0) {
+                alert('No valid data found in selected area');
+                return;
+            }
+            
+            var filename = currentLayer + '_export_' + new Date().toISOString().slice(0,10) + '.csv';
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            
+            if (navigator.msSaveBlob) {
+                navigator.msSaveBlob(blob, filename);
+            } else {
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            alert('Successfully exported ' + count + ' cells to ' + filename);
+        }
+
+        function switchBasemap(basemapType) {
+            map.removeLayer(osmMap);
+            map.removeLayer(streetMap);
+            map.removeLayer(aerialMap);
+            
+            if (basemapType === 'osm') {
+                osmMap.addTo(map);
+            } else if (basemapType === 'street') {
+                streetMap.addTo(map);
+            } else if (basemapType === 'aerial') {
+                aerialMap.addTo(map);
+            }
+        }
+
+        function loadLayer(layerId) {
+            var config = layerConfigs[layerId];
+            
+            updateStatus('Loading ' + config.name + '...');
+            
+            fetch(config.file)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error! status: ' + response.status);
+                    }
+                    updateStatus(config.name + ' fetched successfully');
+                    return response.arrayBuffer();
+                })
+                .then(arrayBuffer => {
+                    updateStatus('Parsing ' + config.name + '...');
+                    return parseGeoraster(arrayBuffer);
+                })
+                .then(georaster => {
+                    updateStatus(config.name + ' parsed successfully');
+                    georasters[layerId] = georaster;
+                    
+                    var scale = config.mode 
+                        ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
+                        : chroma.scale(config.colors).domain(config.domain);
+                    
+                    var pixelValuesToColorFn = function(values) {
+                        var value = values[0];
+                        if (value === null || value === undefined || isNaN(value)) return null;
+                        return scale(value).hex();
+                    };
+                    
+                    var layer = new GeoRasterLayer({
+                        georaster: georaster,
+                        opacity: 0.7,
+                        pixelValuesToColorFn: pixelValuesToColorFn,
+                        resolution: 256,
+                        pane: 'rasterPane'
+                    });
+                    
+                    layers[layerId] = layer;
+                    loadedCount++;
+                    
+                    updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
+                    
+                    if (!currentLayer) {
+                        layer.addTo(map);
+                        currentLayer = layerId;
+                        updateLegend(layerId);
+                    }
+                    
+                    if (loadedCount === totalLayers) {
+                        setTimeout(function() {
+                            document.getElementById('loading').style.display = 'none';
+                        }, 1000);
+                    }
+                })
+                .catch(error => {
+                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
+                    updateStatus(errorMsg, true);
+                    console.error(errorMsg, error);
+                });
+        }
+
+        function switchLayer(layerId) {
+            if (currentLayer && layers[currentLayer]) {
+                map.removeLayer(layers[currentLayer]);
+            }
+            
+            if (layers[layerId]) {
+                layers[layerId].addTo(map);
+                currentLayer = layerId;
+                updateLegend(layerId);
+            }
+        }
+
+        function updateLegend(layerId) {
+            var config = layerConfigs[layerId];
+            var legendDiv = document.getElementById('legend-content');
+            
+            legendDiv.innerHTML = '<h4>' + config.name + '</h4>';
+            
+            if (config.continuousLegend) {
+                var gradientStops = [];
+                for (var i = 0; i < config.colors.length; i++) {
+                    var percentage = (i / (config.colors.length - 1)) * 100;
+                    gradientStops.push(config.colors[i] + ' ' + percentage + '%');
+                }
+                var gradientCSS = 'linear-gradient(to right, ' + gradientStops.join(', ') + ')';
+                
+                legendDiv.innerHTML += 
+                    '<div class="gradient-bar" style="background: ' + gradientCSS + ';"></div>' +
+                    '<div class="gradient-labels">' +
+                    '<span>' + config.labels[0] + '</span>' +
+                    '<span>' + config.labels[1] + '</span>' +
+                    '</div>';
+            }
+            
+            if (config.description) {
+                legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' + 
+                                       config.description + '</p>';
+            }
+        }
+
+        // Create layer control
+        var layerControl = L.control({position: 'topleft'});
+        layerControl.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'layer-control');
+            
+            div.innerHTML = '<h4>Basemaps</h4>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map (Esri)</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\'aerial\')">Aerial Imagery (Esri)</label>';
+            
+            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
+            
+            Object.keys(layerConfigs).forEach(function(key, index) {
+                var checked = index === 0 ? 'checked' : '';
+                div.innerHTML += 
+                    '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
+                    ' onchange="switchLayer(\'' + key + '\')">' + 
+                    layerConfigs[key].name + '</label>';
+            });
+            
+            div.innerHTML += '<div class="opacity-section">';
+            div.innerHTML += '<h5>Layer Opacity</h5>';
+            
+            Object.keys(layerConfigs).forEach(function(key) {
+                div.innerHTML += 
+                    '<div class="opacity-control">' +
+                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
+                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
+                    'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
+                    '</div>';
+            });
+            
+            div.innerHTML += '</div>';
+            
+            return div;
+        };
+        layerControl.addTo(map);
+
+        // Create legend
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'legend');
+            div.id = 'legend-content';
+            return div;
+        };
+        legend.addTo(map);
+
+        // Create info box
+        var info = L.control({position: 'topright'});
+        info.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info');
+            div.innerHTML = 
+                '<h4>Nipah Virus Risk Mapping</h4>' +
+                '<p>Bangladesh & South India</p>' +
+                '<p><em>Right-click: Copy coordinates</em></p>' +
+                '<p><em>Left-click: View cell value</em></p>' +
+                '<p><em>Use drawing tools to measure</em></p>';
+            return div;
+        };
+        info.addTo(map);
+
+        // Right-click to copy coordinates
+        map.on('contextmenu', function(e) {
+            copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
+        });
+
+        // Left-click to show cell value
+        map.on('click', function(e) {
+            if (!currentLayer || !georasters[currentLayer]) return;
+            
+            var value = getRasterValueAtPoint(currentLayer, e.latlng);
+            var config = layerConfigs[currentLayer];
+            
+            var displayValue = value !== null ? value.toFixed(4) : 'No Data';
+            
+            var popupContent = '<h3>' + config.name + '</h3><table>';
+            popupContent += '<tr><td>Coordinates</td><td>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '</td></tr>';
+            popupContent += '<tr><td>Value</td><td>' + displayValue + '</td></tr>';
+            popupContent += '</table>';
+            
+            L.popup()
+                .setLatLng(e.latlng)
+                .setContent(popupContent)
+                .openOn(map);
+        });
+
+        // Load all layers
+        updateStatus('Starting to load layers...');
+        Object.keys(layerConfigs).forEach(function(key) {
+            loadLayer(key);
+        });
+    </script>
+</body>
+</html>
