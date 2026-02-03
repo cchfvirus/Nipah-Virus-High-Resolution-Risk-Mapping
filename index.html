@@ -339,7 +339,7 @@
         // Layer configurations - TWO LAYERS FOR NIPAH
         var layerConfigs = {
             'enm': {
-                file: 'enm_median_suitability_1km.tif',
+                file: 'enm_cog.tif',
                 name: 'ENM - Median Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
                 domain: [0, 1],
@@ -349,7 +349,7 @@
                 continuousLegend: true
             },
             'risk': {
-                file: 'weighted_risk_100m.tif',
+                file: 'risk_cog.tif',
                 name: 'Weighted Risk Surface (100m)',
                 colors: ['#FFFFBE', '#FFDD00', '#FFAA00', '#FF6600', '#FF0000', '#A80000'],
                 domain: [0, 4],
@@ -852,4 +852,5 @@
     </script>
 </body>
 </html>
+
 
