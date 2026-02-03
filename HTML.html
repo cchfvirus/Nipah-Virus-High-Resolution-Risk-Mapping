@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Plague Risk Mapping - Interactive Layers</title>
+    <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -64,21 +64,6 @@
             margin-top: 3px;
         }
         
-        .legend .plague-cases-section {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-        }
-        
-        .legend .plague-case-symbol {
-            display: inline-block;
-            font-size: 18px;
-            color: #1e88e5;
-            text-shadow: 1px 1px 2px #FFF, -1px -1px 2px #FFF, 1px -1px 2px #FFF, -1px 1px 2px #FFF;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        
         .layer-control {
             background: white;
             padding: 10px;
@@ -86,7 +71,7 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
             max-height: 90vh;
             overflow-y: auto;
-            max-width: 220px;
+            max-width: 250px;
         }
         
         .layer-control h4 { 
@@ -103,22 +88,6 @@
         
         .layer-control input[type="radio"] {
             margin-right: 8px;
-        }
-        
-        .layer-control input[type="checkbox"] {
-            margin-right: 8px;
-        }
-        
-        .layer-control .overlay-section {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-        }
-        
-        .layer-control .overlay-section h5 {
-            margin: 0 0 8px;
-            font-size: 12px;
-            font-weight: bold;
         }
         
         .opacity-section {
@@ -181,7 +150,6 @@
             font-size: 12px;
         }
         
-        /* Popup styling */
         .leaflet-popup-content {
             margin: 10px;
             font-size: 12px;
@@ -209,7 +177,6 @@
             width: 50%;
         }
         
-        /* Coordinate copy notification */
         .copy-notification {
             position: fixed;
             top: 50%;
@@ -230,7 +197,6 @@
             opacity: 1;
         }
         
-        /* North Arrow */
         .north-arrow {
             position: absolute;
             bottom: 30px;
@@ -263,54 +229,6 @@
             border-right: 8px solid transparent;
             border-bottom: 12px solid #c30b0b;
         }
-        
-        /* Export button */
-        .export-control {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-        }
-        
-        .export-btn {
-            background: white;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            font-size: 13px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-            transition: all 0.3s;
-        }
-        
-        .export-btn:hover {
-            background: #f0f0f0;
-            border-color: #999;
-        }
-        
-        .export-btn.active {
-            background: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
-        }
-        
-        .export-instruction {
-            position: absolute;
-            bottom: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(76, 175, 80, 0.95);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-size: 12px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            z-index: 1000;
-            display: none;
-            max-width: 300px;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -321,12 +239,6 @@
     <div id="map"></div>
     <div class="north-arrow"></div>
     <div id="copy-notification" class="copy-notification"></div>
-    <div class="export-control">
-        <button id="export-btn" class="export-btn" onclick="toggleExportMode()">📊 Export Cell Data</button>
-    </div>
-    <div id="export-instruction" class="export-instruction">
-        Click and drag to select area, then export to CSV
-    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
@@ -338,15 +250,9 @@
         // Initialize map - centered on Bangladesh and South India region with zoom 6
         var map = L.map('map').setView([23.5, 88.5], 6);
 
-        // Create custom panes with specific z-index ordering
-        map.createPane('backgroundPane');
-        map.getPane('backgroundPane').style.zIndex = 250;
-        
+        // Create custom panes
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 300;
-        
-        map.createPane('boundariesPane');
-        map.getPane('boundariesPane').style.zIndex = 350;
 
         // Define basemaps
         var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
@@ -359,7 +265,7 @@
             maxZoom: 19
         });
 
-        // Add default basemap (Street Map)
+        // Add default basemap
         streetMap.addTo(map);
 
         // Store layers and georasters
@@ -367,81 +273,33 @@
         var georasters = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 4;
-        var plagueCasesLayer = null;
-        var highRiskBoundariesLayer = null;
-        var isExportMode = false;
-        var exportRectangle = null;
+        var totalLayers = 2;
 
-        // Layer configurations
+        // Layer configurations - ONLY TWO LAYERS
         var layerConfigs = {
             'enm': {
-                file: '__Median_Suitability.tif',
-                name: 'Ecological Niche Model (Median Suitability)',
+                file: 'enm_median_suitability_1km.tif',  // Update this filename if different
+                name: 'ENM - Median Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
                 domain: [0, 1],
                 labels: ['Low Suitability', 'High Suitability'],
-                description: '',
+                description: 'Ecological Niche Model at 1km resolution',
                 mode: 'lch',
                 continuousLegend: true
             },
             'risk': {
-                file: 'risk_zones_cog.tif',
-                name: 'Risk Zones (100m)',
-                discreteColors: {
-                    0: '#000000',  // Black - No risk/background
-                    1: '#FFFFBE',  // Light yellow - Very low risk
-                    2: '#FFDD00',  // Yellow - Low risk
-                    3: '#FFAA00',  // Orange - Moderate risk
-                    4: '#FF6600',  // Red-orange - Elevated risk
-                    6: '#FF0000',  // Red - High risk
-                    9: '#A80000'   // Dark red - Very high risk
-                },
-                labels: ['No Risk', 'Very High Risk'],
-                description: 'Plague Transmission Risk Zones',
-                customLegend: true,
-                discreteDisplay: true,
-                legendItems: [
-                    { value: 0, color: '#000000', label: '0 - No Risk' },
-                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
-                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
-                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
-                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
-                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
-                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-                ]
-            },
-            'hotspot': {
-                file: 'hotspot_cog.tif',
-                name: 'Hot Spot Analysis (100m)',
-                colors: ['#0571b0', '#92c5de', '#f7f7f7', '#f4a582', '#ca0020'],
-                domain: [-3, 3],
-                labels: ['Cold Spot', 'Not Significant', 'Hot Spot'],
-                description: 'Getis-Ord Gi* statistic showing spatial clustering of plague risk',
-                customLegend: true,
-                discreteDisplay: true,
-                legendItems: [
-                    { value: 2.58, color: '#ca0020', label: 'Hot Spot with 99% Confidence' },
-                    { value: 1.96, color: '#f4a582', label: 'Hot Spot with 95% Confidence' },
-                    { value: 1.65, color: '#fddbc7', label: 'Hot Spot with 90% Confidence' },
-                    { value: 0, color: '#f7f7f7', label: 'Not Significant' },
-                    { value: -1.65, color: '#d1e5f0', label: 'Cold Spot with 90% Confidence' },
-                    { value: -1.96, color: '#92c5de', label: 'Cold Spot with 95% Confidence' },
-                    { value: -2.58, color: '#0571b0', label: 'Cold Spot with 99% Confidence' }
-                ]
-            },
-            'landscan': {
-                file: 'landscan_uncertainty_cog.tif',
-                name: 'LandScan Mosaic (Uncertainty)',
-                colors: ['#fee5d9', '#fcbba1', '#fc9272', '#fb6a4a', '#ef3b2c', '#cb181d', '#a50f15', '#67000d'],
+                file: 'weighted_risk_100m.tif',  // Update this filename if different
+                name: 'Weighted Risk Surface (100m)',
+                colors: ['#FFFFBE', '#FFDD00', '#FFAA00', '#FF6600', '#FF0000', '#A80000'],
                 domain: [0, 1],
-                labels: ['Low Uncertainty', 'High Uncertainty'],
-                description: 'Population distribution uncertainty metric',
+                labels: ['Low Risk', 'High Risk'],
+                description: 'Weighted plague transmission risk at 100m resolution',
+                mode: 'lch',
                 continuousLegend: true
             }
         };
 
-        // Add measurement tools
+        // Measurement tools
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
@@ -449,29 +307,17 @@
             position: 'topright',
             draw: {
                 polyline: {
-                    shapeOptions: {
-                        color: '#f357a1',
-                        weight: 3
-                    },
+                    shapeOptions: { color: '#f357a1', weight: 3 },
                     metric: true,
                     feet: false,
                     showLength: true
                 },
                 polygon: {
-                    shapeOptions: {
-                        color: '#f357a1',
-                        weight: 3
-                    },
+                    shapeOptions: { color: '#f357a1', weight: 3 },
                     showArea: true,
                     metric: true
                 },
-                rectangle: {
-                    shapeOptions: {
-                        color: '#4CAF50',
-                        weight: 3,
-                        fillOpacity: 0.1
-                    }
-                },
+                rectangle: false,
                 circle: false,
                 marker: false,
                 circlemarker: false
@@ -483,7 +329,6 @@
         });
         map.addControl(drawControl);
 
-        // Handle drawn shapes
         map.on(L.Draw.Event.CREATED, function (event) {
             var layer = event.layer;
             var type = event.layerType;
@@ -494,46 +339,22 @@
                 for (var i = 0; i < latlngs.length - 1; i++) {
                     length += latlngs[i].distanceTo(latlngs[i + 1]);
                 }
-                var lengthKm = (length / 1000).toFixed(2);
-                layer.bindPopup('<b>Distance:</b> ' + lengthKm + ' km');
+                layer.bindPopup('<b>Distance:</b> ' + (length / 1000).toFixed(2) + ' km');
                 drawnItems.addLayer(layer);
             } else if (type === 'polygon') {
                 var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                var areaKm = (area / 1000000).toFixed(2);
-                layer.bindPopup('<b>Area:</b> ' + areaKm + ' km²');
+                layer.bindPopup('<b>Area:</b> ' + (area / 1000000).toFixed(2) + ' km²');
                 drawnItems.addLayer(layer);
-            } else if (type === 'rectangle') {
-                if (isExportMode) {
-                    // Get bounds and export
-                    var bounds = layer.getBounds();
-                    exportCellDataToCSV(bounds);
-                    
-                    // Reset export mode
-                    isExportMode = false;
-                    var btn = document.getElementById('export-btn');
-                    var instruction = document.getElementById('export-instruction');
-                    btn.classList.remove('active');
-                    btn.textContent = '📊 Export Cell Data';
-                    instruction.style.display = 'none';
-                } else {
-                    // Normal rectangle for measurement
-                    var bounds = layer.getBounds();
-                    var area = (bounds.getNorth() - bounds.getSouth()) * 
-                               (bounds.getEast() - bounds.getWest()) * 111 * 111; // Rough km²
-                    layer.bindPopup('<b>Rectangle Area:</b> ~' + area.toFixed(2) + ' km²');
-                    drawnItems.addLayer(layer);
-                }
             }
         });
 
-        // Function to copy coordinates to clipboard
         function copyCoordinatesToClipboard(lat, lng) {
             var coordText = lat.toFixed(6) + ', ' + lng.toFixed(6);
             
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(coordText).then(function() {
                     showCopyNotification('Coordinates copied: ' + coordText);
-                }).catch(function(err) {
+                }).catch(function() {
                     fallbackCopyTextToClipboard(coordText);
                 });
             } else {
@@ -547,16 +368,11 @@
             textArea.style.position = "fixed";
             textArea.style.top = "-9999px";
             document.body.appendChild(textArea);
-            textArea.focus();
             textArea.select();
             
             try {
-                var successful = document.execCommand('copy');
-                if (successful) {
-                    showCopyNotification('Coordinates copied: ' + text);
-                } else {
-                    showCopyNotification('Failed to copy coordinates', true);
-                }
+                document.execCommand('copy');
+                showCopyNotification('Coordinates copied: ' + text);
             } catch (err) {
                 showCopyNotification('Failed to copy coordinates', true);
             }
@@ -585,25 +401,20 @@
             console.log(message);
         }
 
-        // Update layer opacity
         function updateLayerOpacity(layerId, opacity) {
             if (layers[layerId]) {
                 layers[layerId].setOpacity(opacity);
             }
         }
 
-        // Function to get raster value at a point
         function getRasterValueAtPoint(layerId, latlng) {
-            if (!georasters[layerId]) {
-                return null;
-            }
+            if (!georasters[layerId]) return null;
             
             try {
                 var georaster = georasters[layerId];
                 var x = latlng.lng;
                 var y = latlng.lat;
                 
-                // Get georaster bounds
                 var xmin = georaster.xmin;
                 var xmax = georaster.xmax;
                 var ymin = georaster.ymin;
@@ -611,312 +422,33 @@
                 var width = georaster.width;
                 var height = georaster.height;
                 
-                // Check if point is within bounds
-                if (x < xmin || x > xmax || y < ymin || y > ymax) {
-                    return null;
-                }
+                if (x < xmin || x > xmax || y < ymin || y > ymax) return null;
                 
-                // Calculate pixel coordinates
                 var pixelWidth = (xmax - xmin) / width;
                 var pixelHeight = (ymax - ymin) / height;
                 
                 var pixelX = Math.floor((x - xmin) / pixelWidth);
                 var pixelY = Math.floor((ymax - y) / pixelHeight);
                 
-                // Make sure we're within the raster bounds
-                if (pixelX < 0 || pixelX >= width || pixelY < 0 || pixelY >= height) {
-                    return null;
-                }
+                if (pixelX < 0 || pixelX >= width || pixelY < 0 || pixelY >= height) return null;
                 
-                // Get the value from the raster - values[0] is a 2D array [row][col]
                 var values = georaster.values;
                 if (values && values[0] && values[0][pixelY]) {
                     var value = values[0][pixelY][pixelX];
                     
-                    console.log('Layer:', layerId, 'Raw value:', value, 'Type:', typeof value, 'NoDataValue:', georaster.noDataValue);
-                    
-                    // Check for nodata value - including common noData values
                     if (value !== null && value !== undefined && !isNaN(value)) {
-                        // Filter out common NoData values
                         if (value === 255 || value === -9999 || value === -3.4e38 || 
                             Math.abs(value) > 1e10 || value === -32768) {
-                            console.log('Filtered as NoData:', value);
                             return null;
                         }
-                        
-                        // Check georaster's specified noDataValue
-                        if (georaster.noDataValue !== null && georaster.noDataValue !== undefined && !isNaN(georaster.noDataValue)) {
-                            if (Math.abs(value - georaster.noDataValue) < 0.0001) {
-                                console.log('Value matches noDataValue:', georaster.noDataValue);
-                                return null;
-                            }
-                        }
-                        
                         return value;
                     }
                 }
             } catch (error) {
-                console.log('Error getting value for ' + layerId + ':', error);
+                console.log('Error getting value:', error);
             }
             
             return null;
-        }
-
-        // Toggle export mode
-        function toggleExportMode() {
-            isExportMode = !isExportMode;
-            var btn = document.getElementById('export-btn');
-            var instruction = document.getElementById('export-instruction');
-            
-            if (isExportMode) {
-                btn.classList.add('active');
-                btn.textContent = '✓ Export Mode Active';
-                instruction.style.display = 'block';
-                
-                // Enable rectangle drawing
-                if (!exportRectangle) {
-                    new L.Draw.Rectangle(map, drawControl.options.rectangle).enable();
-                }
-            } else {
-                btn.classList.remove('active');
-                btn.textContent = '📊 Export Cell Data';
-                instruction.style.display = 'none';
-            }
-        }
-
-        // Export cell values to CSV
-        function exportCellDataToCSV(bounds) {
-            if (!currentLayer || !georasters[currentLayer]) {
-                alert('Please select a raster layer first');
-                return;
-            }
-            
-            var georaster = georasters[currentLayer];
-            var config = layerConfigs[currentLayer];
-            
-            // Get bounds
-            var north = bounds.getNorth();
-            var south = bounds.getSouth();
-            var east = bounds.getEast();
-            var west = bounds.getWest();
-            
-            // Get georaster properties
-            var xmin = georaster.xmin;
-            var xmax = georaster.xmax;
-            var ymin = georaster.ymin;
-            var ymax = georaster.ymax;
-            var width = georaster.width;
-            var height = georaster.height;
-            
-            var pixelWidth = (xmax - xmin) / width;
-            var pixelHeight = (ymax - ymin) / height;
-            
-            // Calculate pixel range
-            var startCol = Math.max(0, Math.floor((west - xmin) / pixelWidth));
-            var endCol = Math.min(width - 1, Math.ceil((east - xmin) / pixelWidth));
-            var startRow = Math.max(0, Math.floor((ymax - north) / pixelHeight));
-            var endRow = Math.min(height - 1, Math.ceil((ymax - south) / pixelHeight));
-            
-            // Check if area is too large
-            var numCells = (endCol - startCol + 1) * (endRow - startRow + 1);
-            
-            // Calculate approximate cell size in meters
-            var cellWidthDeg = pixelWidth;
-            var cellHeightDeg = pixelHeight;
-            var avgLat = (north + south) / 2;
-            var cellWidthM = cellWidthDeg * 111320 * Math.cos(avgLat * Math.PI / 180);
-            var cellHeightM = cellHeightDeg * 111320;
-            
-            var message = 'Selected area will export approximately ' + numCells + ' cells.\n\n';
-            message += 'Layer: ' + config.name + '\n';
-            message += 'Cell size: ~' + Math.round(cellWidthM) + 'm × ' + Math.round(cellHeightM) + 'm\n';
-            message += 'Grid: ' + (endCol - startCol + 1) + ' columns × ' + (endRow - startRow + 1) + ' rows\n\n';
-            
-            if (numCells > 10000) {
-                message += 'WARNING: This is a large export and may take a while.\n\n';
-            }
-            
-            message += 'Continue with export?';
-            
-            if (!confirm(message)) {
-                return;
-            }
-            
-            // Build CSV
-            var csv = 'Latitude,Longitude,Value\n';
-            var count = 0;
-            
-            for (var row = startRow; row <= endRow; row++) {
-                for (var col = startCol; col <= endCol; col++) {
-                    var value = georaster.values[0][row][col];
-                    
-                    // Skip NoData values
-                    if (value === null || value === undefined || isNaN(value) || 
-                        value === 255 || value === -9999 || value === -3.4e38 || 
-                        Math.abs(value) > 1e10 || value === -32768) {
-                        continue;
-                    }
-                    
-                    if (georaster.noDataValue !== null && georaster.noDataValue !== undefined && !isNaN(georaster.noDataValue)) {
-                        if (Math.abs(value - georaster.noDataValue) < 0.0001) {
-                            continue;
-                        }
-                    }
-                    
-                    // Calculate lat/lng for this cell center
-                    var lng = xmin + (col + 0.5) * pixelWidth;
-                    var lat = ymax - (row + 0.5) * pixelHeight;
-                    
-                    csv += lat.toFixed(6) + ',' + lng.toFixed(6) + ',' + value + '\n';
-                    count++;
-                }
-            }
-            
-            if (count === 0) {
-                alert('No valid data found in selected area');
-                return;
-            }
-            
-            // Download CSV
-            var filename = currentLayer + '_export_' + new Date().toISOString().slice(0,10) + '.csv';
-            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            var link = document.createElement('a');
-            
-            if (navigator.msSaveBlob) { // IE 10+
-                navigator.msSaveBlob(blob, filename);
-            } else {
-                link.href = URL.createObjectURL(blob);
-                link.download = filename;
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-            
-            alert('Successfully exported ' + count + ' cells to ' + filename);
-        }
-
-        // Load plague cases from GeoJSON
-        function loadPlagueCases() {
-            fetch('cases.geojson')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Plague cases file not found');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    updateStatus('Loaded ' + data.features.length + ' plague cases');
-                    
-                    plagueCasesLayer = L.geoJSON(data, {
-                        pointToLayer: function(feature, latlng) {
-                            return L.marker(latlng, {
-                                icon: L.divIcon({
-                                    className: 'custom-div-icon',
-                                    html: "<div style='font-size:24px;font-weight:bold;color:#1e88e5;text-shadow:1px 1px 2px #FFF, -1px -1px 2px #FFF, 1px -1px 2px #FFF, -1px 1px 2px #FFF;'>✚</div>",
-                                    iconSize: [24, 24],
-                                    iconAnchor: [12, 12]
-                                })
-                            });
-                        },
-                        onEachFeature: function(feature, layer) {
-                            var popupContent = '<h3>Plague Case</h3><table>';
-                            
-                            for (var key in feature.properties) {
-                                if (feature.properties.hasOwnProperty(key)) {
-                                    var value = feature.properties[key];
-                                    var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
-                                    popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
-                                }
-                            }
-                            
-                            popupContent += '</table>';
-                            
-                            layer.bindPopup(popupContent, {
-                                maxWidth: 300,
-                                maxHeight: 400
-                            });
-                        }
-                    });
-                    
-                    plagueCasesLayer.addTo(map);
-                    
-                    // Update legend to show plague cases
-                    updateLegend(currentLayer);
-                })
-                .catch(error => {
-                    console.error('Error loading plague cases:', error);
-                    updateStatus('Note: Plague cases layer not available', false);
-                });
-        }
-
-        function togglePlagueCases(show) {
-            if (plagueCasesLayer) {
-                if (show) {
-                    plagueCasesLayer.addTo(map);
-                } else {
-                    map.removeLayer(plagueCasesLayer);
-                }
-            }
-        }
-
-        function updateHighRiskBoundaryStyle() {
-            if (highRiskBoundariesLayer) {
-                // Black boundaries for ENM and Hotspot layers, white for Risk layer
-                var boundaryColor = (currentLayer === 'hotspot' || currentLayer === 'enm') ? '#000000' : '#FFFFFF';
-                
-                highRiskBoundariesLayer.setStyle({
-                    fillColor: 'transparent',
-                    fillOpacity: 0,
-                    color: boundaryColor,
-                    weight: 2,
-                    opacity: 1
-                });
-            }
-        }
-
-        function loadHighRiskBoundaries() {
-            fetch('high_risk_boundaries.geojson')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('High risk boundaries file not found');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    updateStatus('Loaded high risk boundaries');
-                    
-                    // Initial color based on current layer (black for ENM and hotspot, white for risk)
-                    var initialColor = (currentLayer === 'hotspot' || currentLayer === 'enm') ? '#000000' : '#FFFFFF';
-                    
-                    highRiskBoundariesLayer = L.geoJSON(data, {
-                        style: {
-                            fillColor: 'transparent',
-                            fillOpacity: 0,
-                            color: initialColor,
-                            weight: 2,
-                            opacity: 1
-                        },
-                        interactive: false,
-                        pane: 'boundariesPane'
-                    });
-                    
-                    highRiskBoundariesLayer.addTo(map);
-                })
-                .catch(error => {
-                    console.error('Error loading high risk boundaries:', error);
-                    updateStatus('Note: High risk boundaries layer not available', false);
-                });
-        }
-
-        function toggleHighRiskBoundaries(show) {
-            if (highRiskBoundariesLayer) {
-                if (show) {
-                    highRiskBoundariesLayer.addTo(map);
-                } else {
-                    map.removeLayer(highRiskBoundariesLayer);
-                }
-            }
         }
 
         function switchBasemap(basemapType) {
@@ -949,61 +481,21 @@
                 })
                 .then(georaster => {
                     updateStatus(config.name + ' parsed successfully');
-                    
-                    // Store the georaster for value querying
                     georasters[layerId] = georaster;
                     
-                    console.log('Loaded ' + layerId + ' - noDataValue:', georaster.noDataValue);
+                    var scale = config.mode 
+                        ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
+                        : chroma.scale(config.colors).domain(config.domain);
                     
-                    // Set default opacity: All layers default to 0.5 (50%)
-                    var layerOpacity = 0.5;
-                    
-                    // Create pixel value to color function based on layer type
-                    var pixelValuesToColorFn;
-                    
-                    if (layerId === 'risk' && config.discreteColors) {
-                        // For discrete risk layer - capture discreteColors in closure
-                        var discreteColors = config.discreteColors;
-                        pixelValuesToColorFn = function(values) {
-                            var value = values[0];
-                            if (value === null || value === undefined || isNaN(value)) {
-                                return null;
-                            }
-                            
-                            // Filter out 255 (noData value)
-                            if (value === 255) {
-                                return null;
-                            }
-                            
-                            // Round to nearest integer
-                            var intValue = Math.round(value);
-                            
-                            // Look up color in discrete mapping
-                            if (discreteColors.hasOwnProperty(intValue)) {
-                                return discreteColors[intValue];
-                            }
-                            
-                            // Return null for values not in our discrete set
-                            return null;
-                        };
-                    } else {
-                        // For continuous layers (ENM, Hotspot)
-                        var scale = config.mode 
-                            ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
-                            : chroma.scale(config.colors).domain(config.domain);
-                        
-                        pixelValuesToColorFn = function(values) {
-                            var value = values[0];
-                            if (value === null || value === undefined || isNaN(value)) {
-                                return null;
-                            }
-                            return scale(value).hex();
-                        };
-                    }
+                    var pixelValuesToColorFn = function(values) {
+                        var value = values[0];
+                        if (value === null || value === undefined || isNaN(value)) return null;
+                        return scale(value).hex();
+                    };
                     
                     var layer = new GeoRasterLayer({
                         georaster: georaster,
-                        opacity: layerOpacity,
+                        opacity: 0.7,
                         pixelValuesToColorFn: pixelValuesToColorFn,
                         resolution: 256,
                         pane: 'rasterPane'
@@ -1018,7 +510,6 @@
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
-                        updateHighRiskBoundaryStyle();
                     }
                     
                     if (loadedCount === totalLayers) {
@@ -1031,11 +522,6 @@
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
                     updateStatus(errorMsg, true);
                     console.error(errorMsg, error);
-                    
-                    if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-                        updateStatus('⚠️ CORS Error: You must serve files through a web server!', true);
-                        updateStatus('Try using: R servr::httd() or Python http.server', true);
-                    }
                 });
         }
 
@@ -1048,7 +534,6 @@
                 layers[layerId].addTo(map);
                 currentLayer = layerId;
                 updateLegend(layerId);
-                updateHighRiskBoundaryStyle();
             }
         }
 
@@ -1058,13 +543,7 @@
             
             legendDiv.innerHTML = '<h4>' + config.name + '</h4>';
             
-            if (config.customLegend && config.legendItems) {
-                config.legendItems.forEach(function(item) {
-                    legendDiv.innerHTML +=
-                        '<div class="item"><i style="background:' + item.color + '"></i> ' +
-                        item.label + '</div>';
-                });
-            } else if (config.continuousLegend) {
+            if (config.continuousLegend) {
                 var gradientStops = [];
                 for (var i = 0; i < config.colors.length; i++) {
                     var percentage = (i / (config.colors.length - 1)) * 100;
@@ -1078,40 +557,11 @@
                     '<span>' + config.labels[0] + '</span>' +
                     '<span>' + config.labels[1] + '</span>' +
                     '</div>';
-            } else {
-                var numGrades = 5;
-                var range = config.domain[1] - config.domain[0];
-                var step = range / numGrades;
-                
-                var scale = config.mode 
-                    ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
-                    : chroma.scale(config.colors).domain(config.domain);
-                
-                for (var i = 0; i < numGrades; i++) {
-                    var value = config.domain[0] + (step * i);
-                    var nextValue = value + step;
-                    var color = scale(value + step/2).hex();
-                    
-                    legendDiv.innerHTML +=
-                        '<div class="item"><i style="background:' + color + '"></i> ' +
-                        value.toFixed(2) + ' – ' + nextValue.toFixed(2) + '</div>';
-                }
             }
             
             if (config.description) {
                 legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' + 
                                        config.description + '</p>';
-            }
-            
-            // Add plague cases legend section if plague cases are loaded
-            if (plagueCasesLayer) {
-                legendDiv.innerHTML += 
-                    '<div class="plague-cases-section">' +
-                    '<div class="item">' +
-                    '<span class="plague-case-symbol">✚</span>' +
-                    '<span style="font-size:11px;">Plague Cases</span>' +
-                    '</div>' +
-                    '</div>';
             }
         }
 
@@ -1120,12 +570,10 @@
         layerControl.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'layer-control');
             
-            // Basemap section
             div.innerHTML = '<h4>Basemaps</h4>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="street" checked onchange="switchBasemap(\'street\')">Street Map</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="satellite" onchange="switchBasemap(\'satellite\')">Satellite Imagery</label>';
             
-            // Risk layers section
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
             Object.keys(layerConfigs).forEach(function(key, index) {
@@ -1136,23 +584,14 @@
                     layerConfigs[key].name + '</label>';
             });
             
-            // Overlay section
-            div.innerHTML += '<div class="overlay-section">';
-            div.innerHTML += '<h5>Overlays</h5>';
-            div.innerHTML += '<label><input type="checkbox" id="plague-cases-toggle" checked onchange="togglePlagueCases(this.checked)">Plague Cases</label>';
-            div.innerHTML += '<label><input type="checkbox" id="high-risk-toggle" checked onchange="toggleHighRiskBoundaries(this.checked)">High-Risk Regions</label>';
-            div.innerHTML += '</div>';
-            
-            // Opacity sliders section - All layers default to 50%
             div.innerHTML += '<div class="opacity-section">';
             div.innerHTML += '<h5>Layer Opacity</h5>';
             
             Object.keys(layerConfigs).forEach(function(key) {
-                var defaultOpacity = 0.5;
                 div.innerHTML += 
                     '<div class="opacity-control">' +
-                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">' + Math.round(defaultOpacity * 100) + '%</span></label>' +
-                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="' + (defaultOpacity * 100) + '" ' +
+                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
+                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
                     'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
                     '</div>';
             });
@@ -1177,49 +616,32 @@
         info.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'info');
             div.innerHTML = 
-                '<h4>Plague Risk Mapping - Bangladesh & South India</h4>' +
-                '<p>Select a layer to view different risk assessments.</p> ' +
-                '<p><em>Click plague case markers for details</em></p>' +
-                '<p><em>Right-click map to copy coordinates</em></p>' +
-                '<p><em>Left-click map to view cell value</em></p>' +
-                '<p><em>Use drawing tools to measure distance/area</em></p>';
+                '<h4>Nipah Virus Risk Mapping</h4>' +
+                '<p>Bangladesh & South India</p> ' +
+                '<p><em>Right-click: Copy coordinates</em></p>' +
+                '<p><em>Left-click: View cell value</em></p>' +
+                '<p><em>Use tools to measure distance/area</em></p>';
             return div;
         };
         info.addTo(map);
 
-        // Add right-click handler to copy coordinates
+        // Right-click to copy coordinates
         map.on('contextmenu', function(e) {
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Add left-click handler to show cell value from CURRENT layer only
+        // Left-click to show cell value
         map.on('click', function(e) {
-            // Check if current layer is loaded
-            if (!currentLayer || !georasters[currentLayer]) {
-                return;
-            }
+            if (!currentLayer || !georasters[currentLayer]) return;
             
-            // Get value from the currently visible layer only
             var value = getRasterValueAtPoint(currentLayer, e.latlng);
             var config = layerConfigs[currentLayer];
             
-            // Format display value based on layer type
-            var displayValue;
-            if (value !== null) {
-                if (config.discreteDisplay) {
-                    // For discrete layers (risk, hotspot), show integer
-                    displayValue = Math.round(value).toString();
-                } else {
-                    // For continuous layers (ENM), show 4 decimal places
-                    displayValue = value.toFixed(4);
-                }
-            } else {
-                displayValue = 'No Data';
-            }
+            var displayValue = value !== null ? value.toFixed(4) : 'No Data';
             
             var popupContent = '<h3>' + config.name + '</h3><table>';
             popupContent += '<tr><td>Coordinates</td><td>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '</td></tr>';
-            popupContent += '<tr><td>Cell Value</td><td>' + displayValue + '</td></tr>';
+            popupContent += '<tr><td>Value</td><td>' + displayValue + '</td></tr>';
             popupContent += '</table>';
             
             L.popup()
@@ -1233,9 +655,6 @@
         Object.keys(layerConfigs).forEach(function(key) {
             loadLayer(key);
         });
-        
-        loadPlagueCases();
-        loadHighRiskBoundaries();
     </script>
 </body>
 </html>
