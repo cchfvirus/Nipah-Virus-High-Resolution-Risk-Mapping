@@ -398,14 +398,14 @@
             }
         };
 
-        // Initialize all classes as visible
+        // Initialize all classes as visible (INCLUDING 0 now)
         Object.keys(layerConfigs).forEach(function(layerId) {
             var config = layerConfigs[layerId];
             if (config.discreteColors) {
                 visibleClasses[layerId] = {};
                 Object.keys(config.discreteColors).forEach(function(value) {
-                    // Start with all classes visible except 0 (background)
-                    visibleClasses[layerId][value] = (value != 0);
+                    // Start with all classes visible (including 0)
+                    visibleClasses[layerId][value] = true;
                 });
             }
         });
@@ -538,9 +538,7 @@
         function selectAllClasses(layerId) {
             var config = layerConfigs[layerId];
             Object.keys(config.discreteColors).forEach(function(value) {
-                if (value != 0) {  // Don't enable background
-                    visibleClasses[layerId][value] = true;
-                }
+                visibleClasses[layerId][value] = true;
             });
             refreshLayer(layerId);
             updateLegend(layerId);
@@ -724,12 +722,10 @@
             
             legendDiv.innerHTML = '<h4>' + config.name + '</h4>';
             
-            // CUSTOM LEGEND with legendItems (for risk zones)
+            // CUSTOM LEGEND with legendItems (for risk zones) - INCLUDING VALUE 0
             if (config.customLegend && config.legendItems) {
                 config.legendItems.forEach(function(item) {
-                    // Skip background (value 0)
-                    if (item.value == 0) return;
-                    
+                    // INCLUDE ALL VALUES (removed the skip for value 0)
                     var isChecked = visibleClasses[layerId][item.value];
                     var disabledClass = isChecked ? '' : ' disabled';
                     
