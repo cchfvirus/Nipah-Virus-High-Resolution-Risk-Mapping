@@ -412,7 +412,7 @@
             }
         };
 
-        // VECTOR LAYER CONFIGURATIONS - YOUR THREE SHAPEFILES WITH CORRECT FIELD NAMES
+        // VECTOR LAYER CONFIGURATIONS
         var vectorConfigs = {
             'outbreaks': {
                 file: 'outbreaks.geojson',
@@ -675,117 +675,94 @@
             }
         }
 
-        // CREATE POPUP CONTENT - FIXED VERSION
+        // CREATE POPUP CONTENT - UPDATED (Madagascar-style binding)
         function createPopup(feature, layer, config) {
-            if (!config.enablePopup) {
-                return;
-            }
-            
+            if (!config.enablePopup) return;
+
             var popupContent;
-            
-            if (config.customPopup && config.customPopupContent) {
+
+            if (config.customPopup && typeof config.customPopupContent === "function") {
                 popupContent = config.customPopupContent(feature);
             } else {
-                popupContent = '<div style="max-width: 250px;">';
-                popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
-                popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
-                
-                config.popupFields.forEach(function(field) {
-                    if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
-                        var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-                        popupContent += '<tr>' +
-                                       '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
-                                       '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
-                                       '</tr>';
+                popupContent = '<h3>' + config.name + '</h3><table>';
+
+                (config.popupFields || []).forEach(function(field) {
+                    if (feature.properties && feature.properties[field] !== undefined && feature.properties[field] !== null) {
+                        var label = field.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
+                        popupContent += '<tr><td>' + label + '</td><td>' + feature.properties[field] + '</td></tr>';
                     }
                 });
-                
-                popupContent += '</table></div>';
+
+                popupContent += '</table>';
             }
-            
-            layer.bindPopup(popupContent);
-            console.log('Popup bound for:', config.name);
+
+            layer.bindPopup(popupContent, {
+                maxWidth: 300,
+                maxHeight: 400,
+                autoPan: true,
+                closeButton: true
+            });
         }
 
-        // LOAD VECTOR LAYERS - ENHANCED VERSION WITH FORCED INTERACTIVITY
-function loadVectorLayer(vectorId) {
-    var config = vectorConfigs[vectorId];
-    
-    updateStatus('Loading ' + config.name + '...');
-    console.log('Loading vector layer:', vectorId, config.file);
-    
-    fetch(config.file)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('HTTP error! status: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            updateStatus(config.name + ' loaded successfully');
-            console.log('Loaded GeoJSON data:', data);
+        // LOAD VECTOR LAYERS - UPDATED (remove forced click handlers)
+        function loadVectorLayer(vectorId) {
+            var config = vectorConfigs[vectorId];
             
-            var layer;
+            updateStatus('Loading ' + config.name + '...');
+            console.log('Loading vector layer:', vectorId, config.file);
             
-            if (config.type === 'point') {
-                layer = L.geoJSON(data, {
-                    pointToLayer: function(feature, latlng) {
-                        var marker = L.circleMarker(latlng, config.style);
-                        // FORCE INTERACTIVITY
-                        marker.options.interactive = true;
-                        marker.options.bubblingMouseEvents = true;
-                        return marker;
-                    },
-                    onEachFeature: function(feature, featureLayer) {
-                        if (config.enablePopup) {
-                            createPopup(feature, featureLayer, config);
-                            // FORCE POPUP BINDING
-                            featureLayer.on('click', function(e) {
-                                console.log('Point clicked!', config.name);
-                                featureLayer.openPopup();
-                                L.DomEvent.stopPropagation(e);
-                            });
-                        }
-                    },
-                    pane: 'vectorPane'
-                });
-            } else {
-                layer = L.geoJSON(data, {
-                    style: function(feature) {
-                        return Object.assign({}, config.style, {
-                            interactive: true,
-                            bubblingMouseEvents: true
+            fetch(config.file)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error! status: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updateStatus(config.name + ' loaded successfully');
+                    
+                    var layer;
+                    
+                    if (config.type === 'point') {
+                        layer = L.geoJSON(data, {
+                            pointToLayer: function(feature, latlng) {
+                                var marker = L.circleMarker(latlng, config.style);
+                                marker.options.interactive = true;
+                                marker.options.bubblingMouseEvents = true;
+                                return marker;
+                            },
+                            onEachFeature: function(feature, featureLayer) {
+                                createPopup(feature, featureLayer, config);
+                            },
+                            pane: 'vectorPane'
                         });
-                    },
-                    onEachFeature: function(feature, featureLayer) {
-                        if (config.enablePopup) {
-                            createPopup(feature, featureLayer, config);
-                            // FORCE POPUP BINDING
-                            featureLayer.on('click', function(e) {
-                                console.log('Polygon clicked!', config.name);
-                                featureLayer.openPopup();
-                                L.DomEvent.stopPropagation(e);
-                            });
-                        }
-                    },
-                    pane: 'vectorPane'
+                    } else {
+                        layer = L.geoJSON(data, {
+                            style: function() {
+                                return Object.assign({}, config.style, {
+                                    interactive: true,
+                                    bubblingMouseEvents: true
+                                });
+                            },
+                            onEachFeature: function(feature, featureLayer) {
+                                createPopup(feature, featureLayer, config);
+                            },
+                            pane: 'vectorPane'
+                        });
+                    }
+                    
+                    vectorLayers[vectorId] = layer;
+                    
+                    if (config.visible) {
+                        layer.addTo(map);
+                    }
+                })
+                .catch(error => {
+                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
+                    updateStatus(errorMsg, true);
+                    console.error(errorMsg, error);
                 });
-            }
-            
-            vectorLayers[vectorId] = layer;
-            console.log('Vector layer created:', vectorId);
-            
-            if (config.visible) {
-                layer.addTo(map);
-                console.log('Vector layer added to map:', vectorId);
-            }
-        })
-        .catch(error => {
-            var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
-            updateStatus(errorMsg, true);
-            console.error(errorMsg, error);
-        });
-}
+        }
 
         function toggleVectorLayer(vectorId) {
             if (vectorLayers[vectorId]) {
@@ -1033,11 +1010,3 @@ function loadVectorLayer(vectorId) {
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
