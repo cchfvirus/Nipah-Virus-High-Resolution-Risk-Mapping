@@ -302,7 +302,7 @@
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 200;
         map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 650;  // Much higher to ensure vectors are clickable
+        map.getPane('vectorPane').style.zIndex = 1000;  // Much higher to ensure vectors are clickable
         map.getPane('vectorPane').style.pointerEvents = 'auto';  // Ensure clicks work
 
         // Define basemaps
@@ -1033,6 +1033,7 @@ function loadVectorLayer(vectorId) {
     </script>
 </body>
 </html>
+
 
 
 
