@@ -282,7 +282,7 @@
         // THREE-LAYER CONFIGURATION WITH DISCRETE COLORS
         var layerConfigs = {
             'enm': {
-                file: 'enm_cog.tif',
+                file: 'enm_web.tif',
                 name: 'ENM - Regional Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
                 domain: [0, 1],
@@ -290,11 +290,13 @@
                 description: 'Regional ecological suitability (Bangladesh & South India)',
                 mode: 'lch',
                 continuousLegend: true,
-                extent: 'regional'
+                extent: 'regional',
+                center: [18.0, 82.5],
+                zoom: 5
             },
             'risk_bangladesh': {
-                file: 'risk_bang_cog.tif',
-                name: 'Risk - Bangladesh (100m)',
+                file: 'risk_bang_web.tif',
+                name: 'Disease Transmission Risk - Bangladesh (100m)',
                 discreteColors: {
                     0: '#000000',  // Black - No risk/background
                     1: '#FFFFBE',  // Light yellow - Very low risk
@@ -312,8 +314,8 @@
                 zoom: 7
             },
             'risk_south_india': {
-                file: 'risk_india_cog.tif',
-                name: 'Risk - South India (100m)',
+                file: 'risk_india_web.tif',
+                name: 'Disease Transmission Risk - South India (100m)',
                 discreteColors: {
                     0: '#000000',  // Black - No risk/background
                     1: '#FFFFBE',  // Light yellow - Very low risk
@@ -440,50 +442,6 @@
             }
         }
 
-        function getRasterValueAtPoint(layerId, latlng) {
-            if (!georasters[layerId]) return null;
-            
-            try {
-                var georaster = georasters[layerId];
-                var x = latlng.lng;
-                var y = latlng.lat;
-                
-                var xmin = georaster.xmin;
-                var xmax = georaster.xmax;
-                var ymin = georaster.ymin;
-                var ymax = georaster.ymax;
-                var width = georaster.width;
-                var height = georaster.height;
-                
-                if (x < xmin || x > xmax || y < ymin || y > ymax) return null;
-                
-                var pixelWidth = (xmax - xmin) / width;
-                var pixelHeight = (ymax - ymin) / height;
-                
-                var pixelX = Math.floor((x - xmin) / pixelWidth);
-                var pixelY = Math.floor((ymax - y) / pixelHeight);
-                
-                if (pixelX < 0 || pixelX >= width || pixelY < 0 || pixelY >= height) return null;
-                
-                var values = georaster.values;
-                if (values && values[0] && values[0][pixelY]) {
-                    var value = values[0][pixelY][pixelX];
-                    
-                    if (value !== null && value !== undefined && !isNaN(value)) {
-                        if (value === 255 || value === -9999 || value === -3.4e38 || 
-                            Math.abs(value) > 1e10 || value === -32768) {
-                            return null;
-                        }
-                        return value;
-                    }
-                }
-            } catch (error) {
-                console.log('Error getting value:', error);
-            }
-            
-            return null;
-        }
-
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
             map.removeLayer(streetMap);
@@ -580,19 +538,24 @@
         }
 
         function switchLayer(layerId) {
+            // Remove current layer
             if (currentLayer && layers[currentLayer]) {
                 map.removeLayer(layers[currentLayer]);
             }
             
+            // Add new layer
             if (layers[layerId]) {
                 layers[layerId].addTo(map);
                 currentLayer = layerId;
                 updateLegend(layerId);
                 
-                // Auto-zoom to appropriate region
+                // ALWAYS zoom to the layer's specified view
                 var config = layerConfigs[layerId];
-                if (config.center && config.zoom) {
-                    map.setView(config.center, config.zoom);
+                if (config.center && config.zoom !== undefined) {
+                    map.setView(config.center, config.zoom, {
+                        animate: true,
+                        duration: 1.0
+                    });
                 }
             }
         }
@@ -702,48 +665,14 @@
                 '<p>Multi-scale Analysis</p>' +
                 '<p><em>Regional: 1km resolution overview</em></p>' +
                 '<p><em>Country-specific: 100m detail</em></p>' +
-                '<p><em>Right-click: Copy coordinates</em></p>' +
-                '<p><em>Left-click: View cell value</em></p>';
+                '<p><em>Right-click: Copy coordinates</em></p>';
             return div;
         };
         info.addTo(map);
 
+        // Right-click to copy coordinates
         map.on('contextmenu', function(e) {
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
-        });
-
-        map.on('click', function(e) {
-            if (!currentLayer || !georasters[currentLayer]) return;
-            
-            var value = getRasterValueAtPoint(currentLayer, e.latlng);
-            var config = layerConfigs[currentLayer];
-            
-            var displayValue = value !== null ? Math.round(value) : 'No Data';
-            
-            // For discrete layers, show the risk category name
-            var riskCategory = 'No Data';
-            if (value !== null && config.discreteColors) {
-                var roundedValue = Math.round(value);
-                var valueIndex = Object.keys(config.discreteColors).indexOf(String(roundedValue));
-                if (valueIndex >= 0 && config.labels[valueIndex]) {
-                    riskCategory = config.labels[valueIndex];
-                }
-            }
-            
-            var popupContent = '<h3>' + config.name + '</h3><table>';
-            popupContent += '<tr><td>Coordinates</td><td>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '</td></tr>';
-            popupContent += '<tr><td>Value</td><td>' + displayValue + '</td></tr>';
-            
-            if (config.discreteColors && value !== null) {
-                popupContent += '<tr><td>Risk Category</td><td>' + riskCategory + '</td></tr>';
-            }
-            
-            popupContent += '</table>';
-            
-            L.popup()
-                .setLatLng(e.latlng)
-                .setContent(popupContent)
-                .openOn(map);
         });
 
         // Load all layers
@@ -754,4 +683,3 @@
     </script>
 </body>
 </html>
-
