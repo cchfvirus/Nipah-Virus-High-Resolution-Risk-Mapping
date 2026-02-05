@@ -15,7 +15,7 @@
 
 ## Overview
 
-This repository provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Bangladesh and South India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance and intervention.
+This map provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Bangladesh and South India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance and intervention.
 
 ## Map Features
 
@@ -40,22 +40,10 @@ This repository provides high-resolution spatial risk assessments for Nipah viru
 - 🎛️ **Opacity controls** for layer visualization
 - 🔍 **Zoom and pan** to explore regions of interest
 
-## Quick Start
-
-### View the Map Online
-Simply visit: **[https://cchfvirus.github.io/Nipah-Virus-High-Resolution-Risk-Mapping/](https://cchfvirus.github.io/Nipah-Virus-High-Resolution-Risk-Mapping/)**
-
-## Data Description
-
 ### Study Area
 - **Primary Focus:** Bangladesh
 - **Extended Coverage:** South India, including West Bengal
 - **Coordinate System:** WGS84 (EPSG:4326)
-
-### Data Format
-- **File Type:** Cloud-Optimized GeoTIFF (COG)
-- **Compression:** ZSTD (maximum compression)
-- **NoData Value:** -9999
 
 ### Map Technology
 - **Framework:** Leaflet.js
