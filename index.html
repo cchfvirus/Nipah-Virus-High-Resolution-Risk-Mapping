@@ -216,6 +216,15 @@
             width: 50%;
         }
         
+        .leaflet-popup-content a {
+            color: #0066CC;
+            text-decoration: none;
+        }
+        
+        .leaflet-popup-content a:hover {
+            text-decoration: underline;
+        }
+        
         .copy-notification {
             position: fixed;
             top: 50%;
@@ -402,7 +411,7 @@
             }
         };
 
-        // VECTOR LAYER CONFIGURATIONS - YOUR THREE SHAPEFILES
+        // VECTOR LAYER CONFIGURATIONS - YOUR THREE SHAPEFILES WITH POPUP SETTINGS
         var vectorConfigs = {
             'outbreaks': {
                 file: 'outbreaks.geojson',
@@ -415,7 +424,8 @@
                     radius: 5,
                     weight: 2
                 },
-                popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],  // Adjust field names!
+                popupFields: ['Year', 'Location', 'Country', 'Cases', 'Deaths', 'CFR'],  // Adjust field names to match your data!
+                enablePopup: true,
                 visible: true
             },
             'study': {
@@ -423,13 +433,14 @@
                 name: 'Study Area',
                 type: 'polygon',
                 style: {
-                    color: '#000000',           // Black border
-                    weight: 2,
+                    color: '#000000',           // Blue border
+                    weight: 3,
                     fillOpacity: 0.1,
                     fillColor: '#0066CC',
                     dashArray: '10, 5'          // Dashed border
                 },
-                popupFields: ['name', 'area', 'description'],  // Adjust field names!
+                popupFields: [],
+                enablePopup: false,             // NO POPUP for study area
                 visible: true
             },
             'district_2026': {
@@ -438,12 +449,25 @@
                 type: 'polygon',
                 style: {
                     color: '#FFFFFF',           // Gold border for emphasis
-                    weight: 3,
+                    weight: 4,
                     fillOpacity: 0.1,
                     fillColor: null,       // Orange fill
                     dashArray: null             // Solid border
                 },
-                popupFields: ['district', 'state', 'country', 'date', 'cases'],  // Adjust field names!
+                popupFields: [],
+                enablePopup: true,
+                customPopup: true,              // Use custom popup content
+                customPopupContent: function(feature) {
+                    return '<div style="max-width: 300px;">' +
+                           '<h3 style="margin: 0 0 10px; font-size: 15px; color: #8B0000;">2026 Nipah Outbreak - West Bengal</h3>' +
+                           '<p style="margin: 0 0 8px; font-size: 12px; line-height: 1.5;">' +
+                           'In January 2026, authorities in West Bengal confirmed laboratory-confirmed Nipah virus infections in two healthcare workers (nurses) at a private hospital in Barasat, North 24 Parganas district.' +
+                           '</p>' +
+                           '<p style="margin: 0; font-size: 11px; color: #666; font-style: italic;">' +
+                           'Source: <a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON536" target="_blank" style="color: #0066CC;">Nipah virus disease - India (WHO)</a>' +
+                           '</p>' +
+                           '</div>';
+                },
                 visible: true
             }
         };
@@ -650,7 +674,7 @@
             }
         }
 
-        // LOAD VECTOR LAYERS
+        // LOAD VECTOR LAYERS WITH POPUP HANDLING
         function loadVectorLayer(vectorId) {
             var config = vectorConfigs[vectorId];
             
@@ -675,7 +699,9 @@
                                 return L.circleMarker(latlng, config.style);
                             },
                             onEachFeature: function(feature, layer) {
-                                createPopup(feature, layer, config);
+                                if (config.enablePopup) {  // Only create popup if enabled
+                                    createPopup(feature, layer, config);
+                                }
                             },
                             pane: 'vectorPane'
                         });
@@ -683,7 +709,9 @@
                         layer = L.geoJSON(data, {
                             style: config.style,
                             onEachFeature: function(feature, layer) {
-                                createPopup(feature, layer, config);
+                                if (config.enablePopup) {  // Only create popup if enabled
+                                    createPopup(feature, layer, config);
+                                }
                             },
                             pane: 'vectorPane'
                         });
@@ -702,20 +730,38 @@
                 });
         }
 
+        // CREATE POPUP CONTENT (STANDARD OR CUSTOM)
         function createPopup(feature, layer, config) {
-            var popupContent = '<div style="max-width: 200px;">';
-            popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px;">' + config.name + '</h3>';
-            popupContent += '<table style="width: 100%; font-size: 12px;">';
+            // Skip popup if disabled
+            if (!config.enablePopup) {
+                return;
+            }
             
-            config.popupFields.forEach(function(field) {
-                if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
-                    var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-                    popupContent += '<tr><td style="font-weight: bold; padding-right: 8px;">' + label + ':</td>';
-                    popupContent += '<td>' + feature.properties[field] + '</td></tr>';
-                }
-            });
+            var popupContent;
             
-            popupContent += '</table></div>';
+            // Use custom popup content if specified
+            if (config.customPopup && config.customPopupContent) {
+                popupContent = config.customPopupContent(feature);
+            } 
+            // Otherwise create standard popup from fields
+            else {
+                popupContent = '<div style="max-width: 250px;">';
+                popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
+                popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+                
+                config.popupFields.forEach(function(field) {
+                    if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
+                        var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                        popupContent += '<tr>' +
+                                       '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
+                                       '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
+                                       '</tr>';
+                    }
+                });
+                
+                popupContent += '</table></div>';
+            }
+            
             layer.bindPopup(popupContent);
         }
 
@@ -966,10 +1012,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
