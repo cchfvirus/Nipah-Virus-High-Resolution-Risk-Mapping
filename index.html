@@ -411,20 +411,20 @@
             }
         };
 
-        // VECTOR LAYER CONFIGURATIONS - YOUR THREE SHAPEFILES WITH POPUP SETTINGS
+        // VECTOR LAYER CONFIGURATIONS - YOUR THREE SHAPEFILES WITH CORRECT FIELD NAMES
         var vectorConfigs = {
             'outbreaks': {
                 file: 'outbreaks.geojson',
                 name: 'Historical Outbreaks',
                 type: 'point',
                 style: {
-                    color: '#8B0000',           // Dark red border
-                    fillColor: '#FF0000',       // Bright red fill
+                    color: '#8B0000',
+                    fillColor: '#FF0000',
                     fillOpacity: 0.7,
                     radius: 5,
                     weight: 2
                 },
-                popupFields: ['Year', 'Location', 'Country', 'Cases', 'Deaths', 'CFR'],  // Adjust field names to match your data!
+                popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
                 enablePopup: true,
                 visible: true
             },
@@ -433,14 +433,14 @@
                 name: 'Study Area',
                 type: 'polygon',
                 style: {
-                    color: '#000000',           // Blue border
+                    color: '#000000',
                     weight: 3,
                     fillOpacity: 0.1,
                     fillColor: '#0066CC',
-                    dashArray: '10, 5'          // Dashed border
+                    dashArray: '10, 5'
                 },
                 popupFields: [],
-                enablePopup: false,             // NO POPUP for study area
+                enablePopup: false,
                 visible: true
             },
             'district_2026': {
@@ -448,15 +448,15 @@
                 name: '2026 Nipah District',
                 type: 'polygon',
                 style: {
-                    color: '#FFFFFF',           // Gold border for emphasis
+                    color: '#FFFFFF',
                     weight: 4,
                     fillOpacity: 0.1,
-                    fillColor: null,       // Orange fill
-                    dashArray: null             // Solid border
+                    fillColor: null,
+                    dashArray: null
                 },
                 popupFields: [],
                 enablePopup: true,
-                customPopup: true,              // Use custom popup content
+                customPopup: true,
                 customPopupContent: function(feature) {
                     return '<div style="max-width: 300px;">' +
                            '<h3 style="margin: 0 0 10px; font-size: 15px; color: #8B0000;">2026 Nipah Outbreak - West Bengal</h3>' +
@@ -674,77 +674,17 @@
             }
         }
 
-        // LOAD VECTOR LAYERS WITH POPUP HANDLING
-        function loadVectorLayer(vectorId) {
-            var config = vectorConfigs[vectorId];
-            
-            updateStatus('Loading ' + config.name + '...');
-            
-            fetch(config.file)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('HTTP error! status: ' + response.status);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    updateStatus(config.name + ' loaded successfully');
-                    
-                    var layer;
-                    
-                    // Style based on geometry type
-                    if (config.type === 'point') {
-                        layer = L.geoJSON(data, {
-                            pointToLayer: function(feature, latlng) {
-                                return L.circleMarker(latlng, config.style);
-                            },
-                            onEachFeature: function(feature, layer) {
-                                if (config.enablePopup) {  // Only create popup if enabled
-                                    createPopup(feature, layer, config);
-                                }
-                            },
-                            pane: 'vectorPane'
-                        });
-                    } else {
-                        layer = L.geoJSON(data, {
-                            style: config.style,
-                            onEachFeature: function(feature, layer) {
-                                if (config.enablePopup) {  // Only create popup if enabled
-                                    createPopup(feature, layer, config);
-                                }
-                            },
-                            pane: 'vectorPane'
-                        });
-                    }
-                    
-                    vectorLayers[vectorId] = layer;
-                    
-                    if (config.visible) {
-                        layer.addTo(map);
-                    }
-                })
-                .catch(error => {
-                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
-                    updateStatus(errorMsg, true);
-                    console.error(errorMsg, error);
-                });
-        }
-
-        // CREATE POPUP CONTENT (STANDARD OR CUSTOM)
+        // CREATE POPUP CONTENT - FIXED VERSION
         function createPopup(feature, layer, config) {
-            // Skip popup if disabled
             if (!config.enablePopup) {
                 return;
             }
             
             var popupContent;
             
-            // Use custom popup content if specified
             if (config.customPopup && config.customPopupContent) {
                 popupContent = config.customPopupContent(feature);
-            } 
-            // Otherwise create standard popup from fields
-            else {
+            } else {
                 popupContent = '<div style="max-width: 250px;">';
                 popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
                 popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
@@ -763,6 +703,66 @@
             }
             
             layer.bindPopup(popupContent);
+            console.log('Popup bound for:', config.name);
+        }
+
+        // LOAD VECTOR LAYERS - FIXED VERSION
+        function loadVectorLayer(vectorId) {
+            var config = vectorConfigs[vectorId];
+            
+            updateStatus('Loading ' + config.name + '...');
+            console.log('Loading vector layer:', vectorId, config.file);
+            
+            fetch(config.file)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error! status: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updateStatus(config.name + ' loaded successfully');
+                    console.log('Loaded GeoJSON data:', data);
+                    
+                    var layer;
+                    
+                    if (config.type === 'point') {
+                        layer = L.geoJSON(data, {
+                            pointToLayer: function(feature, latlng) {
+                                return L.circleMarker(latlng, config.style);
+                            },
+                            onEachFeature: function(feature, featureLayer) {
+                                if (config.enablePopup) {
+                                    createPopup(feature, featureLayer, config);
+                                }
+                            },
+                            pane: 'vectorPane'
+                        });
+                    } else {
+                        layer = L.geoJSON(data, {
+                            style: config.style,
+                            onEachFeature: function(feature, featureLayer) {
+                                if (config.enablePopup) {
+                                    createPopup(feature, featureLayer, config);
+                                }
+                            },
+                            pane: 'vectorPane'
+                        });
+                    }
+                    
+                    vectorLayers[vectorId] = layer;
+                    console.log('Vector layer created:', vectorId);
+                    
+                    if (config.visible) {
+                        layer.addTo(map);
+                        console.log('Vector layer added to map:', vectorId);
+                    }
+                })
+                .catch(error => {
+                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
+                    updateStatus(errorMsg, true);
+                    console.error(errorMsg, error);
+                });
         }
 
         function toggleVectorLayer(vectorId) {
@@ -943,7 +943,6 @@
                     layerConfigs[key].name + '</label>';
             });
             
-            // ADD VECTOR LAYERS SECTION
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Vector Overlays</h4>';
             
             Object.keys(vectorConfigs).forEach(function(key) {
