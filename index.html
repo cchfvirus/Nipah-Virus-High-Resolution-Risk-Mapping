@@ -279,10 +279,10 @@
         var loadedCount = 0;
         var totalLayers = 3;
 
-        // THREE-LAYER CONFIGURATION
+        // THREE-LAYER CONFIGURATION WITH DISCRETE COLORS
         var layerConfigs = {
             'enm': {
-                file: 'enm_cog.tif',
+                file: 'enm_web.tif',
                 name: 'ENM - Regional Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
                 domain: [0, 1],
@@ -293,44 +293,44 @@
                 extent: 'regional'
             },
             'risk_bangladesh': {
-            file: 'risk_bang_web.tif',  // Your uploaded Bangladesh file
-            name: 'Risk - Bangladesh (100m)',
-            discreteColors: {
-            0: '#000000',  // Black - No risk/background
-            1: '#FFFFBE',  // Light yellow - Very low risk
-            2: '#FFDD00',  // Yellow - Low risk
-            3: '#FFAA00',  // Orange - Moderate risk
-            4: '#FF6600',  // Red-orange - Elevated risk
-            6: '#FF0000',  // Red - High risk
-            9: '#A80000'   // Dark red - Very high risk
-        },
-        labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
-        description: 'High-resolution discrete risk zones for Bangladesh',
-        continuousLegend: false,
-        extent: 'bangladesh',
-        center: [23.8, 90.4],
-        zoom: 7
-    },
-    'risk_south_india': {
-        file: 'risk_india_web.tif',  // Your uploaded South India file
-        name: 'Risk - South India (100m)',
-        discreteColors: {
-            0: '#000000',  // Black - No risk/background
-            1: '#FFFFBE',  // Light yellow - Very low risk
-            2: '#FFDD00',  // Yellow - Low risk
-            3: '#FFAA00',  // Orange - Moderate risk
-            4: '#FF6600',  // Red-orange - Elevated risk
-            6: '#FF0000',  // Red - High risk
-            9: '#A80000'   // Dark red - Very high risk
-        },
-        labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
-        description: 'High-resolution discrete risk zones for South India',
-        continuousLegend: false,
-        extent: 'south_india',
-        center: [12.5, 80.0],
-        zoom: 6
-    }
-};
+                file: 'risk_bang_web.tif',
+                name: 'Risk - Bangladesh (100m)',
+                discreteColors: {
+                    0: '#000000',  // Black - No risk/background
+                    1: '#FFFFBE',  // Light yellow - Very low risk
+                    2: '#FFDD00',  // Yellow - Low risk
+                    3: '#FFAA00',  // Orange - Moderate risk
+                    4: '#FF6600',  // Red-orange - Elevated risk
+                    6: '#FF0000',  // Red - High risk
+                    9: '#A80000'   // Dark red - Very high risk
+                },
+                labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
+                description: 'High-resolution discrete risk zones for Bangladesh',
+                continuousLegend: false,
+                extent: 'bangladesh',
+                center: [23.8, 90.4],
+                zoom: 7
+            },
+            'risk_south_india': {
+                file: 'risk_india_web.tif',
+                name: 'Risk - South India (100m)',
+                discreteColors: {
+                    0: '#000000',  // Black - No risk/background
+                    1: '#FFFFBE',  // Light yellow - Very low risk
+                    2: '#FFDD00',  // Yellow - Low risk
+                    3: '#FFAA00',  // Orange - Moderate risk
+                    4: '#FF6600',  // Red-orange - Elevated risk
+                    6: '#FF0000',  // Red - High risk
+                    9: '#A80000'   // Dark red - Very high risk
+                },
+                labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
+                description: 'High-resolution discrete risk zones for South India',
+                continuousLegend: false,
+                extent: 'south_india',
+                center: [12.5, 80.0],
+                zoom: 6
+            }
+        };
 
         // Measurement tools
         var drawnItems = new L.FeatureGroup();
@@ -519,15 +519,33 @@
                     updateStatus(config.name + ' parsed successfully');
                     georasters[layerId] = georaster;
                     
-                    var scale = config.mode 
-                        ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
-                        : chroma.scale(config.colors).domain(config.domain);
+                    var pixelValuesToColorFn;
                     
-                    var pixelValuesToColorFn = function(values) {
-                        var value = values[0];
-                        if (value === null || value === undefined || isNaN(value)) return null;
-                        return scale(value).hex();
-                    };
+                    // Handle DISCRETE colors
+                    if (config.discreteColors) {
+                        pixelValuesToColorFn = function(values) {
+                            var value = values[0];
+                            if (value === null || value === undefined || isNaN(value)) return null;
+                            
+                            // Round to nearest integer for discrete values
+                            value = Math.round(value);
+                            
+                            // Return color for this value, or null if not defined
+                            return config.discreteColors[value] || null;
+                        };
+                    } 
+                    // Handle CONTINUOUS colors
+                    else {
+                        var scale = config.mode 
+                            ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
+                            : chroma.scale(config.colors).domain(config.domain);
+                        
+                        pixelValuesToColorFn = function(values) {
+                            var value = values[0];
+                            if (value === null || value === undefined || isNaN(value)) return null;
+                            return scale(value).hex();
+                        };
+                    }
                     
                     var layer = new GeoRasterLayer({
                         georaster: georaster,
@@ -585,7 +603,28 @@
             
             legendDiv.innerHTML = '<h4>' + config.name + '</h4>';
             
-            if (config.continuousLegend) {
+            // DISCRETE LEGEND (for risk zones)
+            if (config.discreteColors) {
+                var values = Object.keys(config.discreteColors).sort(function(a, b) {
+                    return parseInt(a) - parseInt(b);
+                });
+                
+                values.forEach(function(value, index) {
+                    var color = config.discreteColors[value];
+                    var label = config.labels[index] || 'Class ' + value;
+                    
+                    // Skip background/no data (value 0)
+                    if (value == 0) return;
+                    
+                    legendDiv.innerHTML += 
+                        '<div class="item">' +
+                        '<i style="background:' + color + '"></i> ' +
+                        label +
+                        '</div>';
+                });
+            }
+            // CONTINUOUS LEGEND (for ENM)
+            else if (config.continuousLegend) {
                 var gradientStops = [];
                 for (var i = 0; i < config.colors.length; i++) {
                     var percentage = (i / (config.colors.length - 1)) * 100;
@@ -679,11 +718,26 @@
             var value = getRasterValueAtPoint(currentLayer, e.latlng);
             var config = layerConfigs[currentLayer];
             
-            var displayValue = value !== null ? value.toFixed(4) : 'No Data';
+            var displayValue = value !== null ? Math.round(value) : 'No Data';
+            
+            // For discrete layers, show the risk category name
+            var riskCategory = 'No Data';
+            if (value !== null && config.discreteColors) {
+                var roundedValue = Math.round(value);
+                var valueIndex = Object.keys(config.discreteColors).indexOf(String(roundedValue));
+                if (valueIndex >= 0 && config.labels[valueIndex]) {
+                    riskCategory = config.labels[valueIndex];
+                }
+            }
             
             var popupContent = '<h3>' + config.name + '</h3><table>';
             popupContent += '<tr><td>Coordinates</td><td>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '</td></tr>';
             popupContent += '<tr><td>Value</td><td>' + displayValue + '</td></tr>';
+            
+            if (config.discreteColors && value !== null) {
+                popupContent += '<tr><td>Risk Category</td><td>' + riskCategory + '</td></tr>';
+            }
+            
             popupContent += '</table>';
             
             L.popup()
@@ -700,7 +754,3 @@
     </script>
 </body>
 </html>
-
-
-
-
