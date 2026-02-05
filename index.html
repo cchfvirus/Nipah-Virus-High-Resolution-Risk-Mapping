@@ -293,32 +293,44 @@
                 extent: 'regional'
             },
             'risk_bangladesh': {
-                file: 'risk_bang_cog.tif',
-                name: 'Risk - Bangladesh (100m)',
-                colors: ['#FFFFBE', '#FFDD00', '#FFAA00', '#FF6600', '#FF0000', '#A80000'],
-                domain: [0, 4],
-                labels: ['Low Risk', 'High Risk'],
-                description: 'High-resolution risk assessment for Bangladesh',
-                mode: 'lch',
-                continuousLegend: true,
-                extent: 'bangladesh',
-                center: [23.8, 90.4],
-                zoom: 7
-            },
-            'risk_south_india': {
-                file: 'risk_india_cog.tif',
-                name: 'Risk - South India (100m)',
-                colors: ['#FFFFBE', '#FFDD00', '#FFAA00', '#FF6600', '#FF0000', '#A80000'],
-                domain: [0, 4],
-                labels: ['Low Risk', 'High Risk'],
-                description: 'High-resolution risk assessment for South India',
-                mode: 'lch',
-                continuousLegend: true,
-                extent: 'south_india',
-                center: [12.5, 80.0],
-                zoom: 6
-            }
-        };
+            file: 'risk_bang_web.tif',  // Your uploaded Bangladesh file
+            name: 'Risk - Bangladesh (100m)',
+            discreteColors: {
+            0: '#000000',  // Black - No risk/background
+            1: '#FFFFBE',  // Light yellow - Very low risk
+            2: '#FFDD00',  // Yellow - Low risk
+            3: '#FFAA00',  // Orange - Moderate risk
+            4: '#FF6600',  // Red-orange - Elevated risk
+            6: '#FF0000',  // Red - High risk
+            9: '#A80000'   // Dark red - Very high risk
+        },
+        labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
+        description: 'High-resolution discrete risk zones for Bangladesh',
+        continuousLegend: false,
+        extent: 'bangladesh',
+        center: [23.8, 90.4],
+        zoom: 7
+    },
+    'risk_south_india': {
+        file: 'risk_india_web.tif',  // Your uploaded South India file
+        name: 'Risk - South India (100m)',
+        discreteColors: {
+            0: '#000000',  // Black - No risk/background
+            1: '#FFFFBE',  // Light yellow - Very low risk
+            2: '#FFDD00',  // Yellow - Low risk
+            3: '#FFAA00',  // Orange - Moderate risk
+            4: '#FF6600',  // Red-orange - Elevated risk
+            6: '#FF0000',  // Red - High risk
+            9: '#A80000'   // Dark red - Very high risk
+        },
+        labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
+        description: 'High-resolution discrete risk zones for South India',
+        continuousLegend: false,
+        extent: 'south_india',
+        center: [12.5, 80.0],
+        zoom: 6
+    }
+};
 
         // Measurement tools
         var drawnItems = new L.FeatureGroup();
@@ -688,6 +700,7 @@
     </script>
 </body>
 </html>
+
 
 
 
