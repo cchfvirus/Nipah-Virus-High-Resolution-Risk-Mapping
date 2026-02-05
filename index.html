@@ -30,7 +30,7 @@
             padding: 10px;
             border-radius: 5px;
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            max-width: 200px;
+            max-width: 240px;
         }
         
         .legend h4 { margin: 0 0 8px; font-size: 14px; }
@@ -48,6 +48,23 @@
             margin-bottom: 5px; 
             overflow: hidden; 
             font-size: 11px;
+            cursor: pointer;
+            padding: 3px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+        
+        .legend .item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .legend .item.disabled {
+            opacity: 0.3;
+        }
+        
+        .legend .item input[type="checkbox"] {
+            margin-right: 5px;
+            cursor: pointer;
         }
         
         .legend .gradient-bar {
@@ -62,6 +79,27 @@
             justify-content: space-between;
             font-size: 11px;
             margin-top: 3px;
+        }
+        
+        .legend-controls {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+            font-size: 10px;
+        }
+        
+        .legend-controls button {
+            font-size: 10px;
+            padding: 3px 8px;
+            margin-right: 5px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 3px;
+        }
+        
+        .legend-controls button:hover {
+            background: #f0f0f0;
         }
         
         .layer-control {
@@ -278,8 +316,14 @@
         var currentLayer = null;
         var loadedCount = 0;
         var totalLayers = 3;
+        
+        // Track which classes are visible for each layer
+        var visibleClasses = {
+            'risk_bangladesh': {},
+            'risk_south_india': {}
+        };
 
-        // THREE-LAYER CONFIGURATION WITH DISCRETE COLORS
+        // THREE-LAYER CONFIGURATION WITH EXACT LEGEND FORMAT
         var layerConfigs = {
             'enm': {
                 file: 'enm_cog.tif',
@@ -296,7 +340,7 @@
             },
             'risk_bangladesh': {
                 file: 'risk_bang_cog.tif',
-                name: 'Disease Transmission Risk - Bangladesh (100m)',
+                name: 'Risk - Bangladesh (100m)',
                 discreteColors: {
                     0: '#000000',  // Black - No risk/background
                     1: '#FFFFBE',  // Light yellow - Very low risk
@@ -306,16 +350,26 @@
                     6: '#FF0000',  // Red - High risk
                     9: '#A80000'   // Dark red - Very high risk
                 },
-                labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
-                description: 'High-resolution discrete risk zones for Bangladesh',
-                continuousLegend: false,
+                labels: ['No Risk', 'Very High Risk'],
+                description: 'Nipah Virus Transmission Risk Zones - Bangladesh',
+                customLegend: true,
+                discreteDisplay: true,
+                legendItems: [
+                    { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
+                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+                ],
                 extent: 'bangladesh',
                 center: [23.8, 90.4],
                 zoom: 7
             },
             'risk_south_india': {
                 file: 'risk_india_cog.tif',
-                name: 'Disease Transmission Risk - South India (100m)',
+                name: 'Risk - South India (100m)',
                 discreteColors: {
                     0: '#000000',  // Black - No risk/background
                     1: '#FFFFBE',  // Light yellow - Very low risk
@@ -325,14 +379,36 @@
                     6: '#FF0000',  // Red - High risk
                     9: '#A80000'   // Dark red - Very high risk
                 },
-                labels: ['No Risk', 'Very Low', 'Low', 'Moderate', 'Elevated', 'High', 'Very High'],
-                description: 'High-resolution discrete risk zones for South India',
-                continuousLegend: false,
+                labels: ['No Risk', 'Very High Risk'],
+                description: 'Nipah Virus Transmission Risk Zones - South India',
+                customLegend: true,
+                discreteDisplay: true,
+                legendItems: [
+                    { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
+                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+                ],
                 extent: 'south_india',
                 center: [12.5, 80.0],
                 zoom: 6
             }
         };
+
+        // Initialize all classes as visible
+        Object.keys(layerConfigs).forEach(function(layerId) {
+            var config = layerConfigs[layerId];
+            if (config.discreteColors) {
+                visibleClasses[layerId] = {};
+                Object.keys(config.discreteColors).forEach(function(value) {
+                    // Start with all classes visible except 0 (background)
+                    visibleClasses[layerId][value] = (value != 0);
+                });
+            }
+        });
 
         // Measurement tools
         var drawnItems = new L.FeatureGroup();
@@ -442,6 +518,85 @@
             }
         }
 
+        function toggleClass(layerId, classValue) {
+            // Toggle the visibility state
+            visibleClasses[layerId][classValue] = !visibleClasses[layerId][classValue];
+            
+            // Refresh the layer
+            refreshLayer(layerId);
+            
+            // Update legend appearance
+            var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
+            var item = checkbox.parentElement;
+            if (visibleClasses[layerId][classValue]) {
+                item.classList.remove('disabled');
+            } else {
+                item.classList.add('disabled');
+            }
+        }
+
+        function selectAllClasses(layerId) {
+            var config = layerConfigs[layerId];
+            Object.keys(config.discreteColors).forEach(function(value) {
+                if (value != 0) {  // Don't enable background
+                    visibleClasses[layerId][value] = true;
+                }
+            });
+            refreshLayer(layerId);
+            updateLegend(layerId);
+        }
+
+        function selectNoneClasses(layerId) {
+            var config = layerConfigs[layerId];
+            Object.keys(config.discreteColors).forEach(function(value) {
+                visibleClasses[layerId][value] = false;
+            });
+            refreshLayer(layerId);
+            updateLegend(layerId);
+        }
+
+        function refreshLayer(layerId) {
+            if (!layers[layerId] || !georasters[layerId]) return;
+            
+            // Remove old layer
+            if (currentLayer === layerId) {
+                map.removeLayer(layers[layerId]);
+            }
+            
+            // Create new layer with updated visibility
+            var config = layerConfigs[layerId];
+            var georaster = georasters[layerId];
+            
+            var pixelValuesToColorFn = function(values) {
+                var value = values[0];
+                if (value === null || value === undefined || isNaN(value)) return null;
+                
+                value = Math.round(value);
+                
+                // Check if this class is visible
+                if (!visibleClasses[layerId][value]) {
+                    return null;  // Don't render this class
+                }
+                
+                return config.discreteColors[value] || null;
+            };
+            
+            var layer = new GeoRasterLayer({
+                georaster: georaster,
+                opacity: 0.7,
+                pixelValuesToColorFn: pixelValuesToColorFn,
+                resolution: 256,
+                pane: 'rasterPane'
+            });
+            
+            layers[layerId] = layer;
+            
+            // Re-add if this is the current layer
+            if (currentLayer === layerId) {
+                layer.addTo(map);
+            }
+        }
+
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
             map.removeLayer(streetMap);
@@ -485,10 +640,13 @@
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
                             
-                            // Round to nearest integer for discrete values
                             value = Math.round(value);
                             
-                            // Return color for this value, or null if not defined
+                            // Check if this class is visible
+                            if (!visibleClasses[layerId][value]) {
+                                return null;
+                            }
+                            
                             return config.discreteColors[value] || null;
                         };
                     } 
@@ -566,25 +724,31 @@
             
             legendDiv.innerHTML = '<h4>' + config.name + '</h4>';
             
-            // DISCRETE LEGEND (for risk zones)
-            if (config.discreteColors) {
-                var values = Object.keys(config.discreteColors).sort(function(a, b) {
-                    return parseInt(a) - parseInt(b);
-                });
-                
-                values.forEach(function(value, index) {
-                    var color = config.discreteColors[value];
-                    var label = config.labels[index] || 'Class ' + value;
+            // CUSTOM LEGEND with legendItems (for risk zones)
+            if (config.customLegend && config.legendItems) {
+                config.legendItems.forEach(function(item) {
+                    // Skip background (value 0)
+                    if (item.value == 0) return;
                     
-                    // Skip background/no data (value 0)
-                    if (value == 0) return;
+                    var isChecked = visibleClasses[layerId][item.value];
+                    var disabledClass = isChecked ? '' : ' disabled';
                     
                     legendDiv.innerHTML += 
-                        '<div class="item">' +
-                        '<i style="background:' + color + '"></i> ' +
-                        label +
+                        '<div class="item' + disabledClass + '">' +
+                        '<input type="checkbox" id="class-' + layerId + '-' + item.value + '" ' +
+                        (isChecked ? 'checked' : '') + ' ' +
+                        'onchange="toggleClass(\'' + layerId + '\', ' + item.value + ')">' +
+                        '<i style="background:' + item.color + '"></i> ' +
+                        item.label +
                         '</div>';
                 });
+                
+                // Add select all/none buttons
+                legendDiv.innerHTML += 
+                    '<div class="legend-controls">' +
+                    '<button onclick="selectAllClasses(\'' + layerId + '\')">All</button>' +
+                    '<button onclick="selectNoneClasses(\'' + layerId + '\')">None</button>' +
+                    '</div>';
             }
             // CONTINUOUS LEGEND (for ENM)
             else if (config.continuousLegend) {
@@ -683,4 +847,3 @@
     </script>
 </body>
 </html>
-
