@@ -707,64 +707,85 @@
             console.log('Popup bound for:', config.name);
         }
 
-        // LOAD VECTOR LAYERS - FIXED VERSION
-        function loadVectorLayer(vectorId) {
-            var config = vectorConfigs[vectorId];
+        // LOAD VECTOR LAYERS - ENHANCED VERSION WITH FORCED INTERACTIVITY
+function loadVectorLayer(vectorId) {
+    var config = vectorConfigs[vectorId];
+    
+    updateStatus('Loading ' + config.name + '...');
+    console.log('Loading vector layer:', vectorId, config.file);
+    
+    fetch(config.file)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            updateStatus(config.name + ' loaded successfully');
+            console.log('Loaded GeoJSON data:', data);
             
-            updateStatus('Loading ' + config.name + '...');
-            console.log('Loading vector layer:', vectorId, config.file);
+            var layer;
             
-            fetch(config.file)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('HTTP error! status: ' + response.status);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    updateStatus(config.name + ' loaded successfully');
-                    console.log('Loaded GeoJSON data:', data);
-                    
-                    var layer;
-                    
-                    if (config.type === 'point') {
-                        layer = L.geoJSON(data, {
-                            pointToLayer: function(feature, latlng) {
-                                return L.circleMarker(latlng, config.style);
-                            },
-                            onEachFeature: function(feature, featureLayer) {
-                                if (config.enablePopup) {
-                                    createPopup(feature, featureLayer, config);
-                                }
-                            },
-                            pane: 'vectorPane'
-                        });
-                    } else {
-                        layer = L.geoJSON(data, {
-                            style: config.style,
-                            onEachFeature: function(feature, featureLayer) {
-                                if (config.enablePopup) {
-                                    createPopup(feature, featureLayer, config);
-                                }
-                            },
-                            pane: 'vectorPane'
-                        });
-                    }
-                    
-                    vectorLayers[vectorId] = layer;
-                    console.log('Vector layer created:', vectorId);
-                    
-                    if (config.visible) {
-                        layer.addTo(map);
-                        console.log('Vector layer added to map:', vectorId);
-                    }
-                })
-                .catch(error => {
-                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
-                    updateStatus(errorMsg, true);
-                    console.error(errorMsg, error);
+            if (config.type === 'point') {
+                layer = L.geoJSON(data, {
+                    pointToLayer: function(feature, latlng) {
+                        var marker = L.circleMarker(latlng, config.style);
+                        // FORCE INTERACTIVITY
+                        marker.options.interactive = true;
+                        marker.options.bubblingMouseEvents = true;
+                        return marker;
+                    },
+                    onEachFeature: function(feature, featureLayer) {
+                        if (config.enablePopup) {
+                            createPopup(feature, featureLayer, config);
+                            // FORCE POPUP BINDING
+                            featureLayer.on('click', function(e) {
+                                console.log('Point clicked!', config.name);
+                                featureLayer.openPopup();
+                                L.DomEvent.stopPropagation(e);
+                            });
+                        }
+                    },
+                    pane: 'vectorPane'
                 });
-        }
+            } else {
+                layer = L.geoJSON(data, {
+                    style: function(feature) {
+                        return Object.assign({}, config.style, {
+                            interactive: true,
+                            bubblingMouseEvents: true
+                        });
+                    },
+                    onEachFeature: function(feature, featureLayer) {
+                        if (config.enablePopup) {
+                            createPopup(feature, featureLayer, config);
+                            // FORCE POPUP BINDING
+                            featureLayer.on('click', function(e) {
+                                console.log('Polygon clicked!', config.name);
+                                featureLayer.openPopup();
+                                L.DomEvent.stopPropagation(e);
+                            });
+                        }
+                    },
+                    pane: 'vectorPane'
+                });
+            }
+            
+            vectorLayers[vectorId] = layer;
+            console.log('Vector layer created:', vectorId);
+            
+            if (config.visible) {
+                layer.addTo(map);
+                console.log('Vector layer added to map:', vectorId);
+            }
+        })
+        .catch(error => {
+            var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
+            updateStatus(errorMsg, true);
+            console.error(errorMsg, error);
+        });
+}
 
         function toggleVectorLayer(vectorId) {
             if (vectorLayers[vectorId]) {
@@ -1012,6 +1033,7 @@
     </script>
 </body>
 </html>
+
 
 
 
