@@ -300,9 +300,10 @@
 
         // Create custom panes
         map.createPane('rasterPane');
-        map.getPane('rasterPane').style.zIndex = 300;
+        map.getPane('rasterPane').style.zIndex = 200;
         map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 400;
+        map.getPane('vectorPane').style.zIndex = 650;  // Much higher to ensure vectors are clickable
+        map.getPane('vectorPane').style.pointerEvents = 'auto';  // Ensure clicks work
 
         // Define basemaps
         var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1011,3 +1012,4 @@
     </script>
 </body>
 </html>
+
