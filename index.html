@@ -324,10 +324,12 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 7; // Updated count
+        var totalLayers = 9; // Updated to include all layers
         
         // Track which classes are visible for each layer
         var visibleClasses = {
+            'risk_bangladesh': {},
+            'risk_south_india': {},
             'pop_risk_india': {},
             'lc_risk_india': {},
             'pop_risk_bangladesh': {},
@@ -360,21 +362,76 @@
                 center: [18.0, 82.5],
                 zoom: 5
             },
-            'pop_risk_india': {
-                file: 'pop_risk_india_cog.tif',
-                name: 'Population Risk - South India (100m)',
+            'risk_bangladesh': {
+                file: 'risk_bang_web.tif',
+                name: 'Risk - Bangladesh (100m)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#000000', // Black - No risk/background
+                    1: '#FFFFBE', // Light yellow - Very low risk
+                    2: '#FFDD00', // Yellow - Low risk
+                    3: '#FFAA00', // Orange - Moderate risk
+                    4: '#FF6600', // Red-orange - Elevated risk
+                    6: '#FF0000', // Red - High risk
+                    9: '#A80000'  // Dark red - Very high risk
                 },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
+                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+                ],
+                center: [23.8, 90.4],
+                zoom: 7
+            },
+            'risk_south_india': {
+                file: 'risk_india_web.tif',
+                name: 'Risk - South India (100m)',
+                discreteColors: {
+                    0: '#000000', // Black - No risk/background
+                    1: '#FFFFBE', // Light yellow - Very low risk
+                    2: '#FFDD00', // Yellow - Low risk
+                    3: '#FFAA00', // Orange - Moderate risk
+                    4: '#FF6600', // Red-orange - Elevated risk
+                    6: '#FF0000', // Red - High risk
+                    9: '#A80000'  // Dark red - Very high risk
+                },
+                customLegend: true,
+                legendItems: [
+                    { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
+                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+                ],
+                center: [12.5, 80.0],
+                zoom: 6
+            },
+            'pop_risk_india': {
+                file: 'pop_risk_india_cog.tif',
+                name: 'Population Risk - South India (100m)',
+                discreteColors: {
+                    0: '#000000', // Black - No risk/background
+                    1: '#FFFFBE', // Light yellow - Very low risk
+                    2: '#FFDD00', // Yellow - Low risk
+                    3: '#FFAA00', // Orange - Moderate risk
+                    4: '#FF6600', // Red-orange - Elevated risk
+                    6: '#FF0000', // Red - High risk
+                    9: '#A80000'  // Dark red - Very high risk
+                },
+                customLegend: true,
+                legendItems: [
+                    { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [12.5, 80.0],
@@ -384,17 +441,22 @@
                 file: 'lc_risk_india_cog.tif',
                 name: 'Landcover Risk - South India (100m)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#000000', // Black - No risk/background
+                    1: '#FFFFBE', // Light yellow - Very low risk
+                    2: '#FFDD00', // Yellow - Low risk
+                    3: '#FFAA00', // Orange - Moderate risk
+                    4: '#FF6600', // Red-orange - Elevated risk
+                    6: '#FF0000', // Red - High risk
+                    9: '#A80000'  // Dark red - Very high risk
                 },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [12.5, 80.0],
@@ -404,17 +466,22 @@
                 file: 'pop_risk_bang_cog.tif',
                 name: 'Population Risk - Bangladesh (100m)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#000000', // Black - No risk/background
+                    1: '#FFFFBE', // Light yellow - Very low risk
+                    2: '#FFDD00', // Yellow - Low risk
+                    3: '#FFAA00', // Orange - Moderate risk
+                    4: '#FF6600', // Red-orange - Elevated risk
+                    6: '#FF0000', // Red - High risk
+                    9: '#A80000'  // Dark red - Very high risk
                 },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.8, 90.4],
@@ -424,17 +491,22 @@
                 file: 'lc_risk_bang_cog.tif',
                 name: 'Landcover Risk - Bangladesh (100m)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#000000', // Black - No risk/background
+                    1: '#FFFFBE', // Light yellow - Very low risk
+                    2: '#FFDD00', // Yellow - Low risk
+                    3: '#FFAA00', // Orange - Moderate risk
+                    4: '#FF6600', // Red-orange - Elevated risk
+                    6: '#FF0000', // Red - High risk
+                    9: '#A80000'  // Dark red - Very high risk
                 },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.8, 90.4],
