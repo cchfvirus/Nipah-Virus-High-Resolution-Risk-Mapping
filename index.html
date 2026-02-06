@@ -294,6 +294,9 @@
         // Initialize map - start with regional view
         var map = L.map('map').setView([18.0, 82.5], 6);
 
+        // Ensure basemaps render beneath rasters
+        map.getPane('tilePane').style.zIndex = 100;
+
         // Create custom panes with explicit z-index ordering
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 200;
@@ -317,23 +320,31 @@
             maxZoom: 19
         });
 
-        var adminGrayBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '@Esri',
-            maxZoom: 19
-         }
+        // Admin boundaries basemap (Esri Gray Canvas base + reference)
+        var adminGrayBase = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+            {
+                attribution: 'Tiles © Esri',
+                maxZoom: 19
+            }
         );
 
-        var adminGrayReference = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '@Esri',
-            maxZoom: 19
-         }
+        var adminGrayReference = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+            {
+                attribution: 'Tiles © Esri',
+                maxZoom: 19
+            }
         );
+
         // Group them so they behave as ONE basemap
         var adminBoundariesMap = L.layerGroup([
             adminGrayBase,
             adminGrayReference
-        ]);    
-        osmMap.addTo(map);
+        ]);
+
+        // Default basemap: Admin Boundaries (change to osmMap.addTo(map) if desired)
+        adminBoundariesMap.addTo(map);
 
         // Store layers and georasters
         var layers = {};
@@ -711,10 +722,12 @@
             }
         }
 
+        // UPDATED: supports admin basemap
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
             map.removeLayer(streetMap);
             map.removeLayer(aerialMap);
+            map.removeLayer(adminBoundariesMap);
             
             if (basemapType === 'osm') {
                 osmMap.addTo(map);
@@ -722,6 +735,8 @@
                 streetMap.addTo(map);
             } else if (basemapType === 'aerial') {
                 aerialMap.addTo(map);
+            } else if (basemapType === 'admin') {
+                adminBoundariesMap.addTo(map);
             }
         }
 
@@ -993,7 +1008,8 @@
             var div = L.DomUtil.create('div', 'layer-control');
             
             div.innerHTML = '<h4>Basemaps</h4>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="admin" checked onchange="switchBasemap(\'admin\')">Admin Boundaries (Esri Gray)</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map (Esri)</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\'aerial\')">Aerial Imagery (Esri)</label>';
             
@@ -1077,13 +1093,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
