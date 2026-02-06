@@ -3,7 +3,7 @@
 <head>
   <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
@@ -19,6 +19,7 @@
       border-radius: 5px;
       max-width: 320px;
     }
+
     .info h4 { margin: 0 0 5px; color: #333; }
     .info p { margin: 5px 0; font-size: 12px; color: #666; }
 
@@ -31,7 +32,9 @@
       box-shadow: 0 0 15px rgba(0,0,0,0.2);
       max-width: 240px;
     }
+
     .legend h4 { margin: 0 0 8px; font-size: 14px; }
+
     .legend i {
       width: 20px;
       height: 18px;
@@ -40,6 +43,7 @@
       opacity: 0.8;
       border: 1px solid #ccc;
     }
+
     .legend .item {
       margin-bottom: 5px;
       overflow: hidden;
@@ -49,9 +53,14 @@
       border-radius: 3px;
       transition: background-color 0.2s;
     }
+
     .legend .item:hover { background-color: #f0f0f0; }
     .legend .item.disabled { opacity: 0.3; }
-    .legend .item input[type="checkbox"] { margin-right: 5px; cursor: pointer; }
+
+    .legend .item input[type="checkbox"] {
+      margin-right: 5px;
+      cursor: pointer;
+    }
 
     .legend .gradient-bar {
       width: 100%;
@@ -59,6 +68,7 @@
       margin: 10px 0;
       border: 1px solid #ccc;
     }
+
     .legend .gradient-labels {
       display: flex;
       justify-content: space-between;
@@ -72,6 +82,7 @@
       border-top: 1px solid #ddd;
       font-size: 10px;
     }
+
     .legend-controls button {
       font-size: 10px;
       padding: 3px 8px;
@@ -81,6 +92,7 @@
       background: white;
       border-radius: 3px;
     }
+
     .legend-controls button:hover { background: #f0f0f0; }
 
     .layer-control {
@@ -92,13 +104,16 @@
       overflow-y: auto;
       max-width: 280px;
     }
+
     .layer-control h4 { margin: 0 0 10px; font-size: 14px; }
+
     .layer-control label {
       display: block;
       margin: 8px 0;
       cursor: pointer;
       font-size: 13px;
     }
+
     .layer-control input[type="radio"],
     .layer-control input[type="checkbox"] { margin-right: 8px; }
 
@@ -107,18 +122,22 @@
       padding-top: 10px;
       border-top: 1px solid #ddd;
     }
+
     .opacity-section h5 {
       margin: 0 0 8px;
       font-size: 12px;
       font-weight: bold;
     }
+
     .opacity-control { margin-bottom: 12px; }
+
     .opacity-control label {
       display: block;
       font-size: 11px;
       color: #666;
       margin-bottom: 4px;
     }
+
     .opacity-control input[type="range"] {
       width: 100%;
       height: 4px;
@@ -126,6 +145,7 @@
       outline: none;
       cursor: pointer;
     }
+
     .opacity-value {
       float: right;
       font-weight: bold;
@@ -177,6 +197,7 @@
       opacity: 0;
       transition: opacity 0.3s;
     }
+
     .copy-notification.show { opacity: 1; }
 
     .north-arrow {
@@ -196,6 +217,7 @@
       font-weight: bold;
       color: #c30b0b;
     }
+
     .north-arrow::before { content: "N"; }
     .north-arrow::after {
       content: "";
@@ -226,10 +248,10 @@
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
   <script>
-    // Initialize map
+    // Initialize map - start with regional view
     var map = L.map('map').setView([18.0, 82.5], 5);
 
-    // Panes (rasters below vectors)
+    // Create custom panes
     map.createPane('rasterPane');
     map.getPane('rasterPane').style.zIndex = 200;
     map.getPane('rasterPane').style.pointerEvents = 'none';
@@ -238,20 +260,18 @@
     map.getPane('vectorPane').style.zIndex = 1000;
     map.getPane('vectorPane').style.pointerEvents = 'auto';
 
-    // Basemaps
+    // Define basemaps
     var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19
     });
 
-    var streetMap = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles © Esri',
       maxZoom: 19
     });
 
-    var aerialMap = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    var aerialMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles © Esri',
       maxZoom: 19
     });
@@ -264,15 +284,12 @@
     var vectorLayers = {};
     var currentLayer = null;
     var loadedCount = 0;
-    var totalLayers = 4; // CHANGED: now 4 rasters
+    var totalLayers = 5; // UPDATED: enm + uncertainty + 4 discrete = 6? (see below)
 
-    // Track visible classes (discrete rasters only)
-    var visibleClasses = {
-      'risk_bangladesh': {},
-      'risk_south_india': {}
-    };
+    // Track which classes are visible for each layer
+    var visibleClasses = {};
 
-    // RASTER LAYER CONFIGS (CHANGED: added enm_uncertainty)
+    // RASTER LAYER CONFIGURATIONS
     var layerConfigs = {
       'enm': {
         file: 'enm_cog.tif',
@@ -291,11 +308,10 @@
       'enm_uncertainty': {
         file: 'enm_uncertainty_cog.tif',
         name: 'ENM - Uncertainty (1km)',
-        // light -> dark blue (low uncertainty is light)
-        colors: ['#e3f2fd', '#bbdefb', '#90caf9', '#64b5f6', '#42a5f5', '#1e88e5', '#0d47a1'],
+        colors: ['#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#084594'],
         domain: [0, 1],
         labels: ['Low Uncertainty', 'High Uncertainty'],
-        description: 'ENM prediction uncertainty (Bangladesh & South India)',
+        description: 'Regional model uncertainty (light = low, dark = high)',
         mode: 'lch',
         continuousLegend: true,
         extent: 'regional',
@@ -303,9 +319,10 @@
         zoom: 5
       },
 
-      'risk_bangladesh': {
-        file: 'risk_bang_cog.tif',
-        name: 'Risk - Bangladesh (100m)',
+      // ---- INDIA (DISCRETE) ----
+      'pop_risk_india': {
+        file: 'pop_risk_india_cog.tif',
+        name: 'Population Risk - South India (100m)',
         discreteColors: {
           0: '#000000',
           1: '#FFFFBE',
@@ -316,7 +333,68 @@
           9: '#A80000'
         },
         labels: ['No Risk', 'Very High Risk'],
-        description: 'Nipah Virus Transmission Risk Zones - Bangladesh',
+        description: 'Population-based Nipah Risk Zones - South India',
+        customLegend: true,
+        discreteDisplay: true,
+        legendItems: [
+          { value: 0, color: '#000000', label: '0 - No Risk' },
+          { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+          { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+          { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+          { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+          { value: 6, color: '#FF0000', label: '6 - High Risk' },
+          { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+        ],
+        extent: 'south_india',
+        center: [12.5, 80.0],
+        zoom: 6
+      },
+
+      'lc_risk_india': {
+        file: 'lc_risk_india_cog.tif',
+        name: 'Landcover Risk - South India (100m)',
+        discreteColors: {
+          0: '#000000',
+          1: '#FFFFBE',
+          2: '#FFDD00',
+          3: '#FFAA00',
+          4: '#FF6600',
+          6: '#FF0000',
+          9: '#A80000'
+        },
+        labels: ['No Risk', 'Very High Risk'],
+        description: 'Landcover-based Nipah Risk Zones - South India',
+        customLegend: true,
+        discreteDisplay: true,
+        legendItems: [
+          { value: 0, color: '#000000', label: '0 - No Risk' },
+          { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+          { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+          { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+          { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+          { value: 6, color: '#FF0000', label: '6 - High Risk' },
+          { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+        ],
+        extent: 'south_india',
+        center: [12.5, 80.0],
+        zoom: 6
+      },
+
+      // ---- BANGLADESH (DISCRETE) ----
+      'pop_risk_bangladesh': {
+        file: 'pop_risk_bang_cog.tif',
+        name: 'Population Risk - Bangladesh (100m)',
+        discreteColors: {
+          0: '#000000',
+          1: '#FFFFBE',
+          2: '#FFDD00',
+          3: '#FFAA00',
+          4: '#FF6600',
+          6: '#FF0000',
+          9: '#A80000'
+        },
+        labels: ['No Risk', 'Very High Risk'],
+        description: 'Population-based Nipah Risk Zones - Bangladesh',
         customLegend: true,
         discreteDisplay: true,
         legendItems: [
@@ -333,9 +411,9 @@
         zoom: 7
       },
 
-      'risk_south_india': {
-        file: 'risk_india_cog.tif',
-        name: 'Risk - South India (100m)',
+      'lc_risk_bangladesh': {
+        file: 'lc_risk_bang_cog.tif',
+        name: 'Landcover Risk - Bangladesh (100m)',
         discreteColors: {
           0: '#000000',
           1: '#FFFFBE',
@@ -346,7 +424,7 @@
           9: '#A80000'
         },
         labels: ['No Risk', 'Very High Risk'],
-        description: 'Nipah Virus Transmission Risk Zones - South India',
+        description: 'Landcover-based Nipah Risk Zones - Bangladesh',
         customLegend: true,
         discreteDisplay: true,
         legendItems: [
@@ -358,13 +436,172 @@
           { value: 6, color: '#FF0000', label: '6 - High Risk' },
           { value: 9, color: '#A80000', label: '9 - Very High Risk' }
         ],
-        extent: 'south_india',
-        center: [12.5, 80.0],
-        zoom: 6
+        extent: 'bangladesh',
+        center: [23.8, 90.4],
+        zoom: 7
       }
     };
 
-    // VECTOR CONFIGS (kept working + fixed commas)
+    // ✅ FIX: totalLayers should match layerConfigs count
+    totalLayers = Object.keys(layerConfigs).length;
+
+    // Initialize all discrete classes as visible
+    Object.keys(layerConfigs).forEach(function(layerId) {
+      var config = layerConfigs[layerId];
+      if (config.discreteColors) {
+        visibleClasses[layerId] = {};
+        Object.keys(config.discreteColors).forEach(function(value) {
+          visibleClasses[layerId][value] = true;
+        });
+      }
+    });
+
+    // Measurement tools
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    var drawControl = new L.Control.Draw({
+      position: 'topright',
+      draw: {
+        polyline: { shapeOptions: { color: '#f357a1', weight: 3 }, metric: true, feet: false, showLength: true },
+        polygon: { shapeOptions: { color: '#f357a1', weight: 3 }, showArea: true, metric: true },
+        rectangle: false, circle: false, marker: false, circlemarker: false
+      },
+      edit: { featureGroup: drawnItems, remove: true }
+    });
+    map.addControl(drawControl);
+
+    map.on(L.Draw.Event.CREATED, function (event) {
+      var layer = event.layer;
+      var type = event.layerType;
+
+      if (type === 'polyline') {
+        var length = 0;
+        var latlngs = layer.getLatLngs();
+        for (var i = 0; i < latlngs.length - 1; i++) length += latlngs[i].distanceTo(latlngs[i + 1]);
+        layer.bindPopup('<b>Distance:</b> ' + (length / 1000).toFixed(2) + ' km');
+        drawnItems.addLayer(layer);
+      } else if (type === 'polygon') {
+        var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+        layer.bindPopup('<b>Area:</b> ' + (area / 1000000).toFixed(2) + ' km²');
+        drawnItems.addLayer(layer);
+      }
+    });
+
+    function copyCoordinatesToClipboard(lat, lng) {
+      var coordText = lat.toFixed(6) + ', ' + lng.toFixed(6);
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(coordText).then(function() {
+          showCopyNotification('Coordinates copied: ' + coordText);
+        }).catch(function() {
+          fallbackCopyTextToClipboard(coordText);
+        });
+      } else {
+        fallbackCopyTextToClipboard(coordText);
+      }
+    }
+
+    function fallbackCopyTextToClipboard(text) {
+      var textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.top = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        showCopyNotification('Coordinates copied: ' + text);
+      } catch (err) {
+        showCopyNotification('Failed to copy coordinates', true);
+      }
+      document.body.removeChild(textArea);
+    }
+
+    function showCopyNotification(message, isError) {
+      var notification = document.getElementById('copy-notification');
+      notification.textContent = message;
+      notification.style.background = isError ? 'rgba(198, 40, 40, 0.9)' : 'rgba(0, 0, 0, 0.8)';
+      notification.classList.add('show');
+      setTimeout(function() { notification.classList.remove('show'); }, 2000);
+    }
+
+    function updateStatus(message, isError) {
+      var statusDiv = document.getElementById('load-status');
+      if (isError) statusDiv.innerHTML += '<div class="error">' + message + '</div>';
+      else statusDiv.innerHTML += '<div>' + message + '</div>';
+      console.log(message);
+    }
+
+    function updateLayerOpacity(layerId, opacity) {
+      if (layers[layerId]) layers[layerId].setOpacity(opacity);
+    }
+
+    function toggleClass(layerId, classValue) {
+      visibleClasses[layerId][classValue] = !visibleClasses[layerId][classValue];
+      refreshLayer(layerId);
+
+      var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
+      var item = checkbox.parentElement;
+      if (visibleClasses[layerId][classValue]) item.classList.remove('disabled');
+      else item.classList.add('disabled');
+    }
+
+    function selectAllClasses(layerId) {
+      var config = layerConfigs[layerId];
+      Object.keys(config.discreteColors).forEach(function(value) { visibleClasses[layerId][value] = true; });
+      refreshLayer(layerId);
+      updateLegend(layerId);
+    }
+
+    function selectNoneClasses(layerId) {
+      var config = layerConfigs[layerId];
+      Object.keys(config.discreteColors).forEach(function(value) { visibleClasses[layerId][value] = false; });
+      refreshLayer(layerId);
+      updateLegend(layerId);
+    }
+
+    function refreshLayer(layerId) {
+      if (!layers[layerId] || !georasters[layerId]) return;
+
+      if (currentLayer === layerId) map.removeLayer(layers[layerId]);
+
+      var config = layerConfigs[layerId];
+      var georaster = georasters[layerId];
+
+      var pixelValuesToColorFn = function(values) {
+        var value = values[0];
+        if (value === null || value === undefined || isNaN(value)) return null;
+        value = Math.round(value);
+        if (!visibleClasses[layerId][value]) return null;
+        return config.discreteColors[value] || null;
+      };
+
+      var layer = new GeoRasterLayer({
+        georaster: georaster,
+        opacity: 0.7,
+        pixelValuesToColorFn: pixelValuesToColorFn,
+        resolution: 256,
+        pane: 'rasterPane',
+        interactive: false
+      });
+
+      layers[layerId] = layer;
+      if (currentLayer === layerId) layer.addTo(map);
+    }
+
+    function switchBasemap(basemapType) {
+      map.removeLayer(osmMap);
+      map.removeLayer(streetMap);
+      map.removeLayer(aerialMap);
+
+      if (basemapType === 'osm') osmMap.addTo(map);
+      else if (basemapType === 'street') streetMap.addTo(map);
+      else if (basemapType === 'aerial') aerialMap.addTo(map);
+    }
+
+    // VECTOR LAYERS
     var vectorConfigs = {
       'outbreaks': {
         file: 'outbreaks.geojson',
@@ -407,198 +644,25 @@
       }
     };
 
-    // Init class visibility for discrete rasters
-    Object.keys(layerConfigs).forEach(function(layerId) {
-      var config = layerConfigs[layerId];
-      if (config.discreteColors) {
-        visibleClasses[layerId] = {};
-        Object.keys(config.discreteColors).forEach(function(v) {
-          visibleClasses[layerId][v] = true;
-        });
-      }
-    });
-
-    // Draw tools
-    var drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-
-    var drawControl = new L.Control.Draw({
-      position: 'topright',
-      draw: {
-        polyline: {
-          shapeOptions: { color: '#f357a1', weight: 3 },
-          metric: true,
-          feet: false,
-          showLength: true
-        },
-        polygon: {
-          shapeOptions: { color: '#f357a1', weight: 3 },
-          showArea: true,
-          metric: true
-        },
-        rectangle: false,
-        circle: false,
-        marker: false,
-        circlemarker: false
-      },
-      edit: {
-        featureGroup: drawnItems,
-        remove: true
-      }
-    });
-    map.addControl(drawControl);
-
-    map.on(L.Draw.Event.CREATED, function (event) {
-      var layer = event.layer;
-      var type = event.layerType;
-
-      if (type === 'polyline') {
-        var length = 0;
-        var latlngs = layer.getLatLngs();
-        for (var i = 0; i < latlngs.length - 1; i++) {
-          length += latlngs[i].distanceTo(latlngs[i + 1]);
-        }
-        layer.bindPopup('<b>Distance:</b> ' + (length / 1000).toFixed(2) + ' km');
-        drawnItems.addLayer(layer);
-      } else if (type === 'polygon') {
-        var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-        layer.bindPopup('<b>Area:</b> ' + (area / 1000000).toFixed(2) + ' km²');
-        drawnItems.addLayer(layer);
-      }
-    });
-
-    function copyCoordinatesToClipboard(lat, lng) {
-      var coordText = lat.toFixed(6) + ', ' + lng.toFixed(6);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(coordText).then(function() {
-          showCopyNotification('Coordinates copied: ' + coordText);
-        }).catch(function() {
-          fallbackCopyTextToClipboard(coordText);
-        });
-      } else {
-        fallbackCopyTextToClipboard(coordText);
-      }
-    }
-
-    function fallbackCopyTextToClipboard(text) {
-      var textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.top = "-9999px";
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        showCopyNotification('Coordinates copied: ' + text);
-      } catch (err) {
-        showCopyNotification('Failed to copy coordinates', true);
-      }
-      document.body.removeChild(textArea);
-    }
-
-    function showCopyNotification(message, isError) {
-      var notification = document.getElementById('copy-notification');
-      notification.textContent = message;
-      notification.style.background = isError ? 'rgba(198, 40, 40, 0.9)' : 'rgba(0, 0, 0, 0.8)';
-      notification.classList.add('show');
-      setTimeout(function() { notification.classList.remove('show'); }, 2000);
-    }
-
-    function updateStatus(message, isError) {
-      var statusDiv = document.getElementById('load-status');
-      if (isError) statusDiv.innerHTML += '<div class="error">' + message + '</div>';
-      else statusDiv.innerHTML += '<div>' + message + '</div>';
-      console.log(message);
-    }
-
-    function updateLayerOpacity(layerId, opacity) {
-      if (layers[layerId]) layers[layerId].setOpacity(opacity);
-    }
-
-    function toggleClass(layerId, classValue) {
-      visibleClasses[layerId][classValue] = !visibleClasses[layerId][classValue];
-      refreshLayer(layerId);
-
-      var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
-      if (!checkbox) return;
-      var item = checkbox.parentElement;
-      if (visibleClasses[layerId][classValue]) item.classList.remove('disabled');
-      else item.classList.add('disabled');
-    }
-
-    function selectAllClasses(layerId) {
-      var config = layerConfigs[layerId];
-      Object.keys(config.discreteColors).forEach(function(v) { visibleClasses[layerId][v] = true; });
-      refreshLayer(layerId);
-      updateLegend(layerId);
-    }
-
-    function selectNoneClasses(layerId) {
-      var config = layerConfigs[layerId];
-      Object.keys(config.discreteColors).forEach(function(v) { visibleClasses[layerId][v] = false; });
-      refreshLayer(layerId);
-      updateLegend(layerId);
-    }
-
-    function refreshLayer(layerId) {
-      if (!layers[layerId] || !georasters[layerId]) return;
-      if (currentLayer === layerId) map.removeLayer(layers[layerId]);
-
-      var config = layerConfigs[layerId];
-      var georaster = georasters[layerId];
-
-      var pixelValuesToColorFn = function(values) {
-        var value = values[0];
-        if (value === null || value === undefined || isNaN(value)) return null;
-        value = Math.round(value);
-        if (!visibleClasses[layerId][value]) return null;
-        return config.discreteColors[value] || null;
-      };
-
-      var layer = new GeoRasterLayer({
-        georaster: georaster,
-        opacity: 0.7,
-        pixelValuesToColorFn: pixelValuesToColorFn,
-        resolution: 256,
-        pane: 'rasterPane',
-        interactive: false
-      });
-
-      layers[layerId] = layer;
-      if (currentLayer === layerId) layer.addTo(map);
-    }
-
-    function switchBasemap(basemapType) {
-      map.removeLayer(osmMap);
-      map.removeLayer(streetMap);
-      map.removeLayer(aerialMap);
-
-      if (basemapType === 'osm') osmMap.addTo(map);
-      else if (basemapType === 'street') streetMap.addTo(map);
-      else if (basemapType === 'aerial') aerialMap.addTo(map);
-    }
-
     function loadVectorLayer(vectorId) {
       var config = vectorConfigs[vectorId];
+
       updateStatus('Loading ' + config.name + '...');
       console.log('Loading vector layer:', vectorId, config.file);
 
       fetch(config.file)
-        .then(function(response) {
+        .then(response => {
           if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
           return response.json();
         })
-        .then(function(data) {
+        .then(data => {
           updateStatus(config.name + ' loaded successfully');
-          console.log('Loaded GeoJSON data:', data);
 
           var layer;
 
           if (config.type === 'point') {
             layer = L.geoJSON(data, {
-              pointToLayer: function(feature, latlng) {
-                return L.circleMarker(latlng, config.style);
-              },
+              pointToLayer: function(feature, latlng) { return L.circleMarker(latlng, config.style); },
               onEachFeature: function(feature, featureLayer) {
                 var popupContent = '<h3>' + config.name + '</h3><table>';
                 for (var key in feature.properties) {
@@ -617,14 +681,14 @@
             layer = L.geoJSON(data, {
               style: config.style,
               onEachFeature: function(feature, featureLayer) {
-                var popupContent = '<h3>2026 Nipah Outbreak - West Bengal</h3><table>';
-                popupContent += '<tr><td>Location</td><td>North 24 Parganas district, West Bengal, India</td></tr>';
-                popupContent += '<tr><td>Date</td><td>January 2026</td></tr>';
-                popupContent += '<tr><td>Cases</td><td>2 healthcare workers (nurses)</td></tr>';
-                popupContent += '<tr><td>Facility</td><td>Private hospital in Barasat</td></tr>';
-                popupContent += '<tr><td>Status</td><td>Laboratory-confirmed Nipah virus infections</td></tr>';
-                popupContent += '<tr><td>Source</td><td><a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON536" target="_blank">WHO Disease Outbreak News</a></td></tr>';
-                popupContent += '</table>';
+                var popupContent = '<h3>2026 Nipah Outbreak - West Bengal</h3><table>' +
+                  '<tr><td>Location</td><td>North 24 Parganas district, West Bengal, India</td></tr>' +
+                  '<tr><td>Date</td><td>January 2026</td></tr>' +
+                  '<tr><td>Cases</td><td>2 healthcare workers (nurses)</td></tr>' +
+                  '<tr><td>Facility</td><td>Private hospital in Barasat</td></tr>' +
+                  '<tr><td>Status</td><td>Laboratory-confirmed Nipah virus infections</td></tr>' +
+                  '<tr><td>Source</td><td><a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON536" target="_blank">WHO Disease Outbreak News</a></td></tr>' +
+                  '</table>';
                 featureLayer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
               },
               pane: 'vectorPane'
@@ -634,14 +698,9 @@
           }
 
           vectorLayers[vectorId] = layer;
-          console.log('Vector layer created:', vectorId);
-
-          if (config.visible) {
-            layer.addTo(map);
-            console.log('Vector layer added to map:', vectorId);
-          }
+          if (config.visible) layer.addTo(map);
         })
-        .catch(function(error) {
+        .catch(error => {
           var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
           updateStatus(errorMsg, true);
           console.error(errorMsg, error);
@@ -656,19 +715,20 @@
 
     function loadLayer(layerId) {
       var config = layerConfigs[layerId];
+
       updateStatus('Loading ' + config.name + '...');
 
       fetch(config.file)
-        .then(function(response) {
+        .then(response => {
           if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
           updateStatus(config.name + ' fetched successfully');
           return response.arrayBuffer();
         })
-        .then(function(arrayBuffer) {
+        .then(arrayBuffer => {
           updateStatus('Parsing ' + config.name + '...');
           return parseGeoraster(arrayBuffer);
         })
-        .then(function(georaster) {
+        .then(georaster => {
           updateStatus(config.name + ' parsed successfully');
           georasters[layerId] = georaster;
 
@@ -718,7 +778,7 @@
             setTimeout(function() { document.getElementById('loading').style.display = 'none'; }, 1000);
           }
         })
-        .catch(function(error) {
+        .catch(error => {
           var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
           updateStatus(errorMsg, true);
           console.error(errorMsg, error);
@@ -753,31 +813,32 @@
 
           legendDiv.innerHTML +=
             '<div class="item' + disabledClass + '">' +
-              '<input type="checkbox" id="class-' + layerId + '-' + item.value + '" ' +
-                (isChecked ? 'checked' : '') +
-                ' onchange="toggleClass(\'' + layerId + '\', ' + item.value + ')">' +
-              '<i style="background:' + item.color + '"></i> ' + item.label +
+            '<input type="checkbox" id="class-' + layerId + '-' + item.value + '" ' +
+            (isChecked ? 'checked' : '') + ' ' +
+            'onchange="toggleClass(\\'' + layerId + '\\', ' + item.value + ')">' +
+            '<i style="background:' + item.color + '"></i> ' +
+            item.label +
             '</div>';
         });
 
         legendDiv.innerHTML +=
           '<div class="legend-controls">' +
-            '<button onclick="selectAllClasses(\\'' + layerId + '\\')">All</button>' +
-            '<button onclick="selectNoneClasses(\\'' + layerId + '\\')">None</button>' +
+          '<button onclick="selectAllClasses(\\'' + layerId + '\\')">All</button>' +
+          '<button onclick="selectNoneClasses(\\'' + layerId + '\\')">None</button>' +
           '</div>';
       } else if (config.continuousLegend) {
         var gradientStops = [];
         for (var i = 0; i < config.colors.length; i++) {
-          var pct = (i / (config.colors.length - 1)) * 100;
-          gradientStops.push(config.colors[i] + ' ' + pct + '%');
+          var percentage = (i / (config.colors.length - 1)) * 100;
+          gradientStops.push(config.colors[i] + ' ' + percentage + '%');
         }
         var gradientCSS = 'linear-gradient(to right, ' + gradientStops.join(', ') + ')';
 
         legendDiv.innerHTML +=
           '<div class="gradient-bar" style="background: ' + gradientCSS + ';"></div>' +
           '<div class="gradient-labels">' +
-            '<span>' + config.labels[0] + '</span>' +
-            '<span>' + config.labels[1] + '</span>' +
+          '<span>' + config.labels[0] + '</span>' +
+          '<span>' + config.labels[1] + '</span>' +
           '</div>';
       }
 
@@ -786,9 +847,9 @@
       }
     }
 
-    // Layer control UI
+    // Create layer control
     var layerControl = L.control({position: 'topleft'});
-    layerControl.onAdd = function () {
+    layerControl.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'layer-control');
 
       div.innerHTML = '<h4>Basemaps</h4>';
@@ -822,30 +883,29 @@
       Object.keys(layerConfigs).forEach(function(key) {
         div.innerHTML +=
           '<div class="opacity-control">' +
-            '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
-            '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
-              'oninput="updateLayerOpacity(\\'' + key + '\\', this.value/100); document.getElementById(\\'opacity-value-' + key + '\\').textContent = this.value + \\'%\\'">' +
+          '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
+          '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
+          'oninput="updateLayerOpacity(\\'' + key + '\\', this.value/100); document.getElementById(\\'opacity-value-' + key + '\\').textContent = this.value + \\'%\\'' + '">' +
           '</div>';
       });
 
       div.innerHTML += '</div>';
-
       return div;
     };
     layerControl.addTo(map);
 
-    // Legend
+    // Create legend
     var legend = L.control({position: 'bottomright'});
-    legend.onAdd = function () {
+    legend.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'legend');
       div.id = 'legend-content';
       return div;
     };
     legend.addTo(map);
 
-    // Info box
+    // Create info box
     var info = L.control({position: 'topright'});
-    info.onAdd = function () {
+    info.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'info');
       div.innerHTML =
         '<h4>Nipah Virus Risk Mapping</h4>' +
@@ -862,11 +922,11 @@
       copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
     });
 
-    // Load rasters
+    // Load all raster layers
     updateStatus('Starting to load layers...');
     Object.keys(layerConfigs).forEach(function(key) { loadLayer(key); });
 
-    // Load vectors
+    // Load all vector layers
     Object.keys(vectorConfigs).forEach(function(key) { loadVectorLayer(key); });
   </script>
 </body>
