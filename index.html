@@ -294,11 +294,13 @@
         // Initialize map - start with regional view
         var map = L.map('map').setView([18.0, 82.5], 6);
 
-        // Create custom panes
+        // Create custom panes with explicit z-index ordering
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 300;
+        
         map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 400;
+        map.getPane('vectorPane').style.zIndex = 650; // Higher than default overlayPane (400) and rasterPane (300)
+        map.getPane('vectorPane').style.pointerEvents = 'auto'; // Ensure clicks work
 
         // Define basemaps
         var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -457,7 +459,7 @@
                 name: 'Nipah virus (2001 - 2026)',
                 type: 'point',
                 style: {
-                    color: '#FFFFFF',
+                    color: '#000000',
                     fillColor: '#6699CC',
                     fillOpacity: 0.5,
                     radius: 8,
@@ -767,7 +769,7 @@
                                     createPopup(feature, featureLayer, config);
                                 }
                             },
-                            pane: 'vectorPane'
+                            pane: 'vectorPane' // Ensure vectors use vectorPane
                         });
                     } else {
                         layer = L.geoJSON(data, {
@@ -777,7 +779,7 @@
                                     createPopup(feature, featureLayer, config);
                                 }
                             },
-                            pane: 'vectorPane'
+                            pane: 'vectorPane' // Ensure vectors use vectorPane
                         });
                     }
                     
@@ -1023,31 +1025,16 @@
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Load all raster layers
+        // Load all raster layers FIRST (bottom)
         updateStatus('Starting to load layers...');
         Object.keys(layerConfigs).forEach(function(key) {
             loadLayer(key);
         });
 
-        // Load all vector layers
+        // Load all vector layers AFTER rasters (top, clickable)
         Object.keys(vectorConfigs).forEach(function(key) {
             loadVectorLayer(key);
         });
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
