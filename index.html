@@ -280,10 +280,6 @@
     </style>
 </head>
 <body>
-    <div id="loading" class="loading">
-        <div>Loading map layers...</div>
-        <div id="load-status" style="margin-top: 10px; font-size: 12px;"></div>
-    </div>
     <div id="map"></div>
     <div class="north-arrow"></div>
     <div id="copy-notification" class="copy-notification"></div>
@@ -382,7 +378,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [12.5, 80.0],
-                zoom: 5
+                zoom: 6
             },
             'lc_risk_india': {
                 file: 'lc_risk_india_cog.tif',
@@ -402,7 +398,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [12.5, 80.0],
-                zoom: 5
+                zoom: 6
             },
             'pop_risk_bangladesh': {
                 file: 'pop_risk_bang_cog.tif',
@@ -422,7 +418,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.8, 90.4],
-                zoom: 5
+                zoom: 7
             },
             'lc_risk_bangladesh': {
                 file: 'lc_risk_bang_cog.tif',
@@ -442,7 +438,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.8, 90.4],
-                zoom: 5
+                zoom: 7
             }
         };
 
@@ -611,12 +607,6 @@
         }
 
         function updateStatus(message, isError) {
-            var statusDiv = document.getElementById('load-status');
-            if (isError) {
-                statusDiv.innerHTML += '<div class="error">' + message + '</div>';
-            } else {
-                statusDiv.innerHTML += '<div>' + message + '</div>';
-            }
             console.log(message);
         }
 
@@ -873,12 +863,6 @@
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
-                    }
-                    
-                    if (loadedCount === totalLayers) {
-                        setTimeout(function() {
-                            document.getElementById('loading').style.display = 'none';
-                        }, 1000);
                     }
                 })
                 .catch(error => {
