@@ -324,7 +324,7 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 6; // Updated count: 2 ENM + 4 risk layers
+        var totalLayers = 5; // Updated count: 1 ENM + 4 risk layers
         
         // Track which classes are visible for each layer
         var visibleClasses = {
@@ -343,18 +343,6 @@
                 domain: [0, 1],
                 labels: ['Low Suitability', 'High Suitability'],
                 description: 'Regional ecological suitability',
-                mode: 'lch',
-                continuousLegend: true,
-                center: [18.0, 82.5],
-                zoom: 5
-            },
-            'enm_uncertainty': {
-                file: 'enm_uncertainty_cog.tif',
-                name: 'ENM - Uncertainty (1km)',
-                colors: ['#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#084594'],
-                domain: [0.005, 0.1025],
-                labels: ['Low Uncertainty', 'High Uncertainty'],
-                description: 'Regional model uncertainty',
                 mode: 'lch',
                 continuousLegend: true,
                 center: [18.0, 82.5],
@@ -383,7 +371,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [12.5, 80.0],
-                zoom: 4
+                zoom: 6
             },
             'lc_risk_india': {
                 file: 'lc_risk_india_cog.tif',
@@ -408,7 +396,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [12.5, 80.0],
-                zoom: 4
+                zoom: 6
             },
             'pop_risk_bangladesh': {
                 file: 'pop_risk_bang_cog.tif',
@@ -433,7 +421,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.8, 90.4],
-                zoom: 6
+                zoom: 7
             },
             'lc_risk_bangladesh': {
                 file: 'lc_risk_bang_cog.tif',
@@ -458,7 +446,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.8, 90.4],
-                zoom: 6
+                zoom: 7
             }
         };
 
@@ -1048,5 +1036,3 @@
     </script>
 </body>
 </html>
-
-
