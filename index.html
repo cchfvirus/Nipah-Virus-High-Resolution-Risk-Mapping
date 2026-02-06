@@ -789,16 +789,39 @@
                             pointToLayer: function(feature, latlng) {
                                 var marker = L.circleMarker(latlng, config.style);
                                 debugLog('Created point marker at: ' + latlng.toString());
-                                return marker;
-                            },
-                            onEachFeature: function(feature, featureLayer) {
+                                
+                                // CRITICAL: Explicitly bind popup HERE for points
                                 if (config.enablePopup) {
-                                    createPopup(feature, featureLayer, config);
+                                    if (config.customPopup && config.customPopupContent) {
+                                        marker.bindPopup(config.customPopupContent(feature));
+                                    } else {
+                                        var popupContent = '<div style="max-width: 250px;">';
+                                        popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
+                                        popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+                                        
+                                        config.popupFields.forEach(function(field) {
+                                            if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
+                                                var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                                                popupContent += '<tr>' +
+                                                               '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
+                                                               '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
+                                                               '</tr>';
+                                            }
+                                        });
+                                        
+                                        popupContent += '</table></div>';
+                                        marker.bindPopup(popupContent);
+                                    }
+                                    debugLog('Popup bound to point marker');
                                 }
-                                // Add click event for debugging
-                                featureLayer.on('click', function(e) {
-                                    debugLog('Vector clicked: ' + config.name);
+                                
+                                // Add click handler for debugging
+                                marker.on('click', function(e) {
+                                    debugLog('Point marker clicked!');
+                                    L.DomEvent.stopPropagation(e); // Prevent map click
                                 });
+                                
+                                return marker;
                             },
                             pane: 'vectorPane'
                         });
