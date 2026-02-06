@@ -277,12 +277,27 @@
             border-right: 8px solid transparent;
             border-bottom: 12px solid #c30b0b;
         }
+        
+        .debug-panel {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 11px;
+            max-width: 300px;
+            z-index: 2000;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div class="north-arrow"></div>
     <div id="copy-notification" class="copy-notification"></div>
+    <div id="debug-panel" class="debug-panel">Debug Info:<br><span id="debug-content"></span></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
@@ -291,16 +306,25 @@
     <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
     <script>
+        // Debug logger
+        function debugLog(message) {
+            var debugContent = document.getElementById('debug-content');
+            var timestamp = new Date().toLocaleTimeString();
+            debugContent.innerHTML = timestamp + ': ' + message + '<br>' + debugContent.innerHTML;
+            console.log('[DEBUG]', message);
+        }
+
         // Initialize map - start with regional view
         var map = L.map('map').setView([18.0, 82.5], 6);
 
         // Create custom panes with explicit z-index ordering
         map.createPane('rasterPane');
-        map.getPane('rasterPane').style.zIndex = 300;
+        map.getPane('rasterPane').style.zIndex = 200;
         
         map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 650; // Higher than default overlayPane (400) and rasterPane (300)
-        map.getPane('vectorPane').style.pointerEvents = 'auto'; // Ensure clicks work
+        map.getPane('vectorPane').style.zIndex = 450;
+        
+        debugLog('Panes created - raster:200, vector:450');
 
         // Define basemaps
         var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -326,7 +350,7 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 5; // Updated count: 1 ENM + 4 risk layers
+        var totalLayers = 5;
         
         // Track which classes are visible for each layer
         var visibleClasses = {
@@ -354,13 +378,13 @@
                 file: 'pop_risk_india_cog.tif',
                 name: 'Population Risk - South India (100m)',
                 discreteColors: {
-                    0: '#000000', // Black - No risk/background
-                    1: '#FFFFBE', // Light yellow - Very low risk
-                    2: '#FFDD00', // Yellow - Low risk
-                    3: '#FFAA00', // Orange - Moderate risk
-                    4: '#FF6600', // Red-orange - Elevated risk
-                    6: '#FF0000', // Red - High risk
-                    9: '#A80000'  // Dark red - Very high risk
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
                 },
                 customLegend: true,
                 legendItems: [
@@ -379,13 +403,13 @@
                 file: 'lc_risk_india_cog.tif',
                 name: 'Landcover Risk - South India (100m)',
                 discreteColors: {
-                    0: '#000000', // Black - No risk/background
-                    1: '#FFFFBE', // Light yellow - Very low risk
-                    2: '#FFDD00', // Yellow - Low risk
-                    3: '#FFAA00', // Orange - Moderate risk
-                    4: '#FF6600', // Red-orange - Elevated risk
-                    6: '#FF0000', // Red - High risk
-                    9: '#A80000'  // Dark red - Very high risk
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
                 },
                 customLegend: true,
                 legendItems: [
@@ -404,13 +428,13 @@
                 file: 'pop_risk_bang_cog.tif',
                 name: 'Population Risk - Bangladesh (100m)',
                 discreteColors: {
-                    0: '#000000', // Black - No risk/background
-                    1: '#FFFFBE', // Light yellow - Very low risk
-                    2: '#FFDD00', // Yellow - Low risk
-                    3: '#FFAA00', // Orange - Moderate risk
-                    4: '#FF6600', // Red-orange - Elevated risk
-                    6: '#FF0000', // Red - High risk
-                    9: '#A80000'  // Dark red - Very high risk
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
                 },
                 customLegend: true,
                 legendItems: [
@@ -429,13 +453,13 @@
                 file: 'lc_risk_bang_cog.tif',
                 name: 'Landcover Risk - Bangladesh (100m)',
                 discreteColors: {
-                    0: '#000000', // Black - No risk/background
-                    1: '#FFFFBE', // Light yellow - Very low risk
-                    2: '#FFDD00', // Yellow - Low risk
-                    3: '#FFAA00', // Orange - Moderate risk
-                    4: '#FF6600', // Red-orange - Elevated risk
-                    6: '#FF0000', // Red - High risk
-                    9: '#A80000'  // Dark red - Very high risk
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
                 },
                 customLegend: true,
                 legendItems: [
@@ -459,11 +483,11 @@
                 name: 'Nipah virus (2001 - 2026)',
                 type: 'point',
                 style: {
-                    color: '#FFFFFF',
-                    fillColor: '#0000FF',
-                    fillOpacity: 0.5,
-                    radius: 8,
-                    weight: 2
+                    color: '#000000',
+                    fillColor: '#6699CC',
+                    fillOpacity: 0.8,
+                    radius: 10,
+                    weight: 3
                 },
                 popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
                 enablePopup: true,
@@ -474,8 +498,8 @@
                 name: 'M Region',
                 type: 'polygon',
                 style: {
-                    color: '#000000',
-                    weight: 2,
+                    color: '#FF0000',
+                    weight: 3,
                     fillOpacity: 0,
                     fillColor: '#0066CC',
                     dashArray: '10, 5'
@@ -490,9 +514,9 @@
                 type: 'polygon',
                 style: {
                     color: '#FFFFFF',
-                    weight: 4,
-                    fillOpacity: 0.1,
-                    fillColor: null,
+                    weight: 5,
+                    fillOpacity: 0.2,
+                    fillColor: '#FFFF00',
                     dashArray: null
                 },
                 popupFields: [],
@@ -711,6 +735,7 @@
 
         function createPopup(feature, layer, config) {
             if (!config.enablePopup) {
+                debugLog('Popup disabled for: ' + config.name);
                 return;
             }
             
@@ -737,14 +762,14 @@
             }
             
             layer.bindPopup(popupContent);
-            console.log('Popup bound for:', config.name);
+            debugLog('Popup bound for: ' + config.name);
         }
 
         function loadVectorLayer(vectorId) {
             var config = vectorConfigs[vectorId];
             
             updateStatus('Loading ' + config.name + '...');
-            console.log('Loading vector layer:', vectorId, config.file);
+            debugLog('Starting load: ' + vectorId);
             
             fetch(config.file)
                 .then(response => {
@@ -755,21 +780,27 @@
                 })
                 .then(data => {
                     updateStatus(config.name + ' loaded successfully');
-                    console.log('Loaded GeoJSON data:', data);
+                    debugLog('Data loaded for: ' + vectorId + ', features: ' + (data.features ? data.features.length : 'N/A'));
                     
                     var layer;
                     
                     if (config.type === 'point') {
                         layer = L.geoJSON(data, {
                             pointToLayer: function(feature, latlng) {
-                                return L.circleMarker(latlng, config.style);
+                                var marker = L.circleMarker(latlng, config.style);
+                                debugLog('Created point marker at: ' + latlng.toString());
+                                return marker;
                             },
                             onEachFeature: function(feature, featureLayer) {
                                 if (config.enablePopup) {
                                     createPopup(feature, featureLayer, config);
                                 }
+                                // Add click event for debugging
+                                featureLayer.on('click', function(e) {
+                                    debugLog('Vector clicked: ' + config.name);
+                                });
                             },
-                            pane: 'vectorPane' // Ensure vectors use vectorPane
+                            pane: 'vectorPane'
                         });
                     } else {
                         layer = L.geoJSON(data, {
@@ -778,22 +809,27 @@
                                 if (config.enablePopup) {
                                     createPopup(feature, featureLayer, config);
                                 }
+                                // Add click event for debugging
+                                featureLayer.on('click', function(e) {
+                                    debugLog('Vector clicked: ' + config.name);
+                                });
                             },
-                            pane: 'vectorPane' // Ensure vectors use vectorPane
+                            pane: 'vectorPane'
                         });
                     }
                     
                     vectorLayers[vectorId] = layer;
-                    console.log('Vector layer created:', vectorId);
+                    debugLog('Vector layer created: ' + vectorId);
                     
                     if (config.visible) {
                         layer.addTo(map);
-                        console.log('Vector layer added to map:', vectorId);
+                        debugLog('Vector layer added to map: ' + vectorId + ', z-index: ' + map.getPane('vectorPane').style.zIndex);
                     }
                 })
                 .catch(error => {
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
                     updateStatus(errorMsg, true);
+                    debugLog('ERROR: ' + errorMsg);
                     console.error(errorMsg, error);
                 });
         }
@@ -802,8 +838,10 @@
             if (vectorLayers[vectorId]) {
                 if (map.hasLayer(vectorLayers[vectorId])) {
                     map.removeLayer(vectorLayers[vectorId]);
+                    debugLog('Removed vector layer: ' + vectorId);
                 } else {
                     vectorLayers[vectorId].addTo(map);
+                    debugLog('Added vector layer: ' + vectorId);
                 }
             }
         }
@@ -868,11 +906,13 @@
                     loadedCount++;
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
+                    debugLog('Raster layer loaded: ' + layerId);
                     
                     if (!currentLayer) {
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
+                        debugLog('Initial raster layer displayed: ' + layerId);
                     }
                 })
                 .catch(error => {
@@ -1025,18 +1065,23 @@
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Load all raster layers FIRST (bottom)
+        // Test click anywhere on map
+        map.on('click', function(e) {
+            debugLog('Map clicked at: ' + e.latlng.toString());
+        });
+
+        // Load all raster layers FIRST
         updateStatus('Starting to load layers...');
         Object.keys(layerConfigs).forEach(function(key) {
             loadLayer(key);
         });
 
-        // Load all vector layers AFTER rasters (top, clickable)
-        Object.keys(vectorConfigs).forEach(function(key) {
-            loadVectorLayer(key);
-        });
+        // Load all vector layers AFTER with slight delay
+        setTimeout(function() {
+            Object.keys(vectorConfigs).forEach(function(key) {
+                loadVectorLayer(key);
+            });
+        }, 1000);
     </script>
 </body>
 </html>
-
-
