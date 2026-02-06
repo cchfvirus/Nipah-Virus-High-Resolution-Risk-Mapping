@@ -3,7 +3,7 @@
 <head>
     <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"="width=device-width, initial-scale=1.0">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
@@ -189,6 +189,7 @@
             font-size: 12px;
         }
         
+        /* Popup styling - COPIED FROM MADAGASCAR */
         .leaflet-popup-content {
             margin: 10px;
             font-size: 12px;
@@ -214,15 +215,6 @@
             font-weight: bold;
             color: #666;
             width: 50%;
-        }
-        
-        .leaflet-popup-content a {
-            color: #0066CC;
-            text-decoration: none;
-        }
-        
-        .leaflet-popup-content a:hover {
-            text-decoration: underline;
         }
         
         .copy-notification {
@@ -301,11 +293,11 @@
         // Create custom panes
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 200;
-        map.getPane('rasterPane').style.pointerEvents = 'none'; // ✅ CRITICAL: let clicks pass through rasters
+        map.getPane('rasterPane').style.pointerEvents = 'none';
 
         map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 1000;  // Vectors on top
-        map.getPane('vectorPane').style.pointerEvents = 'auto';  // Ensure clicks work
+        map.getPane('vectorPane').style.zIndex = 1000;
+        map.getPane('vectorPane').style.pointerEvents = 'auto';
 
         // Define basemaps
         var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -414,7 +406,7 @@
             }
         };
 
-        // VECTOR LAYER CONFIGURATIONS
+        // VECTOR LAYER CONFIGURATIONS - FIXED
         var vectorConfigs = {
             'outbreaks': {
                 file: 'outbreaks.geojson',
@@ -427,8 +419,6 @@
                     radius: 5,
                     weight: 2
                 },
-                popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
-                enablePopup: true,
                 visible: true
             },
             'study': {
@@ -442,8 +432,6 @@
                     fillColor: null,
                     dashArray: '10, 5'
                 },
-                popupFields: [],
-                enablePopup: false,
                 visible: true
             },
             'district_2026': {
@@ -456,20 +444,6 @@
                     fillOpacity: 0,
                     fillColor: null,
                     dashArray: '15, 10'
-                },
-                popupFields: [],
-                enablePopup: true,
-                customPopup: true,
-                customPopupContent: function(feature) {
-                    return '<div style="max-width: 300px;">' +
-                           '<h3 style="margin: 0 0 10px; font-size: 15px; color: #8B0000;">2026 Nipah Outbreak - West Bengal</h3>' +
-                           '<p style="margin: 0 0 8px; font-size: 12px; line-height: 1.5;">' +
-                           'In January 2026, authorities in West Bengal confirmed laboratory-confirmed Nipah virus infections in two healthcare workers (nurses) at a private hospital in Barasat, North 24 Parganas district.' +
-                           '</p>' +
-                           '<p style="margin: 0; font-size: 11px; color: #666; font-style: italic;">' +
-                           'Source: <a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON536" target="_blank" style="color: #0066CC;">Nipah virus disease - India (WHO)</a>' +
-                           '</p>' +
-                           '</div>';
                 },
                 visible: true
             }
@@ -654,7 +628,7 @@
                 pixelValuesToColorFn: pixelValuesToColorFn,
                 resolution: 256,
                 pane: 'rasterPane',
-                interactive: false // ✅ ADD: make raster non-interactive
+                interactive: false
             });
             
             layers[layerId] = layer;
@@ -678,41 +652,7 @@
             }
         }
 
-        // CREATE POPUP CONTENT - unchanged from your current version
-        function createPopup(feature, layer, config) {
-            if (!config.enablePopup) return;
-
-            var popupContent;
-
-            if (config.customPopup && config.customPopupContent) {
-                popupContent = config.customPopupContent(feature);
-            } else {
-                popupContent = '<div style="max-width: 250px;">';
-                popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
-                popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
-                
-                config.popupFields.forEach(function(field) {
-                    if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
-                        var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-                        popupContent += '<tr>' +
-                                       '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
-                                       '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
-                                       '</tr>';
-                    }
-                });
-                
-                popupContent += '</table></div>';
-            }
-            
-            layer.bindPopup(popupContent, {
-                maxWidth: 300,
-                maxHeight: 400,
-                autoPan: true,
-                closeButton: true
-            });
-        }
-
-        // LOAD VECTOR LAYERS - binds popup normally; clicks will now reach vectors because rasterPane ignores pointer events
+        // LOAD VECTOR LAYERS - FIXED WITH MADAGASCAR POPUP STYLE
         function loadVectorLayer(vectorId) {
             var config = vectorConfigs[vectorId];
             
@@ -733,33 +673,57 @@
                     var layer;
                     
                     if (config.type === 'point') {
+                        // Point layer (outbreaks)
                         layer = L.geoJSON(data, {
                             pointToLayer: function(feature, latlng) {
-                                var marker = L.circleMarker(latlng, config.style);
-                                marker.options.interactive = true;
-                                marker.options.bubblingMouseEvents = true;
-                                return marker;
+                                return L.circleMarker(latlng, config.style);
                             },
                             onEachFeature: function(feature, featureLayer) {
-                                if (config.enablePopup) {
-                                    createPopup(feature, featureLayer, config);
+                                // Build popup content using Madagascar style
+                                var popupContent = '<h3>' + config.name + '</h3><table>';
+                                
+                                for (var key in feature.properties) {
+                                    if (feature.properties.hasOwnProperty(key)) {
+                                        var value = feature.properties[key];
+                                        var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
+                                        popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
+                                    }
                                 }
+                                
+                                popupContent += '</table>';
+                                
+                                featureLayer.bindPopup(popupContent, {
+                                    maxWidth: 300,
+                                    maxHeight: 400
+                                });
+                            },
+                            pane: 'vectorPane'
+                        });
+                    } else if (vectorId === 'district_2026') {
+                        // Special handling for 2026 district
+                        layer = L.geoJSON(data, {
+                            style: config.style,
+                            onEachFeature: function(feature, featureLayer) {
+                                var popupContent = '<h3>2026 Nipah Outbreak - West Bengal</h3><table>';
+                                popupContent += '<tr><td>Location</td><td>North 24 Parganas district, West Bengal, India</td></tr>';
+                                popupContent += '<tr><td>Date</td><td>January 2026</td></tr>';
+                                popupContent += '<tr><td>Cases</td><td>2 healthcare workers (nurses)</td></tr>';
+                                popupContent += '<tr><td>Facility</td><td>Private hospital in Barasat</td></tr>';
+                                popupContent += '<tr><td>Status</td><td>Laboratory-confirmed Nipah virus infections</td></tr>';
+                                popupContent += '<tr><td>Source</td><td><a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON536" target="_blank">WHO Disease Outbreak News</a></td></tr>';
+                                popupContent += '</table>';
+                                
+                                featureLayer.bindPopup(popupContent, {
+                                    maxWidth: 300,
+                                    maxHeight: 400
+                                });
                             },
                             pane: 'vectorPane'
                         });
                     } else {
+                        // Polygon layer (study area) - no popup
                         layer = L.geoJSON(data, {
-                            style: function(feature) {
-                                return Object.assign({}, config.style, {
-                                    interactive: true,
-                                    bubblingMouseEvents: true
-                                });
-                            },
-                            onEachFeature: function(feature, featureLayer) {
-                                if (config.enablePopup) {
-                                    createPopup(feature, featureLayer, config);
-                                }
-                            },
+                            style: config.style,
                             pane: 'vectorPane'
                         });
                     }
@@ -843,7 +807,7 @@
                         pixelValuesToColorFn: pixelValuesToColorFn,
                         resolution: 256,
                         pane: 'rasterPane',
-                        interactive: false // ✅ ADD: make raster non-interactive
+                        interactive: false
                     });
                     
                     layers[layerId] = layer;
@@ -1004,6 +968,7 @@
                 '<p>Multi-scale Analysis</p>' +
                 '<p><em>Regional: 1km resolution overview</em></p>' +
                 '<p><em>Country-specific: 100m detail</em></p>' +
+                '<p><em>Click outbreak markers for details</em></p>' +
                 '<p><em>Right-click: Copy coordinates</em></p>';
             return div;
         };
@@ -1026,4 +991,3 @@
     </script>
 </body>
 </html>
-
