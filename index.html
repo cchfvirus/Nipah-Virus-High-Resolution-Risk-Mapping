@@ -418,6 +418,8 @@
                     fillOpacity: 0.9,
                     radius: 6,
                     weight: 2
+                    enablePopup: true,   // ✅ REQUIRED (your logic)
+                    popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
                 },
                 visible: true
             },
@@ -444,6 +446,7 @@
                     fillOpacity: 0,
                     fillColor: null,
                     dashArray: '15, 10'
+                    enablePopup: true
                 },
                 visible: true
             }
@@ -991,4 +994,5 @@
     </script>
 </body>
 </html>
+
 
