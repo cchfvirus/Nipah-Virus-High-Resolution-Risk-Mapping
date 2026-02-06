@@ -19,38 +19,40 @@ This map provides high-resolution spatial risk assessments for Nipah virus (NiV)
 
 ## Map Features
 
-### Available Layers
+Nipah Virus Risk Mapping — Bangladesh & South India
 
-#### 1. **Ecological Niche Model (ENM) - Median Suitability**
-- **Resolution:** 1 kilometer
-- **Description:** Shows environmental suitability for Nipah virus transmission based on ecological factors
-- **Color Scale:** Gray (low suitability) → Dark Red (high suitability)
-- **Use Cases:** Identifying potential spillover regions, long-term risk assessment
+This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, browser-based way to explore where environmental suitability and risk signals are highest, and how these patterns relate to known outbreak locations and administrative context.
 
-#### 2. **Weighted Risk Surface - South India and Bangladesh**
-- **Resolution:** 100 meters
-- **Description:** Integrated risk assessment combining multiple epidemiological and environmental factors
-- **Color Scale:** Light Yellow (low risk) → Dark Red (high risk)
-- **Use Cases:** Fine-scale intervention planning, local surveillance prioritization
+Regional layer (1 km)
+ENM – Regional Suitability: A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater suitability relative to the study domain.
 
-### Interactive Tools
-- 📋 **Right-click** to copy coordinates
-- 📏 **Drawing tools** to measure distances and areas
-- 🗺️ **Multiple basemaps** (OpenStreetMap, Street view, Satellite imagery)
-- 🎛️ **Opacity controls** for layer visualization
-- 🔍 **Zoom and pan** to explore regions of interest
+High-resolution layers (100 m)
+Population Risk and Landcover Risk surfaces are provided separately for:
 
-### Study Area
-- **Primary Focus:** Bangladesh
-- **Extended Coverage:** South India, including West Bengal
-- **Coordinate System:** WGS84 (EPSG:4326)
+Bangladesh
+South India
 
-### Map Technology
-- **Framework:** Leaflet.js
-- **Raster Display:** GeoRaster Layer for Leaflet
-- **Basemaps:** OpenStreetMap, Esri World Street Map & Satellite Imagery
+These layers use a discrete risk classification scheme (e.g., No Risk → Very High Risk). You can toggle individual risk classes in the legend to isolate specific zones.
 
-## License
+Vector overlays
 
-This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
-[Or choose another license like CC-BY-4.0 for data]
+Historical Nipah events (2001–2026) are shown as clickable point markers with attribute popups (year, coordinates, and reference).
+A study region boundary (“M Region”) provides geographic context for model extent.
+The January 2026 West Bengal district overlay includes a narrative popup with an external reference link.
+
+How to use the map
+
+Use the Layer Control (top-left) to switch basemaps, change raster layers, and toggle vector overlays.
+Use the Legend (bottom-right) to interpret color ramps and risk classes. For discrete risk layers, you can turn classes on/off to simplify interpretation.
+Adjust raster visibility using the Opacity sliders.
+Use the measurement tools (top-right) to draw distance/area shapes.
+Right-click anywhere on the map to copy coordinates to your clipboard.
+
+Technical notes
+
+Raster layers are served as Cloud-Optimized GeoTIFFs (COGs) for efficient web loading.
+Vector overlays are GeoJSON and rendered above the rasters for clear interpretation.
+
+Disclaimer
+
+This map is intended for visualization and research support. It does not represent real-time case reporting or a clinical/public health advisory. Interpret results within the limits of the underlying data and modeling assumptions.
