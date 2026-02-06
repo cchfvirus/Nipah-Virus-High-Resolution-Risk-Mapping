@@ -1,512 +1,192 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-
-  <style>
-    body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-
-    .info {
-      padding: 10px 12px;
-      background: white;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      border-radius: 5px;
-      max-width: 320px;
-    }
-
-    .info h4 { margin: 0 0 5px; color: #333; }
-    .info p { margin: 5px 0; font-size: 12px; color: #666; }
-
-    .legend {
-      line-height: 20px;
-      color: #555;
-      background: white;
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      max-width: 240px;
-    }
-
-    .legend h4 { margin: 0 0 8px; font-size: 14px; }
-
-    .legend i {
-      width: 20px;
-      height: 18px;
-      float: left;
-      margin-right: 8px;
-      opacity: 0.8;
-      border: 1px solid #ccc;
-    }
-
-    .legend .item {
-      margin-bottom: 5px;
-      overflow: hidden;
-      font-size: 11px;
-      cursor: pointer;
-      padding: 3px;
-      border-radius: 3px;
-      transition: background-color 0.2s;
-    }
-
-    .legend .item:hover { background-color: #f0f0f0; }
-    .legend .item.disabled { opacity: 0.3; }
-
-    .legend .item input[type="checkbox"] {
-      margin-right: 5px;
-      cursor: pointer;
-    }
-
-    .legend .gradient-bar {
-      width: 100%;
-      height: 20px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-    }
-
-    .legend .gradient-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      margin-top: 3px;
-    }
-
-    .legend-controls {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid #ddd;
-      font-size: 10px;
-    }
-
-    .legend-controls button {
-      font-size: 10px;
-      padding: 3px 8px;
-      margin-right: 5px;
-      cursor: pointer;
-      border: 1px solid #ccc;
-      background: white;
-      border-radius: 3px;
-    }
-
-    .legend-controls button:hover { background: #f0f0f0; }
-
-    .layer-control {
-      background: white;
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      max-height: 90vh;
-      overflow-y: auto;
-      max-width: 280px;
-    }
-
-    .layer-control h4 { margin: 0 0 10px; font-size: 14px; }
-
-    .layer-control label {
-      display: block;
-      margin: 8px 0;
-      cursor: pointer;
-      font-size: 13px;
-    }
-
-    .layer-control input[type="radio"],
-    .layer-control input[type="checkbox"] { margin-right: 8px; }
-
-    .opacity-section {
-      margin-top: 15px;
-      padding-top: 10px;
-      border-top: 1px solid #ddd;
-    }
-
-    .opacity-section h5 {
-      margin: 0 0 8px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    .opacity-control { margin-bottom: 12px; }
-
-    .opacity-control label {
-      display: block;
-      font-size: 11px;
-      color: #666;
-      margin-bottom: 4px;
-    }
-
-    .opacity-control input[type="range"] {
-      width: 100%;
-      height: 4px;
-      border-radius: 2px;
-      outline: none;
-      cursor: pointer;
-    }
-
-    .opacity-value {
-      float: right;
-      font-weight: bold;
-      color: #333;
-      font-size: 11px;
-    }
-
-    .loading {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px;
-      border-radius: 5px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.3);
-      z-index: 1000;
-      text-align: center;
-    }
-
-    .error {
-      background: #ffebee;
-      color: #c62828;
-      padding: 10px;
-      margin: 5px 0;
-      border-radius: 3px;
-      font-size: 12px;
-    }
-
-    .leaflet-popup-content { margin: 10px; font-size: 12px; }
-    .leaflet-popup-content h3 { margin: 0 0 8px; font-size: 14px; color: #333; }
-    .leaflet-popup-content table { width: 100%; border-collapse: collapse; }
-    .leaflet-popup-content table td { padding: 3px 5px; border-bottom: 1px solid #eee; }
-    .leaflet-popup-content table td:first-child { font-weight: bold; color: #666; width: 50%; }
-
-    .copy-notification {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 15px 25px;
-      border-radius: 5px;
-      font-size: 14px;
-      z-index: 10000;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .copy-notification.show { opacity: 1; }
-
-    .north-arrow {
-      position: absolute;
-      bottom: 30px;
-      left: 10px;
-      width: 50px;
-      height: 50px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: bold;
-      color: #c30b0b;
-    }
-
-    .north-arrow::before { content: "N"; }
-    .north-arrow::after {
-      content: "";
-      position: absolute;
-      top: 8px;
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-bottom: 12px solid #c30b0b;
-    }
-  </style>
+    <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-search@3.0.0/dist/leaflet-search.min.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        
+        .info { padding: 10px 12px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; max-width: 320px; }
+        .info h4 { margin: 0 0 5px; color: #333; }
+        .legend { line-height: 20px; color: #555; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); max-width: 240px; }
+        .legend i { width: 20px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #ccc; }
+        .layer-control { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); max-height: 80vh; overflow-y: auto; max-width: 280px; }
+        .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.3); z-index: 1000; text-align: center; }
+        .north-arrow { position: absolute; bottom: 30px; left: 10px; width: 50px; height: 50px; background: white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 1000; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #c30b0b; }
+        .gradient-bar { width: 100%; height: 20px; margin: 10px 0; border: 1px solid #ccc; }
+        .gradient-labels { display: flex; justify-content: space-between; font-size: 11px; }
+        .search-container { position: absolute; top: 100px; left: 10px; z-index: 1000; }
+    </style>
 </head>
 <body>
-  <div id="loading" class="loading">
-    <div>Loading map layers...</div>
-    <div id="load-status" style="margin-top: 10px; font-size: 12px;"></div>
-  </div>
+    <div id="loading" class="loading">
+        <div>Loading Nipah Analysis Layers...</div>
+        <div id="load-status" style="margin-top: 10px; font-size: 12px;"></div>
+    </div>
+    <div id="map"></div>
+    <div class="north-arrow">N</div>
 
-  <div id="map"></div>
-  <div class="north-arrow"></div>
-  <div id="copy-notification" class="copy-notification"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script src="https://unpkg.com/leaflet-search@3.0.0/dist/leaflet-search.min.js"></script>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
-  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script>
+        var map = L.map('map').setView([18.0, 82.5], 5); [cite: 56]
+        map.createPane('rasterPane').style.zIndex = 300; [cite: 57]
+        map.createPane('vectorPane').style.zIndex = 400; [cite: 57]
 
-  <script>
-    // Initialize map
-    var map = L.map('map').setView([18.0, 82.5], 5);
+        var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); [cite: 58, 61]
 
-    // Custom panes for layering
-    map.createPane('rasterPane');
-    map.getPane('rasterPane').style.zIndex = 200;
-    map.getPane('rasterPane').style.pointerEvents = 'none';
+        var layers = {};
+        var georasters = {};
+        var currentLayer = null;
+        var loadedCount = 0;
 
-    map.createPane('vectorPane');
-    map.getPane('vectorPane').style.zIndex = 1000;
-    map.getPane('vectorPane').style.pointerEvents = 'auto';
+        var layerConfigs = {
+            'enm': {
+                file: 'enm_cog.tif',
+                name: 'ENM - Regional Suitability (1km)',
+                colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
+                domain: [0, 1],
+                labels: ['Low Suitability', 'High Suitability'],
+                continuousLegend: true,
+                center: [18.0, 82.5],
+                zoom: 5
+            },
+            'enm_uncertainty': {
+                file: 'enm_uncertainty_cog.tif',
+                name: 'ENM - Uncertainty (1km)',
+                colors: ['#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#084594'],
+                domain: [0, 1],
+                labels: ['Low Uncertainty', 'High Uncertainty'],
+                continuousLegend: true,
+                center: [18.0, 82.5],
+                zoom: 5
+            },
+            'pop_risk_india': {
+                file: 'pop_risk_india_cog.tif',
+                name: 'Population Risk - South India (100m)',
+                discreteColors: { 0: '#000000', 9: '#A80000' },
+                customLegend: true,
+                center: [12.5, 80.0],
+                zoom: 6
+            },
+            'lc_risk_india': {
+                file: 'lc_risk_india_cog.tif',
+                name: 'Landcover Risk - South India (100m)',
+                discreteColors: { 0: '#000000', 9: '#A80000' },
+                customLegend: true,
+                center: [12.5, 80.0],
+                zoom: 6
+            },
+            'pop_risk_bangladesh': {
+                file: 'pop_risk_bang_cog.tif',
+                name: 'Population Risk - Bangladesh (100m)',
+                discreteColors: { 0: '#000000', 9: '#A80000' },
+                customLegend: true,
+                center: [23.8, 90.4],
+                zoom: 7
+            },
+            'lc_risk_bangladesh': {
+                file: 'lc_risk_bang_cog.tif',
+                name: 'Landcover Risk - Bangladesh (100m)',
+                discreteColors: { 0: '#000000', 9: '#A80000' },
+                customLegend: true,
+                center: [23.8, 90.4],
+                zoom: 7
+            }
+        };
 
-    // Basemaps
-    var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19
-    }).addTo(map);
+        var totalLayers = Object.keys(layerConfigs).length;
 
-    var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri',
-      maxZoom: 19
-    });
+        function updateLegend(id) {
+            var config = layerConfigs[id];
+            var div = document.getElementById('legend-content');
+            div.innerHTML = '<h4>' + config.name + '</h4>';
+            if (config.continuousLegend) {
+                var grad = 'linear-gradient(to right, ' + config.colors.join(',') + ')';
+                div.innerHTML += '<div class="gradient-bar" style="background:' + grad + '"></div>' +
+                                 '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
+            } else {
+                div.innerHTML += '<div><i style="background:#000000"></i> No Risk</div>' +
+                                 '<div><i style="background:#A80000"></i> Very High Risk</div>';
+            }
+        }
 
-    var aerialMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri',
-      maxZoom: 19
-    });
+        function loadLayer(id) {
+            var config = layerConfigs[id];
+            fetch(config.file).then(r => r.arrayBuffer()).then(buf => parseGeoraster(buf)).then(geo => {
+                georasters[id] = geo;
+                var layer = new GeoRasterLayer({
+                    georaster: geo,
+                    opacity: 0.7,
+                    pane: 'rasterPane',
+                    pixelValuesToColorFn: values => {
+                        var v = values[0];
+                        if (v === null || isNaN(v)) return null;
+                        if (config.discreteColors) return config.discreteColors[Math.round(v)] || null;
+                        return chroma.scale(config.colors).domain(config.domain)(v).hex();
+                    }
+                });
+                layers[id] = layer;
+                loadedCount++;
+                if (!currentLayer) { currentLayer = id; layer.addTo(map); updateLegend(id); }
+                if (loadedCount === totalLayers) document.getElementById('loading').style.display = 'none';
+            });
+        }
 
-    var layers = {};
-    var georasters = {};
-    var vectorLayers = {};
-    var currentLayer = null;
-    var loadedCount = 0;
-    var visibleClasses = {};
+        function switchLayer(id) {
+            if (currentLayer) map.removeLayer(layers[currentLayer]);
+            currentLayer = id;
+            layers[id].addTo(map);
+            updateLegend(id);
+            map.setView(layerConfigs[id].center, layerConfigs[id].zoom);
+        }
 
-    // RASTER CONFIGURATIONS
-    var layerConfigs = {
-      'enm': {
-        file: 'enm_cog.tif',
-        name: 'ENM - Regional Suitability (1km)',
-        colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
-        domain: [0, 1],
-        labels: ['Low Suitability', 'High Suitability'],
-        description: 'Regional ecological suitability',
-        mode: 'lch',
-        continuousLegend: true,
-        extent: 'regional',
-        center: [18.0, 82.5],
-        zoom: 5
-      },
-      'enm_uncertainty': {
-        file: 'enm_uncertainty_cog.tif',
-        name: 'ENM - Uncertainty (1km)',
-        colors: ['#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#084594'],
-        domain: [0, 1],
-        labels: ['Low Uncertainty', 'High Uncertainty'],
-        description: 'Regional model uncertainty',
-        mode: 'lch',
-        continuousLegend: true,
-        extent: 'regional',
-        center: [18.0, 82.5],
-        zoom: 5
-      },
-      'pop_risk_india': {
-        file: 'pop_risk_india_cog.tif',
-        name: 'Population Risk - South India (100m)',
-        discreteColors: { 0: '#000000', 1: '#FFFFBE', 2: '#FFDD00', 3: '#FFAA00', 4: '#FF6600', 6: '#FF0000', 9: '#A80000' },
-        customLegend: true,
-        legendItems: [
-          { value: 0, color: '#000000', label: '0 - No Risk' },
-          { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
-          { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
-          { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
-          { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
-          { value: 6, color: '#FF0000', label: '6 - High Risk' },
-          { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-        ],
-        extent: 'south_india',
-        center: [12.5, 80.0],
-        zoom: 6
-      },
-      'lc_risk_india': {
-        file: 'lc_risk_india_cog.tif',
-        name: 'Landcover Risk - South India (100m)',
-        discreteColors: { 0: '#000000', 1: '#FFFFBE', 2: '#FFDD00', 3: '#FFAA00', 4: '#FF6600', 6: '#FF0000', 9: '#A80000' },
-        customLegend: true,
-        legendItems: [
-          { value: 0, color: '#000000', label: '0 - No Risk' },
-          { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-        ],
-        extent: 'south_india',
-        center: [12.5, 80.0],
-        zoom: 6
-      },
-      'pop_risk_bangladesh': {
-        file: 'pop_risk_bang_cog.tif',
-        name: 'Population Risk - Bangladesh (100m)',
-        discreteColors: { 0: '#000000', 1: '#FFFFBE', 2: '#FFDD00', 3: '#FFAA00', 4: '#FF6600', 6: '#FF0000', 9: '#A80000' },
-        customLegend: true,
-        legendItems: [
-          { value: 0, color: '#000000', label: '0 - No Risk' },
-          { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-        ],
-        extent: 'bangladesh',
-        center: [23.8, 90.4],
-        zoom: 7
-      }
-    };
+        // Add UI
+        var layerControl = L.control({position: 'topleft'});
+        layerControl.onAdd = function() {
+            var div = L.DomUtil.create('div', 'layer-control');
+            div.innerHTML = '<h4>Risk Layers</h4>';
+            Object.keys(layerConfigs).forEach((id, i) => {
+                div.innerHTML += '<label><input type="radio" name="r" ' + (i==0?'checked':'') + ' onchange="switchLayer(\''+id+'\')"> ' + layerConfigs[id].name + '</label>';
+            });
+            return div;
+        };
+        layerControl.addTo(map);
 
-    var totalLayers = Object.keys(layerConfigs).length;
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function() {
+            var div = L.DomUtil.create('div', 'legend');
+            div.id = 'legend-content';
+            return div;
+        };
+        legend.addTo(map);
 
-    // Initialize visibility tracking
-    Object.keys(layerConfigs).forEach(function(layerId) {
-      var config = layerConfigs[layerId];
-      if (config.discreteColors) {
-        visibleClasses[layerId] = {};
-        Object.keys(config.discreteColors).forEach(function(value) {
-          visibleClasses[layerId][value] = true;
+        // District Search Logic (Nominatim)
+        var searchControl = new L.Control.Search({
+            url: 'https://nominatim.openstreetmap.org/search?format=json&q={s}',
+            jsonpParam: 'json_callback',
+            propertyName: 'display_name',
+            propertyLoc: ['lat','lon'],
+            marker: L.circleMarker([0,0], {radius: 20, color: '#f00'}),
+            autoCollapse: true,
+            autoType: false,
+            minLength: 2
         });
-      }
-    });
+        map.addControl(searchControl);
 
-    // Drawing Tools
-    var drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-    var drawControl = new L.Control.Draw({
-      position: 'topright',
-      draw: {
-        polyline: { shapeOptions: { color: '#f357a1' } },
-        polygon: { shapeOptions: { color: '#f357a1' } },
-        rectangle: false, circle: false, marker: false, circlemarker: false
-      },
-      edit: { featureGroup: drawnItems, remove: true }
-    });
-    map.addControl(drawControl);
-
-    map.on(L.Draw.Event.CREATED, function (event) {
-      var layer = event.layer;
-      var type = event.layerType;
-      if (type === 'polyline') {
-        var length = 0;
-        var latlngs = layer.getLatLngs();
-        for (var i = 0; i < latlngs.length - 1; i++) length += latlngs[i].distanceTo(latlngs[i + 1]);
-        layer.bindPopup('<b>Distance:</b> ' + (length / 1000).toFixed(2) + ' km');
-      }
-      drawnItems.addLayer(layer);
-    });
-
-    // Utility Functions
-    function updateStatus(message, isError) {
-      var statusDiv = document.getElementById('load-status');
-      statusDiv.innerHTML += isError ? '<div class="error">' + message + '</div>' : '<div>' + message + '</div>';
-    }
-
-    function switchBasemap(type) {
-      [osmMap, streetMap, aerialMap].forEach(m => map.removeLayer(m));
-      if (type === 'osm') osmMap.addTo(map);
-      if (type === 'street') streetMap.addTo(map);
-      if (type === 'aerial') aerialMap.addTo(map);
-    }
-
-    function updateLayerOpacity(layerId, opacity) {
-      if (layers[layerId]) layers[layerId].setOpacity(opacity);
-    }
-
-    function loadLayer(layerId) {
-      var config = layerConfigs[layerId];
-      updateStatus('Loading ' + config.name + '...');
-      fetch(config.file)
-        .then(r => r.arrayBuffer())
-        .then(buf => parseGeoraster(buf))
-        .then(georaster => {
-          georasters[layerId] = georaster;
-          var pixelValuesToColorFn;
-
-          if (config.discreteColors) {
-            pixelValuesToColorFn = values => {
-              var val = Math.round(values[0]);
-              if (val === null || !visibleClasses[layerId][val]) return null;
-              return config.discreteColors[val] || null;
-            };
-          } else {
-            var scale = chroma.scale(config.colors).domain(config.domain);
-            pixelValuesToColorFn = values => values[0] === null ? null : scale(values[0]).hex();
-          }
-
-          var layer = new GeoRasterLayer({
-            georaster: georaster,
-            opacity: 0.7,
-            pixelValuesToColorFn: pixelValuesToColorFn,
-            resolution: 256,
-            pane: 'rasterPane'
-          });
-
-          layers[layerId] = layer;
-          loadedCount++;
-          if (!currentLayer) {
-            layer.addTo(map);
-            currentLayer = layerId;
-            updateLegend(layerId);
-          }
-          if (loadedCount === totalLayers) {
-            document.getElementById('loading').style.display = 'none';
-          }
-        });
-    }
-
-    function switchLayer(layerId) {
-      if (currentLayer && layers[currentLayer]) map.removeLayer(layers[currentLayer]);
-      if (layers[layerId]) {
-        layers[layerId].addTo(map);
-        currentLayer = layerId;
-        updateLegend(layerId);
-        var cfg = layerConfigs[layerId];
-        map.setView(cfg.center, cfg.zoom);
-      }
-    }
-
-    function updateLegend(layerId) {
-      var config = layerConfigs[layerId];
-      var div = document.getElementById('legend-content');
-      div.innerHTML = '<h4>' + config.name + '</h4>';
-      
-      if (config.customLegend) {
-        config.legendItems.forEach(item => {
-          div.innerHTML += `<div class="item"><i style="background:${item.color}"></i> ${item.label}</div>`;
-        });
-      } else if (config.continuousLegend) {
-        var grad = `linear-gradient(to right, ${config.colors.join(',')})`;
-        div.innerHTML += `<div class="gradient-bar" style="background:${grad}"></div>
-                          <div class="gradient-labels"><span>${config.labels[0]}</span><span>${config.labels[1]}</span></div>`;
-      }
-    }
-
-    // UI Controls Setup
-    var layerControl = L.control({position: 'topleft'});
-    layerControl.onAdd = function () {
-      var div = L.DomUtil.create('div', 'layer-control');
-      div.innerHTML = '<h4>Basemaps</h4>' +
-        '<label><input type="radio" name="basemap" checked onclick="switchBasemap(\'osm\')"> OSM</label>' +
-        '<label><input type="radio" name="basemap" onclick="switchBasemap(\'street\')"> Esri Street</label>' +
-        '<h4 style="border-top:1px solid #ddd; margin-top:10px">Risk Layers</h4>';
-      
-      Object.keys(layerConfigs).forEach((k, i) => {
-        div.innerHTML += `<label><input type="radio" name="layer" ${i===0?'checked':''} onclick="switchLayer('${k}')"> ${layerConfigs[k].name}</label>`;
-      });
-      return div;
-    };
-    layerControl.addTo(map);
-
-    var legend = L.control({position: 'bottomright'});
-    legend.onAdd = function () {
-      var div = L.DomUtil.create('div', 'legend');
-      div.id = 'legend-content';
-      return div;
-    };
-    legend.addTo(map);
-
-    // Initial Load
-    Object.keys(layerConfigs).forEach(k => loadLayer(k));
-  </script>
+        Object.keys(layerConfigs).forEach(id => loadLayer(id));
+    </script>
 </body>
 </html>
