@@ -301,8 +301,10 @@
         // Create custom panes
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 200;
+        map.getPane('rasterPane').style.pointerEvents = 'none'; // ✅ CRITICAL: let clicks pass through rasters
+
         map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 1000;  // Much higher to ensure vectors are clickable
+        map.getPane('vectorPane').style.zIndex = 1000;  // Vectors on top
         map.getPane('vectorPane').style.pointerEvents = 'auto';  // Ensure clicks work
 
         // Define basemaps
@@ -651,7 +653,8 @@
                 opacity: 0.7,
                 pixelValuesToColorFn: pixelValuesToColorFn,
                 resolution: 256,
-                pane: 'rasterPane'
+                pane: 'rasterPane',
+                interactive: false // ✅ ADD: make raster non-interactive
             });
             
             layers[layerId] = layer;
@@ -675,27 +678,32 @@
             }
         }
 
-        // CREATE POPUP CONTENT - UPDATED (Madagascar-style binding)
+        // CREATE POPUP CONTENT - unchanged from your current version
         function createPopup(feature, layer, config) {
             if (!config.enablePopup) return;
 
             var popupContent;
 
-            if (config.customPopup && typeof config.customPopupContent === "function") {
+            if (config.customPopup && config.customPopupContent) {
                 popupContent = config.customPopupContent(feature);
             } else {
-                popupContent = '<h3>' + config.name + '</h3><table>';
-
-                (config.popupFields || []).forEach(function(field) {
-                    if (feature.properties && feature.properties[field] !== undefined && feature.properties[field] !== null) {
-                        var label = field.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
-                        popupContent += '<tr><td>' + label + '</td><td>' + feature.properties[field] + '</td></tr>';
+                popupContent = '<div style="max-width: 250px;">';
+                popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
+                popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+                
+                config.popupFields.forEach(function(field) {
+                    if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
+                        var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                        popupContent += '<tr>' +
+                                       '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
+                                       '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
+                                       '</tr>';
                     }
                 });
-
-                popupContent += '</table>';
+                
+                popupContent += '</table></div>';
             }
-
+            
             layer.bindPopup(popupContent, {
                 maxWidth: 300,
                 maxHeight: 400,
@@ -704,7 +712,7 @@
             });
         }
 
-        // LOAD VECTOR LAYERS - UPDATED (remove forced click handlers)
+        // LOAD VECTOR LAYERS - binds popup normally; clicks will now reach vectors because rasterPane ignores pointer events
         function loadVectorLayer(vectorId) {
             var config = vectorConfigs[vectorId];
             
@@ -720,6 +728,7 @@
                 })
                 .then(data => {
                     updateStatus(config.name + ' loaded successfully');
+                    console.log('Loaded GeoJSON data:', data);
                     
                     var layer;
                     
@@ -732,29 +741,35 @@
                                 return marker;
                             },
                             onEachFeature: function(feature, featureLayer) {
-                                createPopup(feature, featureLayer, config);
+                                if (config.enablePopup) {
+                                    createPopup(feature, featureLayer, config);
+                                }
                             },
                             pane: 'vectorPane'
                         });
                     } else {
                         layer = L.geoJSON(data, {
-                            style: function() {
+                            style: function(feature) {
                                 return Object.assign({}, config.style, {
                                     interactive: true,
                                     bubblingMouseEvents: true
                                 });
                             },
                             onEachFeature: function(feature, featureLayer) {
-                                createPopup(feature, featureLayer, config);
+                                if (config.enablePopup) {
+                                    createPopup(feature, featureLayer, config);
+                                }
                             },
                             pane: 'vectorPane'
                         });
                     }
                     
                     vectorLayers[vectorId] = layer;
+                    console.log('Vector layer created:', vectorId);
                     
                     if (config.visible) {
                         layer.addTo(map);
+                        console.log('Vector layer added to map:', vectorId);
                     }
                 })
                 .catch(error => {
@@ -827,7 +842,8 @@
                         opacity: 0.7,
                         pixelValuesToColorFn: pixelValuesToColorFn,
                         resolution: 256,
-                        pane: 'rasterPane'
+                        pane: 'rasterPane',
+                        interactive: false // ✅ ADD: make raster non-interactive
                     });
                     
                     layers[layerId] = layer;
