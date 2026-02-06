@@ -3,7 +3,7 @@
 <head>
     <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
     <meta charset="utf-8" />
-    <meta name="viewport"="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
@@ -189,7 +189,6 @@
             font-size: 12px;
         }
         
-        /* Popup styling */
         .leaflet-popup-content {
             margin: 10px;
             font-size: 12px;
@@ -215,6 +214,15 @@
             font-weight: bold;
             color: #666;
             width: 50%;
+        }
+        
+        .leaflet-popup-content a {
+            color: #0066CC;
+            text-decoration: none;
+        }
+        
+        .leaflet-popup-content a:hover {
+            text-decoration: underline;
         }
         
         .copy-notification {
@@ -272,10 +280,6 @@
     </style>
 </head>
 <body>
-    <div id="loading" class="loading">
-        <div>Loading map layers...</div>
-        <div id="load-status" style="margin-top: 10px; font-size: 12px;"></div>
-    </div>
     <div id="map"></div>
     <div class="north-arrow"></div>
     <div id="copy-notification" class="copy-notification"></div>
@@ -288,16 +292,17 @@
 
     <script>
         // Initialize map - start with regional view
-        var map = L.map('map').setView([18.0, 82.5], 5);
+        var map = L.map('map').setView([18.0, 82.5], 6);
 
-        // Create custom panes
+        // Ensure basemaps render beneath rasters
+        map.getPane('tilePane').style.zIndex = 100;
+
+        // Create custom panes with explicit z-index ordering
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 200;
-        map.getPane('rasterPane').style.pointerEvents = 'none';
-
+        
         map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 1000;
-        map.getPane('vectorPane').style.pointerEvents = 'auto';
+        map.getPane('vectorPane').style.zIndex = 450;
 
         // Define basemaps
         var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -315,7 +320,31 @@
             maxZoom: 19
         });
 
-        osmMap.addTo(map);
+        // Admin boundaries basemap (Esri Gray Canvas base + reference)
+        var adminGrayBase = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+            {
+                attribution: 'Tiles © Esri',
+                maxZoom: 19
+            }
+        );
+
+        var adminGrayReference = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+            {
+                attribution: 'Tiles © Esri',
+                maxZoom: 19
+            }
+        );
+
+        // Group them so they behave as ONE basemap
+        var adminBoundariesMap = L.layerGroup([
+            adminGrayBase,
+            adminGrayReference
+        ]);
+
+        // Default basemap: Admin Boundaries (change to osmMap.addTo(map) if desired)
+        adminBoundariesMap.addTo(map);
 
         // Store layers and georasters
         var layers = {};
@@ -323,32 +352,33 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 3;
+        var totalLayers = 5;
         
         // Track which classes are visible for each layer
         var visibleClasses = {
-            'risk_bangladesh': {},
-            'risk_south_india': {}
+            'pop_risk_india': {},
+            'lc_risk_india': {},
+            'pop_risk_bangladesh': {},
+            'lc_risk_bangladesh': {}
         };
 
-        // RASTER LAYER CONFIGURATIONS
+        // UPDATED RASTER LAYER CONFIGURATIONS
         var layerConfigs = {
             'enm': {
                 file: 'enm_cog.tif',
                 name: 'ENM - Regional Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
-                domain: [0, 1],
+                domain: [0, 0.97733802],
                 labels: ['Low Suitability', 'High Suitability'],
-                description: 'Regional ecological suitability (Bangladesh & South India)',
+                description: 'Regional ecological suitability',
                 mode: 'lch',
                 continuousLegend: true,
-                extent: 'regional',
                 center: [18.0, 82.5],
                 zoom: 5
             },
-            'risk_bangladesh': {
-                file: 'risk_bang_cog.tif',
-                name: 'Risk - Bangladesh (100m)',
+            'pop_risk_india': {
+                file: 'pop_risk_india_cog.tif',
+                name: 'Population Risk - South India (100m)',
                 discreteColors: {
                     0: '#000000',
                     1: '#FFFFBE',
@@ -358,10 +388,7 @@
                     6: '#FF0000',
                     9: '#A80000'
                 },
-                labels: ['No Risk', 'Very High Risk'],
-                description: 'Nipah Virus Transmission Risk Zones - Bangladesh',
                 customLegend: true,
-                discreteDisplay: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
                     { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
@@ -371,13 +398,62 @@
                     { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
-                extent: 'bangladesh',
+                center: [10.401378, 75.157471],
+                zoom: 8
+            },
+            'lc_risk_india': {
+                file: 'lc_risk_india_cog.tif',
+                name: 'Landcover Risk - South India (100m)',
+                discreteColors: {
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
+                },
+                customLegend: true,
+                legendItems: [
+                    { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
+                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+                ],
+                center: [10.401378, 75.157471],
+                zoom: 8
+            },
+            'pop_risk_bangladesh': {
+                file: 'pop_risk_bang_cog.tif',
+                name: 'Population Risk - Bangladesh (100m)',
+                discreteColors: {
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
+                },
+                customLegend: true,
+                legendItems: [
+                    { value: 0, color: '#000000', label: '0 - No Risk' },
+                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
+                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
+                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
+                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
+                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
+                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
+                ],
                 center: [23.8, 90.4],
                 zoom: 7
             },
-            'risk_south_india': {
-                file: 'risk_india_cog.tif',
-                name: 'Risk - South India (100m)',
+            'lc_risk_bangladesh': {
+                file: 'lc_risk_bang_cog.tif',
+                name: 'Landcover Risk - Bangladesh (100m)',
                 discreteColors: {
                     0: '#000000',
                     1: '#FFFFBE',
@@ -387,10 +463,7 @@
                     6: '#FF0000',
                     9: '#A80000'
                 },
-                labels: ['No Risk', 'Very High Risk'],
-                description: 'Nipah Virus Transmission Risk Zones - South India',
                 customLegend: true,
-                discreteDisplay: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
                     { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
@@ -400,72 +473,70 @@
                     { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
-                extent: 'south_india',
-                center: [12.5, 80.0],
-                zoom: 6
+                center: [23.8, 90.4],
+                zoom: 7
             }
         };
 
         // VECTOR LAYER CONFIGURATIONS
-        // NOTE: fixed invalid commas in style objects + added new india_admin layer
         var vectorConfigs = {
             'outbreaks': {
-                file: 'outbreaks.geojson',
-                name: 'Historical Outbreaks',
+                file: 'outbreaks.json',
+                name: 'Nipah virus (2001 - 2026)',
                 type: 'point',
                 style: {
                     color: '#FFFFFF',
-                    fillColor: '#0000FF',
-                    fillOpacity: 0.9,
-                    radius: 6,
-                    weight: 2
+                    fillColor: '#0096FF',
+                    fillOpacity: 0.8,
+                    radius: 7,
+                    weight: 3
                 },
-                visible: true,
-                enablePopup: true
+                popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
+                enablePopup: true,
+                visible: true
             },
             'study': {
                 file: 'study.geojson',
-                name: 'Study Area',
+                name: 'M Region',
                 type: 'polygon',
                 style: {
                     color: '#000000',
                     weight: 1,
                     fillOpacity: 0,
+                    fillColor: '#0066CC',
+                    dashArray: '10, 5'
+                },
+                popupFields: [],
+                enablePopup: false,
+                visible: true,
+                interactive: false
+            },
+            'district_2026': {
+                file: 'nipah_2026.json',
+                name: 'January 2026 - Barasat, North 24 Parganas district',
+                type: 'polygon',
+                style: {
+                    color: '#FFFFFF',
+                    weight: 3,
+                    fillOpacity: 0.15,
                     fillColor: null,
                     dashArray: '10, 5'
                 },
-                visible: true,
-                enablePopup: false
-            },
-            'district_2026': {
-                file: '2026_district.geojson',
-                name: '2026 Nipah District',
-                type: 'polygon',
-                style: {
-                    color: '#FFFFFF',
-                    weight: 3,
-                    fillOpacity: 0,
-                    fillColor: null,
-                    dashArray: '15, 10'
+                popupFields: [],
+                enablePopup: true,
+                customPopup: true,
+                customPopupContent: function(feature) {
+                    return '<div style="max-width: 300px;">' +
+                           '<h3 style="margin: 0 0 10px; font-size: 15px; color: #8B0000;">2026 Nipah Outbreak - West Bengal</h3>' +
+                           '<p style="margin: 0 0 8px; font-size: 12px; line-height: 1.5;">' +
+                           'In January 2026, authorities in West Bengal confirmed laboratory-confirmed Nipah virus infections in two healthcare workers (nurses) at a private hospital in Barasat, North 24 Parganas district. This event represents the third NiV infection outbreak reported in West Bengal (previous outbreaks reported in Siliguri in 2001 and Nadia in 2007).' +
+                           '</p>' +
+                           '<p style="margin: 0; font-size: 11px; color: #666; font-style: italic;">' +
+                           'Source: <a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON593" target="_blank" style="color: #0066CC;">Nipah virus disease - India (WHO)</a>' +
+                           '</p>' +
+                           '</div>';
                 },
-                visible: true,
-                enablePopup: true
-            },
-
-            // NEW: India admin layer (same behavior as district_2026: polygon + popup + vector pane)
-            'india_admin': {
-                file: 'india.json',
-                name: 'India Admin Layer',
-                type: 'polygon',
-                style: {
-                    color: '#FFFFFF',
-                    weight: 3,
-                    fillOpacity: 0,
-                    fillColor: null,
-                    dashArray: '15, 10'
-                },
-                visible: true,
-                enablePopup: true
+                visible: true
             }
         };
 
@@ -573,12 +644,6 @@
         }
 
         function updateStatus(message, isError) {
-            var statusDiv = document.getElementById('load-status');
-            if (isError) {
-                statusDiv.innerHTML += '<div class="error">' + message + '</div>';
-            } else {
-                statusDiv.innerHTML += '<div>' + message + '</div>';
-            }
             console.log(message);
         }
 
@@ -647,8 +712,7 @@
                 opacity: 0.7,
                 pixelValuesToColorFn: pixelValuesToColorFn,
                 resolution: 256,
-                pane: 'rasterPane',
-                interactive: false
+                pane: 'rasterPane'
             });
             
             layers[layerId] = layer;
@@ -658,10 +722,12 @@
             }
         }
 
+        // UPDATED: supports admin basemap
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
             map.removeLayer(streetMap);
             map.removeLayer(aerialMap);
+            map.removeLayer(adminBoundariesMap);
             
             if (basemapType === 'osm') {
                 osmMap.addTo(map);
@@ -669,15 +735,45 @@
                 streetMap.addTo(map);
             } else if (basemapType === 'aerial') {
                 aerialMap.addTo(map);
+            } else if (basemapType === 'admin') {
+                adminBoundariesMap.addTo(map);
             }
         }
 
-        // LOAD VECTOR LAYERS (supports: outbreaks point popups, district_2026 popup, india_admin popup, others no popup)
+        function createPopup(feature, layer, config) {
+            if (!config.enablePopup) {
+                return;
+            }
+            
+            var popupContent;
+            
+            if (config.customPopup && config.customPopupContent) {
+                popupContent = config.customPopupContent(feature);
+            } else {
+                popupContent = '<div style="max-width: 250px;">';
+                popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
+                popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+                
+                config.popupFields.forEach(function(field) {
+                    if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
+                        var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                        popupContent += '<tr>' +
+                                       '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
+                                       '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
+                                       '</tr>';
+                    }
+                });
+                
+                popupContent += '</table></div>';
+            }
+            
+            layer.bindPopup(popupContent);
+        }
+
         function loadVectorLayer(vectorId) {
             var config = vectorConfigs[vectorId];
             
             updateStatus('Loading ' + config.name + '...');
-            console.log('Loading vector layer:', vectorId, config.file);
             
             fetch(config.file)
                 .then(response => {
@@ -688,90 +784,63 @@
                 })
                 .then(data => {
                     updateStatus(config.name + ' loaded successfully');
-                    console.log('Loaded GeoJSON data:', data);
                     
                     var layer;
-
-                    // POINT LAYER (outbreaks)
+                    
                     if (config.type === 'point') {
                         layer = L.geoJSON(data, {
                             pointToLayer: function(feature, latlng) {
-                                return L.circleMarker(latlng, config.style);
-                            },
-                            onEachFeature: function(feature, featureLayer) {
-                                // Build popup table from properties
-                                var popupContent = '<h3>' + config.name + '</h3><table>';
-                                for (var key in feature.properties) {
-                                    if (feature.properties.hasOwnProperty(key)) {
-                                        var value = feature.properties[key];
-                                        var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
-                                        popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
+                                var marker = L.circleMarker(latlng, config.style);
+                                
+                                // Bind popup for points
+                                if (config.enablePopup) {
+                                    if (config.customPopup && config.customPopupContent) {
+                                        marker.bindPopup(config.customPopupContent(feature));
+                                    } else {
+                                        var popupContent = '<div style="max-width: 250px;">';
+                                        popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
+                                        popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+                                        
+                                        config.popupFields.forEach(function(field) {
+                                            if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
+                                                var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                                                popupContent += '<tr>' +
+                                                               '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
+                                                               '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
+                                                               '</tr>';
+                                            }
+                                        });
+                                        
+                                        popupContent += '</table></div>';
+                                        marker.bindPopup(popupContent);
                                     }
                                 }
-                                popupContent += '</table>';
                                 
-                                featureLayer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
+                                return marker;
                             },
                             pane: 'vectorPane'
                         });
-
-                    // POLYGON LAYER: district_2026 (your custom popup)
-                    } else if (vectorId === 'district_2026') {
-                        layer = L.geoJSON(data, {
-                            style: config.style,
-                            onEachFeature: function(feature, featureLayer) {
-                                var popupContent = '<h3>2026 Nipah Outbreak - West Bengal</h3><table>';
-                                popupContent += '<tr><td>Location</td><td>North 24 Parganas district, West Bengal, India</td></tr>';
-                                popupContent += '<tr><td>Date</td><td>January 2026</td></tr>';
-                                popupContent += '<tr><td>Cases</td><td>2 healthcare workers (nurses)</td></tr>';
-                                popupContent += '<tr><td>Facility</td><td>Private hospital in Barasat</td></tr>';
-                                popupContent += '<tr><td>Status</td><td>Laboratory-confirmed Nipah virus infections</td></tr>';
-                                popupContent += '<tr><td>Source</td><td><a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON536" target="_blank">WHO Disease Outbreak News</a></td></tr>';
-                                popupContent += '</table>';
-                                
-                                featureLayer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
-                            },
-                            pane: 'vectorPane'
-                        });
-
-                    // POLYGON LAYER: india_admin (auto popup from feature properties; same style as district_2026)
-                    } else if (vectorId === 'india_admin') {
-                        layer = L.geoJSON(data, {
-                            style: config.style,
-                            onEachFeature: function(feature, featureLayer) {
-                                var popupContent = '<h3>' + config.name + '</h3><table>';
-                                if (feature && feature.properties) {
-                                    for (var key in feature.properties) {
-                                        if (feature.properties.hasOwnProperty(key)) {
-                                            var value = feature.properties[key];
-                                            var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
-                                            popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
-                                        }
-                                    }
-                                } else {
-                                    popupContent += '<tr><td>Info</td><td>No properties found</td></tr>';
-                                }
-                                popupContent += '</table>';
-
-                                featureLayer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
-                            },
-                            pane: 'vectorPane'
-                        });
-
-                    // OTHER POLYGON LAYERS (no popup)
                     } else {
                         layer = L.geoJSON(data, {
                             style: config.style,
+                            onEachFeature: function(feature, featureLayer) {
+                                if (config.enablePopup) {
+                                    createPopup(feature, featureLayer, config);
+                                }
+                                
+                                // Make layer non-interactive if specified
+                                if (config.interactive === false) {
+                                    featureLayer.options.interactive = false;
+                                }
+                            },
                             pane: 'vectorPane'
                         });
                     }
                     
                     vectorLayers[vectorId] = layer;
-                    console.log('Vector layer created:', vectorId);
                     
                     if (config.visible) {
                         layer.addTo(map);
-                        console.log('Vector layer added to map:', vectorId);
                     }
                 })
                 .catch(error => {
@@ -844,8 +913,7 @@
                         opacity: 0.7,
                         pixelValuesToColorFn: pixelValuesToColorFn,
                         resolution: 256,
-                        pane: 'rasterPane',
-                        interactive: false
+                        pane: 'rasterPane'
                     });
                     
                     layers[layerId] = layer;
@@ -857,12 +925,6 @@
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
-                    }
-                    
-                    if (loadedCount === totalLayers) {
-                        setTimeout(function() {
-                            document.getElementById('loading').style.display = 'none';
-                        }, 1000);
                     }
                 })
                 .catch(error => {
@@ -946,7 +1008,8 @@
             var div = L.DomUtil.create('div', 'layer-control');
             
             div.innerHTML = '<h4>Basemaps</h4>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="admin" checked onchange="switchBasemap(\'admin\')">Admin Boundaries (Esri Gray)</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map (Esri)</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\'aerial\')">Aerial Imagery (Esri)</label>';
             
@@ -1006,7 +1069,6 @@
                 '<p>Multi-scale Analysis</p>' +
                 '<p><em>Regional: 1km resolution overview</em></p>' +
                 '<p><em>Country-specific: 100m detail</em></p>' +
-                '<p><em>Click outbreak markers for details</em></p>' +
                 '<p><em>Right-click: Copy coordinates</em></p>';
             return div;
         };
@@ -1016,16 +1078,23 @@
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Load all raster layers
+        // Load all raster layers FIRST
         updateStatus('Starting to load layers...');
         Object.keys(layerConfigs).forEach(function(key) {
             loadLayer(key);
         });
 
-        // Load all vector layers
-        Object.keys(vectorConfigs).forEach(function(key) {
-            loadVectorLayer(key);
-        });
+        // Load all vector layers AFTER with slight delay
+        setTimeout(function() {
+            Object.keys(vectorConfigs).forEach(function(key) {
+                loadVectorLayer(key);
+            });
+        }, 1000);
     </script>
 </body>
 </html>
+
+
+
+
+
