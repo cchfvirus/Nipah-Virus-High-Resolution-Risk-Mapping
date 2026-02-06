@@ -277,27 +277,12 @@
             border-right: 8px solid transparent;
             border-bottom: 12px solid #c30b0b;
         }
-        
-        .debug-panel {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 11px;
-            max-width: 300px;
-            z-index: 2000;
-        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div class="north-arrow"></div>
     <div id="copy-notification" class="copy-notification"></div>
-    <div id="debug-panel" class="debug-panel">Debug Info:<br><span id="debug-content"></span></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
@@ -306,14 +291,6 @@
     <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
     <script>
-        // Debug logger
-        function debugLog(message) {
-            var debugContent = document.getElementById('debug-content');
-            var timestamp = new Date().toLocaleTimeString();
-            debugContent.innerHTML = timestamp + ': ' + message + '<br>' + debugContent.innerHTML;
-            console.log('[DEBUG]', message);
-        }
-
         // Initialize map - start with regional view
         var map = L.map('map').setView([18.0, 82.5], 6);
 
@@ -323,8 +300,6 @@
         
         map.createPane('vectorPane');
         map.getPane('vectorPane').style.zIndex = 450;
-        
-        debugLog('Panes created - raster:200, vector:450');
 
         // Define basemaps
         var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -506,7 +481,8 @@
                 },
                 popupFields: [],
                 enablePopup: false,
-                visible: true
+                visible: true,
+                interactive: false
             },
             'district_2026': {
                 file: 'nipah_2026.json',
@@ -735,7 +711,6 @@
 
         function createPopup(feature, layer, config) {
             if (!config.enablePopup) {
-                debugLog('Popup disabled for: ' + config.name);
                 return;
             }
             
@@ -762,14 +737,12 @@
             }
             
             layer.bindPopup(popupContent);
-            debugLog('Popup bound for: ' + config.name);
         }
 
         function loadVectorLayer(vectorId) {
             var config = vectorConfigs[vectorId];
             
             updateStatus('Loading ' + config.name + '...');
-            debugLog('Starting load: ' + vectorId);
             
             fetch(config.file)
                 .then(response => {
@@ -780,7 +753,6 @@
                 })
                 .then(data => {
                     updateStatus(config.name + ' loaded successfully');
-                    debugLog('Data loaded for: ' + vectorId + ', features: ' + (data.features ? data.features.length : 'N/A'));
                     
                     var layer;
                     
@@ -788,9 +760,8 @@
                         layer = L.geoJSON(data, {
                             pointToLayer: function(feature, latlng) {
                                 var marker = L.circleMarker(latlng, config.style);
-                                debugLog('Created point marker at: ' + latlng.toString());
                                 
-                                // CRITICAL: Explicitly bind popup HERE for points
+                                // Bind popup for points
                                 if (config.enablePopup) {
                                     if (config.customPopup && config.customPopupContent) {
                                         marker.bindPopup(config.customPopupContent(feature));
@@ -812,14 +783,7 @@
                                         popupContent += '</table></div>';
                                         marker.bindPopup(popupContent);
                                     }
-                                    debugLog('Popup bound to point marker');
                                 }
-                                
-                                // Add click handler for debugging
-                                marker.on('click', function(e) {
-                                    debugLog('Point marker clicked!');
-                                    L.DomEvent.stopPropagation(e); // Prevent map click
-                                });
                                 
                                 return marker;
                             },
@@ -832,27 +796,25 @@
                                 if (config.enablePopup) {
                                     createPopup(feature, featureLayer, config);
                                 }
-                                // Add click event for debugging
-                                featureLayer.on('click', function(e) {
-                                    debugLog('Vector clicked: ' + config.name);
-                                });
+                                
+                                // Make layer non-interactive if specified
+                                if (config.interactive === false) {
+                                    featureLayer.options.interactive = false;
+                                }
                             },
                             pane: 'vectorPane'
                         });
                     }
                     
                     vectorLayers[vectorId] = layer;
-                    debugLog('Vector layer created: ' + vectorId);
                     
                     if (config.visible) {
                         layer.addTo(map);
-                        debugLog('Vector layer added to map: ' + vectorId + ', z-index: ' + map.getPane('vectorPane').style.zIndex);
                     }
                 })
                 .catch(error => {
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
                     updateStatus(errorMsg, true);
-                    debugLog('ERROR: ' + errorMsg);
                     console.error(errorMsg, error);
                 });
         }
@@ -861,10 +823,8 @@
             if (vectorLayers[vectorId]) {
                 if (map.hasLayer(vectorLayers[vectorId])) {
                     map.removeLayer(vectorLayers[vectorId]);
-                    debugLog('Removed vector layer: ' + vectorId);
                 } else {
                     vectorLayers[vectorId].addTo(map);
-                    debugLog('Added vector layer: ' + vectorId);
                 }
             }
         }
@@ -929,13 +889,11 @@
                     loadedCount++;
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
-                    debugLog('Raster layer loaded: ' + layerId);
                     
                     if (!currentLayer) {
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
-                        debugLog('Initial raster layer displayed: ' + layerId);
                     }
                 })
                 .catch(error => {
@@ -1086,11 +1044,6 @@
 
         map.on('contextmenu', function(e) {
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
-        });
-
-        // Test click anywhere on map
-        map.on('click', function(e) {
-            debugLog('Map clicked at: ' + e.latlng.toString());
         });
 
         // Load all raster layers FIRST
