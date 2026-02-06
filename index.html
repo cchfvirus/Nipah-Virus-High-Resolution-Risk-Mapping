@@ -3,7 +3,7 @@
 <head>
     <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
     <meta charset="utf-8" />
-    <meta name="viewport"="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
@@ -54,13 +54,8 @@
             transition: background-color 0.2s;
         }
         
-        .legend .item:hover {
-            background-color: #f0f0f0;
-        }
-        
-        .legend .item.disabled {
-            opacity: 0.3;
-        }
+        .legend .item:hover { background-color: #f0f0f0; }
+        .legend .item.disabled { opacity: 0.3; }
         
         .legend .item input[type="checkbox"] {
             margin-right: 5px;
@@ -98,9 +93,7 @@
             border-radius: 3px;
         }
         
-        .legend-controls button:hover {
-            background: #f0f0f0;
-        }
+        .legend-controls button:hover { background: #f0f0f0; }
         
         .layer-control {
             background: white;
@@ -112,10 +105,7 @@
             max-width: 280px;
         }
         
-        .layer-control h4 { 
-            margin: 0 0 10px; 
-            font-size: 14px;
-        }
+        .layer-control h4 { margin: 0 0 10px; font-size: 14px; }
         
         .layer-control label {
             display: block;
@@ -141,9 +131,7 @@
             font-weight: bold;
         }
         
-        .opacity-control {
-            margin-bottom: 12px;
-        }
+        .opacity-control { margin-bottom: 12px; }
         
         .opacity-control label {
             display: block;
@@ -233,9 +221,7 @@
             transition: opacity 0.3s;
         }
         
-        .copy-notification.show {
-            opacity: 1;
-        }
+        .copy-notification.show { opacity: 1; }
         
         .north-arrow {
             position: absolute;
@@ -255,9 +241,7 @@
             color: #c30b0b;
         }
         
-        .north-arrow::before {
-            content: "N";
-        }
+        .north-arrow::before { content: "N"; }
         
         .north-arrow::after {
             content: "";
@@ -406,7 +390,22 @@
             }
         };
 
-        // VECTOR LAYER CONFIGURATIONS - FIXED
+        // ✅ IMPORTANT: disable pointer events on raster canvas itself (fixes “clicks don’t reach vectors”)
+        function disableRasterPointerEvents(rasterLayer) {
+            try {
+                if (!rasterLayer) return;
+                if (typeof rasterLayer.getContainer === 'function') {
+                    var el = rasterLayer.getContainer();
+                    if (el && el.style) el.style.pointerEvents = 'none';
+                }
+                if (rasterLayer._canvas && rasterLayer._canvas.style) rasterLayer._canvas.style.pointerEvents = 'none';
+                if (rasterLayer._container && rasterLayer._container.style) rasterLayer._container.style.pointerEvents = 'none';
+            } catch (e) {
+                console.warn('disableRasterPointerEvents error', e);
+            }
+        }
+
+        // VECTOR LAYER CONFIGURATIONS - ✅ FIXED (enablePopup moved OUTSIDE style + commas fixed)
         var vectorConfigs = {
             'outbreaks': {
                 file: 'outbreaks.geojson',
@@ -418,9 +417,9 @@
                     fillOpacity: 0.9,
                     radius: 6,
                     weight: 2
-                    enablePopup: true,
-                    popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
                 },
+                enablePopup: true,
+                popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
                 visible: true
             },
             'study': {
@@ -434,6 +433,7 @@
                     fillColor: null,
                     dashArray: '10, 5'
                 },
+                enablePopup: false,
                 visible: true
             },
             'district_2026': {
@@ -446,8 +446,8 @@
                     fillOpacity: 0,
                     fillColor: null,
                     dashArray: '15, 10'
-                    enablePopup: true
                 },
+                enablePopup: true,
                 visible: true
             }
         };
@@ -638,6 +638,7 @@
             
             if (currentLayer === layerId) {
                 layer.addTo(map);
+                disableRasterPointerEvents(layer);
             }
         }
 
@@ -655,7 +656,7 @@
             }
         }
 
-        // LOAD VECTOR LAYERS - FIXED WITH MADAGASCAR POPUP STYLE
+        // LOAD VECTOR LAYERS - ✅ uses enablePopup flag + Madagascar popup format
         function loadVectorLayer(vectorId) {
             var config = vectorConfigs[vectorId];
             
@@ -676,15 +677,15 @@
                     var layer;
                     
                     if (config.type === 'point') {
-                        // Point layer (outbreaks)
                         layer = L.geoJSON(data, {
                             pointToLayer: function(feature, latlng) {
                                 return L.circleMarker(latlng, config.style);
                             },
                             onEachFeature: function(feature, featureLayer) {
-                                // Build popup content using Madagascar style
+                                if (!config.enablePopup) return;
+
                                 var popupContent = '<h3>' + config.name + '</h3><table>';
-                                
+
                                 for (var key in feature.properties) {
                                     if (feature.properties.hasOwnProperty(key)) {
                                         var value = feature.properties[key];
@@ -692,9 +693,9 @@
                                         popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
                                     }
                                 }
-                                
+
                                 popupContent += '</table>';
-                                
+
                                 featureLayer.bindPopup(popupContent, {
                                     maxWidth: 300,
                                     maxHeight: 400
@@ -703,10 +704,11 @@
                             pane: 'vectorPane'
                         });
                     } else if (vectorId === 'district_2026') {
-                        // Special handling for 2026 district
                         layer = L.geoJSON(data, {
                             style: config.style,
                             onEachFeature: function(feature, featureLayer) {
+                                if (!config.enablePopup) return;
+
                                 var popupContent = '<h3>2026 Nipah Outbreak - West Bengal</h3><table>';
                                 popupContent += '<tr><td>Location</td><td>North 24 Parganas district, West Bengal, India</td></tr>';
                                 popupContent += '<tr><td>Date</td><td>January 2026</td></tr>';
@@ -724,7 +726,6 @@
                             pane: 'vectorPane'
                         });
                     } else {
-                        // Polygon layer (study area) - no popup
                         layer = L.geoJSON(data, {
                             style: config.style,
                             pane: 'vectorPane'
@@ -820,9 +821,15 @@
                     
                     if (!currentLayer) {
                         layer.addTo(map);
+                        disableRasterPointerEvents(layer);
                         currentLayer = layerId;
                         updateLegend(layerId);
                     }
+
+                    // ensure pointerEvents none whenever layer gets added later
+                    layer.on('add', function() {
+                        disableRasterPointerEvents(layer);
+                    });
                     
                     if (loadedCount === totalLayers) {
                         setTimeout(function() {
@@ -844,6 +851,7 @@
             
             if (layers[layerId]) {
                 layers[layerId].addTo(map);
+                disableRasterPointerEvents(layers[layerId]);
                 currentLayer = layerId;
                 updateLegend(layerId);
                 
@@ -994,6 +1002,3 @@
     </script>
 </body>
 </html>
-
-
-
