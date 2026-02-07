@@ -1,6 +1,7 @@
 # Nipah Virus High-Resolution Risk Mapping
 ### Bangladesh & South India
-![Uploading Nipah_virus.jpg…]()
+
+![Nipah Risk Map](Nipah_virus.jpeg)
 
 [![Live Map](https://img.shields.io/badge/🗺️-View_Interactive_Map-blue?style=for-the-badge)](https://cchfvirus.github.io/Nipah-Virus-High-Resolution-Risk-Mapping/)
 [![GitHub Pages](https://img.shields.io/badge/Status-Live-success)](https://cchfvirus.github.io/Nipah-Virus-High-Resolution-Risk-Mapping/)
