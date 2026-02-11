@@ -217,7 +217,7 @@
         }
         
         .leaflet-popup-content a {
-            color: '#0066CC';
+            color: #0066CC;
             text-decoration: none;
         }
         
@@ -352,36 +352,26 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 6;
+        var totalLayers = 6;  // Updated to include MTP layer
         
         // Track which classes are visible for each layer
         var visibleClasses = {
-            'mtp_binary': {},
             'pop_risk_india': {},
             'lc_risk_india': {},
             'pop_risk_bangladesh': {},
-            'lc_risk_bangladesh': {}
+            'lc_risk_bangladesh': {},
+            'mtp_binary': {}  // Added for MTP layer
         };
 
-        // DEFINE LAYER ORDER EXPLICITLY
-        var layerOrder = [
-            'enm',
-            'mtp_binary', 
-            'pop_risk_india',
-            'lc_risk_india',
-            'pop_risk_bangladesh',
-            'lc_risk_bangladesh'
-        ];
-
-        // RASTER LAYER CONFIGURATIONS
+        // RASTER LAYER CONFIGURATIONS - Added MTP layer
         var layerConfigs = {
             'enm': {
                 file: 'enm_cog.tif',
                 name: 'Maxent - Regional Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
-                domain: [0, 100],
-                labels: ['Low Suitability (0)', 'High Suitability (100)'],
-                description: 'Regional ecological suitability (0-100 scale)',
+                domain: [0, 1],
+                labels: ['Low Suitability', 'High Suitability'],
+                description: 'Regional ecological suitability',
                 mode: 'lch',
                 continuousLegend: true,
                 center: [18.0, 82.5],
@@ -391,8 +381,8 @@
                 file: 'mtp_cog.tif',
                 name: 'Minimum Training Presence Threshold (1km)',
                 discreteColors: {
-                    0: null,        // Transparent for unsuitable (0 values)
-                    1: '#dc143c'    // Crimson red for suitable (1 values)
+                    0: null,        // Transparent for unsuitable
+                    1: '#dc143c'    // Crimson red for suitable habitat
                 },
                 customLegend: true,
                 legendItems: [
@@ -567,8 +557,8 @@
             }
         };
 
-        // Initialize all classes as visible for discrete layers
-        layerOrder.forEach(function(layerId) {
+        // Initialize all classes as visible
+        Object.keys(layerConfigs).forEach(function(layerId) {
             var config = layerConfigs[layerId];
             if (config.discreteColors) {
                 visibleClasses[layerId] = {};
@@ -671,18 +661,7 @@
         }
 
         function updateStatus(message, isError) {
-            console.log((isError ? 'ERROR: ' : '') + message);
-            
-            // Also show status to user
-            var notification = document.getElementById('copy-notification');
-            if (isError) {
-                notification.textContent = 'Loading Error: ' + message;
-                notification.style.background = 'rgba(198, 40, 40, 0.9)';
-                notification.classList.add('show');
-                setTimeout(function() {
-                    notification.classList.remove('show');
-                }, 4000);
-            }
+            console.log(message);
         }
 
         function updateLayerOpacity(layerId, opacity) {
@@ -696,13 +675,11 @@
             refreshLayer(layerId);
             
             var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
-            if (checkbox) {
-                var item = checkbox.parentElement;
-                if (visibleClasses[layerId][classValue]) {
-                    item.classList.remove('disabled');
-                } else {
-                    item.classList.add('disabled');
-                }
+            var item = checkbox.parentElement;
+            if (visibleClasses[layerId][classValue]) {
+                item.classList.remove('disabled');
+            } else {
+                item.classList.add('disabled');
             }
         }
 
@@ -883,6 +860,7 @@
                 .catch(error => {
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
                     updateStatus(errorMsg, true);
+                    console.error(errorMsg, error);
                 });
         }
 
@@ -904,9 +882,9 @@
             fetch(config.file)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Network error: ' + response.status + ' - Check if ' + config.file + ' exists');
+                        throw new Error('HTTP error! status: ' + response.status);
                     }
-                    updateStatus(config.name + ' downloaded successfully');
+                    updateStatus(config.name + ' fetched successfully');
                     return response.arrayBuffer();
                 })
                 .then(arrayBuffer => {
@@ -920,21 +898,19 @@
                     var pixelValuesToColorFn;
                     
                     if (config.discreteColors) {
-                        // Binary/categorical layer handling
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
                             
                             value = Math.round(value);
                             
-                            if (!visibleClasses[layerId] || !visibleClasses[layerId][value]) {
+                            if (!visibleClasses[layerId][value]) {
                                 return null;
                             }
                             
                             return config.discreteColors[value] || null;
                         };
                     } else {
-                        // Continuous layer handling with better floating-point tolerance
                         var scale = config.mode 
                             ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
                             : chroma.scale(config.colors).domain(config.domain);
@@ -942,16 +918,6 @@
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
-                            
-                            // Handle tiny floating-point values - treat values < 1e-10 as zero
-                            if (Math.abs(value) < 1e-10) {
-                                value = 0;
-                            }
-                            
-                            // Ensure value is within domain
-                            if (value < config.domain[0]) value = config.domain[0];
-                            if (value > config.domain[1]) value = config.domain[1];
-                            
                             return scale(value).hex();
                         };
                     }
@@ -960,7 +926,7 @@
                         georaster: georaster,
                         opacity: 0.7,
                         pixelValuesToColorFn: pixelValuesToColorFn,
-                        resolution: 256,  // Lower resolution for better performance
+                        resolution: 256,
                         pane: 'rasterPane'
                     });
                     
@@ -969,17 +935,16 @@
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    // Initialize the first layer (ENM) as default
-                    if (layerId === 'enm') {
+                    if (!currentLayer) {
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
-                        updateStatus('ENM layer displayed successfully');
                     }
                 })
                 .catch(error => {
-                    var errorMsg = 'Failed to load ' + config.name + ': ' + error.message;
+                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
                     updateStatus(errorMsg, true);
+                    console.error(errorMsg, error);
                 });
         }
 
@@ -1000,10 +965,6 @@
                         duration: 1.0
                     });
                 }
-                
-                updateStatus('Switched to ' + config.name);
-            } else {
-                updateStatus('Layer not loaded yet: ' + layerId, true);
             }
         }
 
@@ -1015,7 +976,7 @@
             
             if (config.customLegend && config.legendItems) {
                 config.legendItems.forEach(function(item) {
-                    var isChecked = visibleClasses[layerId] && visibleClasses[layerId][item.value];
+                    var isChecked = visibleClasses[layerId][item.value];
                     var disabledClass = isChecked ? '' : ' disabled';
                     
                     legendDiv.innerHTML += 
@@ -1055,7 +1016,7 @@
             }
         }
 
-        // Create layer control using the explicit order
+        // Create layer control
         var layerControl = L.control({position: 'topleft'});
         layerControl.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'layer-control');
@@ -1068,9 +1029,8 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
-            // Use explicit layer order instead of Object.keys()
-            layerOrder.forEach(function(key, index) {
-                var checked = index === 0 ? 'checked' : '';  // ENM will be first and checked
+            Object.keys(layerConfigs).forEach(function(key, index) {
+                var checked = index === 0 ? 'checked' : '';
                 div.innerHTML += 
                     '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
                     ' onchange="switchLayer(\'' + key + '\')">' + 
@@ -1090,7 +1050,7 @@
             div.innerHTML += '<div class="opacity-section">';
             div.innerHTML += '<h5>Layer Opacity</h5>';
             
-            layerOrder.forEach(function(key) {
+            Object.keys(layerConfigs).forEach(function(key) {
                 div.innerHTML += 
                     '<div class="opacity-control">' +
                     '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
@@ -1132,9 +1092,9 @@
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Load all raster layers using explicit order
+        // Load all raster layers
         updateStatus('Starting to load layers...');
-        layerOrder.forEach(function(key) {
+        Object.keys(layerConfigs).forEach(function(key) {
             loadLayer(key);
         });
 
