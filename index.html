@@ -479,20 +479,20 @@
             },
             // NEW BINARY LAYER ADDED HERE
             'binary_layer': {
-                file: 'mtp_cog.tif',
+                file: 'binary_layer_cog.tif',
                 name: 'Binary Classification (Regional)',
                 discreteColors: {
-                    0: '#CCCCCC',
-                    1: '#006837'
+                    0: '#FF0000',  // Bright red for absent - very visible!
+                    1: '#00FF00'   // Bright green for present - very visible!
                 },
                 customLegend: true,
                 legendItems: [
-                    { value: 0, color: '#CCCCCC', label: '0 - Absent' },
-                    { value: 1, color: '#006837', label: '1 - Present' }
+                    { value: 0, color: '#FF0000', label: '0 - Absent' },
+                    { value: 1, color: '#00FF00', label: '1 - Present' }
                 ],
                 description: 'Binary presence/absence classification',
                 center: [18.0, 82.5],
-                zoom: 6
+                zoom: 5
             }
         };
 
@@ -909,7 +909,11 @@
                         sourceType: georaster.sourceType,
                         mins: georaster.mins,
                         maxs: georaster.maxs,
-                        ranges: georaster.ranges
+                        ranges: georaster.ranges,
+                        xmin: georaster.xmin,
+                        xmax: georaster.xmax,
+                        ymin: georaster.ymin,
+                        ymax: georaster.ymax
                     });
                     
                     // For binary layer, check if values are actually present
@@ -918,6 +922,26 @@
                         console.log('Min values:', georaster.mins);
                         console.log('Max values:', georaster.maxs);
                         console.log('Expected values: 0 and 1');
+                        console.log('NoData value:', georaster.noDataValue);
+                        console.log('Geographic extent:', {
+                            xmin: georaster.xmin,
+                            xmax: georaster.xmax,
+                            ymin: georaster.ymin,
+                            ymax: georaster.ymax
+                        });
+                        console.log('Current map view center:', map.getCenter());
+                        console.log('Current map zoom:', map.getZoom());
+                        
+                        // Sample a few actual values to see what we're getting
+                        if (georaster.values && georaster.values[0]) {
+                            var sampleValues = [];
+                            for (var i = 0; i < Math.min(20, georaster.values[0].length); i++) {
+                                if (georaster.values[0][i] !== undefined && georaster.values[0][i] !== null) {
+                                    sampleValues.push(georaster.values[0][i]);
+                                }
+                            }
+                            console.log('Sample of first 20 non-null values:', sampleValues);
+                        }
                     }
                     
                     georasters[layerId] = georaster;
@@ -925,6 +949,9 @@
                     var pixelValuesToColorFn;
                     
                     if (config.discreteColors) {
+                        var pixelCount = 0;
+                        var colorCounts = {};
+                        
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
@@ -932,15 +959,32 @@
                             value = Math.round(value);
                             
                             // Debug logging for binary_layer
-                            if (layerId === 'binary_layer' && Math.random() < 0.001) {
-                                console.log('Binary layer pixel value:', value, 'Visible:', visibleClasses[layerId][value], 'Color:', config.discreteColors[value]);
+                            if (layerId === 'binary_layer') {
+                                pixelCount++;
+                                if (!colorCounts[value]) colorCounts[value] = 0;
+                                colorCounts[value]++;
+                                
+                                if (pixelCount === 1000) {
+                                    console.log('Binary layer - first 1000 pixels:', colorCounts);
+                                } else if (pixelCount === 10000) {
+                                    console.log('Binary layer - first 10000 pixels:', colorCounts);
+                                } else if (pixelCount === 100000) {
+                                    console.log('Binary layer - first 100000 pixels:', colorCounts);
+                                }
                             }
                             
                             if (!visibleClasses[layerId][value]) {
                                 return null;
                             }
                             
-                            return config.discreteColors[value] || null;
+                            var color = config.discreteColors[value] || null;
+                            
+                            // Log first few color assignments for binary layer
+                            if (layerId === 'binary_layer' && pixelCount <= 5) {
+                                console.log('Pixel', pixelCount, '- Value:', value, 'Color:', color);
+                            }
+                            
+                            return color;
                         };
                     } else {
                         var scale = config.mode 
@@ -997,6 +1041,29 @@
                         animate: true,
                         duration: 1.0
                     });
+                }
+                
+                // Additional debugging for binary layer
+                if (layerId === 'binary_layer') {
+                    console.log('Binary layer switched to - checking visibility...');
+                    console.log('Layer opacity:', layers[layerId].options.opacity);
+                    console.log('Layer on map:', map.hasLayer(layers[layerId]));
+                    console.log('Visible classes for binary_layer:', visibleClasses['binary_layer']);
+                    console.log('Layer config discreteColors:', config.discreteColors);
+                    
+                    // Try to fit bounds to the georaster extent
+                    var georaster = georasters[layerId];
+                    if (georaster && georaster.xmin !== undefined) {
+                        var bounds = [
+                            [georaster.ymin, georaster.xmin],
+                            [georaster.ymax, georaster.xmax]
+                        ];
+                        console.log('Binary layer bounds:', bounds);
+                        console.log('Fitting map to binary layer extent...');
+                        setTimeout(function() {
+                            map.fitBounds(bounds);
+                        }, 500);
+                    }
                 }
             }
         }
