@@ -352,15 +352,14 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 6; // UPDATED: changed from 5 to 6
+        var totalLayers = 5;
         
         // Track which classes are visible for each layer
         var visibleClasses = {
             'pop_risk_india': {},
             'lc_risk_india': {},
             'pop_risk_bangladesh': {},
-            'lc_risk_bangladesh': {},
-            'binary_layer': {} // ADDED: new layer for visibility tracking
+            'lc_risk_bangladesh': {}
         };
 
         // UPDATED RASTER LAYER CONFIGURATIONS
@@ -476,23 +475,6 @@
                 ],
                 center: [23.8, 90.4],
                 zoom: 7
-            },
-            // NEW BINARY LAYER ADDED HERE
-            'binary_layer': {
-                file: 'mtp_cog.tif',
-                name: 'Binary Classification (Regional)',
-                discreteColors: {
-                    0: '#FF0000',  // Bright red for absent - very visible!
-                    1: '#00FF00'   // Bright green for present - very visible!
-                },
-                customLegend: true,
-                legendItems: [
-                    { value: 0, color: '#FF0000', label: '0 - Absent' },
-                    { value: 1, color: '#00FF00', label: '1 - Present' }
-                ],
-                description: 'Binary presence/absence classification',
-                center: [18.0, 82.5],
-                zoom: 5
             }
         };
 
@@ -897,94 +879,22 @@
                 })
                 .then(georaster => {
                     updateStatus(config.name + ' parsed successfully');
-                    
-                    // Debug: Log georaster properties
-                    console.log('Georaster info for ' + layerId + ':', {
-                        numberOfRasters: georaster.numberOfRasters,
-                        height: georaster.height,
-                        width: georaster.width,
-                        pixelHeight: georaster.pixelHeight,
-                        pixelWidth: georaster.pixelWidth,
-                        projection: georaster.projection,
-                        sourceType: georaster.sourceType,
-                        mins: georaster.mins,
-                        maxs: georaster.maxs,
-                        ranges: georaster.ranges,
-                        xmin: georaster.xmin,
-                        xmax: georaster.xmax,
-                        ymin: georaster.ymin,
-                        ymax: georaster.ymax
-                    });
-                    
-                    // For binary layer, check if values are actually present
-                    if (layerId === 'binary_layer') {
-                        console.log('Binary layer loaded - checking data range...');
-                        console.log('Min values:', georaster.mins);
-                        console.log('Max values:', georaster.maxs);
-                        console.log('Expected values: 0 and 1');
-                        console.log('NoData value:', georaster.noDataValue);
-                        console.log('Geographic extent:', {
-                            xmin: georaster.xmin,
-                            xmax: georaster.xmax,
-                            ymin: georaster.ymin,
-                            ymax: georaster.ymax
-                        });
-                        console.log('Current map view center:', map.getCenter());
-                        console.log('Current map zoom:', map.getZoom());
-                        
-                        // Sample a few actual values to see what we're getting
-                        if (georaster.values && georaster.values[0]) {
-                            var sampleValues = [];
-                            for (var i = 0; i < Math.min(20, georaster.values[0].length); i++) {
-                                if (georaster.values[0][i] !== undefined && georaster.values[0][i] !== null) {
-                                    sampleValues.push(georaster.values[0][i]);
-                                }
-                            }
-                            console.log('Sample of first 20 non-null values:', sampleValues);
-                        }
-                    }
-                    
                     georasters[layerId] = georaster;
                     
                     var pixelValuesToColorFn;
                     
                     if (config.discreteColors) {
-                        var pixelCount = 0;
-                        var colorCounts = {};
-                        
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
                             
                             value = Math.round(value);
                             
-                            // Debug logging for binary_layer
-                            if (layerId === 'binary_layer') {
-                                pixelCount++;
-                                if (!colorCounts[value]) colorCounts[value] = 0;
-                                colorCounts[value]++;
-                                
-                                if (pixelCount === 1000) {
-                                    console.log('Binary layer - first 1000 pixels:', colorCounts);
-                                } else if (pixelCount === 10000) {
-                                    console.log('Binary layer - first 10000 pixels:', colorCounts);
-                                } else if (pixelCount === 100000) {
-                                    console.log('Binary layer - first 100000 pixels:', colorCounts);
-                                }
-                            }
-                            
                             if (!visibleClasses[layerId][value]) {
                                 return null;
                             }
                             
-                            var color = config.discreteColors[value] || null;
-                            
-                            // Log first few color assignments for binary layer
-                            if (layerId === 'binary_layer' && pixelCount <= 5) {
-                                console.log('Pixel', pixelCount, '- Value:', value, 'Color:', color);
-                            }
-                            
-                            return color;
+                            return config.discreteColors[value] || null;
                         };
                     } else {
                         var scale = config.mode 
@@ -1011,8 +921,7 @@
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    // Set the first layer to be 'enm', not the first alphabetically
-                    if (!currentLayer && layerId === 'enm') {
+                    if (!currentLayer) {
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
@@ -1041,29 +950,6 @@
                         animate: true,
                         duration: 1.0
                     });
-                }
-                
-                // Additional debugging for binary layer
-                if (layerId === 'binary_layer') {
-                    console.log('Binary layer switched to - checking visibility...');
-                    console.log('Layer opacity:', layers[layerId].options.opacity);
-                    console.log('Layer on map:', map.hasLayer(layers[layerId]));
-                    console.log('Visible classes for binary_layer:', visibleClasses['binary_layer']);
-                    console.log('Layer config discreteColors:', config.discreteColors);
-                    
-                    // Try to fit bounds to the georaster extent
-                    var georaster = georasters[layerId];
-                    if (georaster && georaster.xmin !== undefined) {
-                        var bounds = [
-                            [georaster.ymin, georaster.xmin],
-                            [georaster.ymax, georaster.xmax]
-                        ];
-                        console.log('Binary layer bounds:', bounds);
-                        console.log('Fitting map to binary layer extent...');
-                        setTimeout(function() {
-                            map.fitBounds(bounds);
-                        }, 500);
-                    }
                 }
             }
         }
@@ -1129,17 +1015,12 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
-            // Define explicit order for layers (instead of using Object.keys which sorts alphabetically)
-            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'binary_layer'];
-            
-            layerOrder.forEach(function(key, index) {
-                if (layerConfigs[key]) {
-                    var checked = (key === 'enm') ? 'checked' : '';
-                    div.innerHTML += 
-                        '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
-                        ' onchange="switchLayer(\'' + key + '\')">' + 
-                        layerConfigs[key].name + '</label>';
-                }
+            Object.keys(layerConfigs).forEach(function(key, index) {
+                var checked = index === 0 ? 'checked' : '';
+                div.innerHTML += 
+                    '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
+                    ' onchange="switchLayer(\'' + key + '\')">' + 
+                    layerConfigs[key].name + '</label>';
             });
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Vector Overlays</h4>';
@@ -1155,18 +1036,13 @@
             div.innerHTML += '<div class="opacity-section">';
             div.innerHTML += '<h5>Layer Opacity</h5>';
             
-            // Use same explicit order for opacity controls
-            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'binary_layer'];
-            
-            layerOrder.forEach(function(key) {
-                if (layerConfigs[key]) {
-                    div.innerHTML += 
-                        '<div class="opacity-control">' +
-                        '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
-                        '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
-                        'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
-                        '</div>';
-                }
+            Object.keys(layerConfigs).forEach(function(key) {
+                div.innerHTML += 
+                    '<div class="opacity-control">' +
+                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
+                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
+                    'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
+                    '</div>';
             });
             
             div.innerHTML += '</div>';
@@ -1217,4 +1093,9 @@
     </script>
 </body>
 </html>
+
+
+
+
+
 
