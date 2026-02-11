@@ -167,6 +167,19 @@
             font-size: 11px;
         }
         
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+        }
+        
         .error {
             background: #ffebee;
             color: #c62828;
@@ -538,11 +551,7 @@
                     showArea: true,
                     metric: true
                 },
-                rectangle: {
-                    shapeOptions: { color: '#00BFFF', weight: 3 },
-                    showArea: true,
-                    metric: true
-                },
+                rectangle: false,
                 circle: false,
                 marker: false,
                 circlemarker: false
@@ -570,31 +579,6 @@
                 var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
                 layer.bindPopup('<b>Area:</b> ' + (area / 1000000).toFixed(2) + ' km²');
                 drawnItems.addLayer(layer);
-            } else if (type === 'rectangle') {
-                var bounds = layer.getBounds();
-                var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                
-                // Create popup with export option
-                var popupContent = '<div style="min-width: 200px;">' +
-                                  '<b>Export Raster Subset</b><br>' +
-                                  '<b>Area:</b> ' + (area / 1000000).toFixed(2) + ' km²<br>' +
-                                  '<b>Bounds:</b><br>' +
-                                  'North: ' + bounds.getNorth().toFixed(6) + '<br>' +
-                                  'South: ' + bounds.getSouth().toFixed(6) + '<br>' +
-                                  'East: ' + bounds.getEast().toFixed(6) + '<br>' +
-                                  'West: ' + bounds.getWest().toFixed(6) + '<br><br>' +
-                                  '<button onclick="exportRasterSubset(' + 
-                                  bounds.getSouth() + ',' + bounds.getWest() + ',' +
-                                  bounds.getNorth() + ',' + bounds.getEast() + 
-                                  ')" style="width: 100%; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 13px;">' +
-                                  'Export Current Layer as GeoTIFF</button>' +
-                                  '<p style="font-size: 10px; color: #666; margin-top: 8px;">Current layer: ' + 
-                                  (currentLayer ? layerConfigs[currentLayer].name : 'None') + '</p>' +
-                                  '</div>';
-                
-                layer.bindPopup(popupContent);
-                drawnItems.addLayer(layer);
-                layer.openPopup();
             }
         });
 
@@ -643,184 +627,6 @@
 
         function updateStatus(message, isError) {
             console.log(message);
-        }
-
-        function exportRasterSubset(south, west, north, east) {
-            if (!currentLayer) {
-                alert('Please select a raster layer first!');
-                return;
-            }
-            
-            var georaster = georasters[currentLayer];
-            if (!georaster) {
-                alert('Current layer data not available!');
-                return;
-            }
-            
-            var config = layerConfigs[currentLayer];
-            showCopyNotification('Preparing export... This may take a moment.', false);
-            
-            // Calculate pixel coordinates for the subset
-            var xmin = georaster.xmin;
-            var xmax = georaster.xmax;
-            var ymin = georaster.ymin;
-            var ymax = georaster.ymax;
-            var width = georaster.width;
-            var height = georaster.height;
-            var pixelWidth = georaster.pixelWidth;
-            var pixelHeight = georaster.pixelHeight;
-            
-            // Convert lat/lng bounds to pixel coordinates
-            var colMin = Math.floor((west - xmin) / pixelWidth);
-            var colMax = Math.ceil((east - xmin) / pixelWidth);
-            var rowMin = Math.floor((ymax - north) / pixelHeight);
-            var rowMax = Math.ceil((ymax - south) / pixelHeight);
-            
-            // Clamp to valid range
-            colMin = Math.max(0, Math.min(width - 1, colMin));
-            colMax = Math.max(0, Math.min(width, colMax));
-            rowMin = Math.max(0, Math.min(height - 1, rowMin));
-            rowMax = Math.max(0, Math.min(height, rowMax));
-            
-            var subsetWidth = colMax - colMin;
-            var subsetHeight = rowMax - rowMin;
-            
-            if (subsetWidth <= 0 || subsetHeight <= 0) {
-                alert('Invalid subset area. Please draw a larger rectangle within the raster extent.');
-                return;
-            }
-            
-            console.log('Exporting subset:', {
-                bounds: {south, west, north, east},
-                pixels: {colMin, colMax, rowMin, rowMax},
-                dimensions: {width: subsetWidth, height: subsetHeight}
-            });
-            
-            try {
-                // Extract subset of raster values
-                var subsetData = new Uint8Array(subsetWidth * subsetHeight);
-                var srcValues = georaster.values[0];
-                
-                for (var row = 0; row < subsetHeight; row++) {
-                    for (var col = 0; col < subsetWidth; col++) {
-                        var srcRow = rowMin + row;
-                        var srcCol = colMin + col;
-                        var srcIdx = srcRow * width + srcCol;
-                        var dstIdx = row * subsetWidth + col;
-                        
-                        var value = srcValues[srcIdx];
-                        if (value === null || value === undefined || isNaN(value)) {
-                            subsetData[dstIdx] = 255; // NoData value
-                        } else {
-                            subsetData[dstIdx] = Math.round(value);
-                        }
-                    }
-                }
-                
-                // Calculate geographic extent of subset
-                var subsetXmin = xmin + colMin * pixelWidth;
-                var subsetXmax = xmin + colMax * pixelWidth;
-                var subsetYmin = ymax - rowMax * pixelHeight;
-                var subsetYmax = ymax - rowMin * pixelHeight;
-                
-                // Create GeoTIFF metadata
-                var metadata = {
-                    width: subsetWidth,
-                    height: subsetHeight,
-                    ModelPixelScale: [pixelWidth, pixelHeight, 0],
-                    ModelTiepoint: [0, 0, 0, subsetXmin, subsetYmax, 0]
-                };
-                
-                // Create simple uncompressed GeoTIFF
-                var tiffData = createSimpleGeoTIFF(subsetData, metadata);
-                
-                // Download the file
-                var blob = new Blob([tiffData], {type: 'image/tiff'});
-                var url = URL.createObjectURL(blob);
-                var link = document.createElement('a');
-                link.href = url;
-                link.download = currentLayer + '_subset_' + Date.now() + '.tif';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                
-                showCopyNotification('✓ GeoTIFF exported successfully!', false);
-                
-            } catch (error) {
-                console.error('Export error:', error);
-                alert('Error exporting raster: ' + error.message);
-            }
-        }
-        
-        function createSimpleGeoTIFF(data, metadata) {
-            // Create a minimal GeoTIFF file (uncompressed, 8-bit)
-            var width = metadata.width;
-            var height = metadata.height;
-            var stripRowsPerStrip = height;
-            
-            // Calculate offsets
-            var ifdOffset = 8;
-            var modelPixelScaleOffset = ifdOffset + 2 + (14 * 12) + 4;
-            var modelTiepointOffset = modelPixelScaleOffset + 24;
-            var imageDataOffset = modelTiepointOffset + 48;
-            
-            var totalSize = imageDataOffset + (width * height);
-            var buffer = new ArrayBuffer(totalSize);
-            var view = new DataView(buffer);
-            var offset = 0;
-            
-            // TIFF Header (Little Endian)
-            view.setUint8(offset++, 0x49); // 'I'
-            view.setUint8(offset++, 0x49); // 'I'
-            view.setUint16(offset, 42, true); offset += 2;
-            view.setUint32(offset, ifdOffset, true); offset += 4;
-            
-            // IFD
-            offset = ifdOffset;
-            view.setUint16(offset, 14, true); offset += 2; // 14 entries
-            
-            function writeIFD(tag, type, count, value) {
-                view.setUint16(offset, tag, true); offset += 2;
-                view.setUint16(offset, type, true); offset += 2;
-                view.setUint32(offset, count, true); offset += 4;
-                view.setUint32(offset, value, true); offset += 4;
-            }
-            
-            writeIFD(256, 4, 1, width); // ImageWidth
-            writeIFD(257, 4, 1, height); // ImageLength
-            writeIFD(258, 3, 1, 8); // BitsPerSample
-            writeIFD(259, 3, 1, 1); // Compression
-            writeIFD(262, 3, 1, 1); // PhotometricInterpretation
-            writeIFD(273, 4, 1, imageDataOffset); // StripOffsets
-            writeIFD(277, 3, 1, 1); // SamplesPerPixel
-            writeIFD(278, 4, 1, stripRowsPerStrip); // RowsPerStrip
-            writeIFD(279, 4, 1, width * height); // StripByteCounts
-            writeIFD(282, 5, 1, modelPixelScaleOffset); // XResolution
-            writeIFD(283, 5, 1, modelPixelScaleOffset + 8); // YResolution
-            writeIFD(284, 3, 1, 1); // PlanarConfiguration
-            writeIFD(296, 3, 1, 1); // ResolutionUnit
-            writeIFD(33922, 12, 6, modelTiepointOffset); // ModelTiepointTag
-            
-            view.setUint32(offset, 0, true); offset += 4;
-            
-            // ModelPixelScale
-            offset = modelPixelScaleOffset;
-            view.setFloat64(offset, metadata.ModelPixelScale[0], true); offset += 8;
-            view.setFloat64(offset, metadata.ModelPixelScale[1], true); offset += 8;
-            view.setFloat64(offset, metadata.ModelPixelScale[2], true); offset += 8;
-            
-            // ModelTiepoint
-            offset = modelTiepointOffset;
-            for (var i = 0; i < 6; i++) {
-                view.setFloat64(offset, metadata.ModelTiepoint[i], true);
-                offset += 8;
-            }
-            
-            // Image data
-            new Uint8Array(buffer).set(data, imageDataOffset);
-            
-            return buffer;
         }
 
         function updateLayerOpacity(layerId, opacity) {
