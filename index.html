@@ -294,6 +294,12 @@
         // Initialize map - start with regional view
         var map = L.map('map').setView([18.0, 82.5], 6);
 
+        // Store the initial view to restore later
+        var initialView = {
+            center: [18.0, 82.5],
+            zoom: 6
+        };
+
         // Ensure basemaps render beneath rasters
         map.getPane('tilePane').style.zIndex = 100;
 
@@ -350,8 +356,7 @@
                 description: 'Regional ecological suitability',
                 mode: 'lch',
                 continuousLegend: true,
-                center: [18.0, 82.5],
-                zoom: 5
+                useInitialView: true  // Flag to use initial view instead of custom center/zoom
             },
             'pop_risk_india': {
                 file: 'pop_risk_india_cog.tif',
@@ -375,8 +380,8 @@
                     { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
-                center: [10.984672, 76.057320],
-                zoom: 9
+                center: [10.401378, 75.157471],
+                zoom: 8
             },
             'lc_risk_india': {
                 file: 'lc_risk_india_cog.tif',
@@ -400,8 +405,8 @@
                     { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
-                center: [10.984672, 76.057320],
-                zoom: 9
+                center: [10.401378, 75.157471],
+                zoom: 8
             },
             'pop_risk_bangladesh': {
                 file: 'pop_risk_bang_cog.tif',
@@ -426,7 +431,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.594194, 89.802246],
-                zoom: 8
+                zoom: 7
             },
             'lc_risk_bangladesh': {
                 file: 'lc_risk_bang_cog.tif',
@@ -451,7 +456,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.594194, 89.802246],
-                zoom: 8
+                zoom: 7
             }
         };
 
@@ -465,7 +470,7 @@
                     color: '#FFFFFF',
                     fillColor: '#0096FF',
                     fillOpacity: 0.8,
-                    radius: 8,
+                    radius: 6,
                     weight: 3
                 },
                 popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
@@ -872,6 +877,29 @@
                         ymax: georaster.ymax
                     });
                     
+                    // DIAGNOSTIC: Check actual unique values for discrete layers
+                    if (config.discreteColors && layerId.includes('risk')) {
+                        console.log('=== DIAGNOSTIC FOR ' + layerId + ' ===');
+                        console.log('Expected values in config:', Object.keys(config.discreteColors));
+                        console.log('Min value in raster:', georaster.mins);
+                        console.log('Max value in raster:', georaster.maxs);
+                        
+                        // Sample actual values
+                        if (georaster.values && georaster.values[0]) {
+                            var uniqueValues = new Set();
+                            var sampleSize = Math.min(10000, georaster.values[0].length);
+                            for (var i = 0; i < sampleSize; i++) {
+                                var val = georaster.values[0][i];
+                                if (val !== null && val !== undefined && !isNaN(val)) {
+                                    uniqueValues.add(Math.round(val));
+                                }
+                            }
+                            var sortedUnique = Array.from(uniqueValues).sort((a, b) => a - b);
+                            console.log('Actual unique values found (sample of ' + sampleSize + ' pixels):', sortedUnique);
+                            console.log('>>> ACTION NEEDED: Update discreteColors in config to match these values! <<<');
+                        }
+                    }
+                    
                     georasters[layerId] = georaster;
                     
                     var pixelValuesToColorFn;
@@ -939,7 +967,14 @@
                 updateLegend(layerId);
                 
                 var config = layerConfigs[layerId];
-                if (config.center && config.zoom !== undefined) {
+                
+                // Check if this layer should use the initial view
+                if (config.useInitialView) {
+                    map.setView(initialView.center, initialView.zoom, {
+                        animate: true,
+                        duration: 1.0
+                    });
+                } else if (config.center && config.zoom !== undefined) {
                     map.setView(config.center, config.zoom, {
                         animate: true,
                         duration: 1.0
@@ -1096,7 +1131,3 @@
     </script>
 </body>
 </html>
-
-
-
-
