@@ -320,31 +320,8 @@
             maxZoom: 19
         });
 
-        // Admin boundaries basemap (Esri Gray Canvas base + reference)
-        var adminGrayBase = L.tileLayer(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-            {
-                attribution: 'Tiles © Esri',
-                maxZoom: 19
-            }
-        );
-
-        var adminGrayReference = L.tileLayer(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
-            {
-                attribution: 'Tiles © Esri',
-                maxZoom: 19
-            }
-        );
-
-        // Group them so they behave as ONE basemap
-        var adminBoundariesMap = L.layerGroup([
-            adminGrayBase,
-            adminGrayReference
-        ]);
-
-        // Default basemap: Admin Boundaries (change to osmMap.addTo(map) if desired)
-        adminBoundariesMap.addTo(map);
+        // Default basemap: OpenStreetMap
+        osmMap.addTo(map);
 
         // Store layers and georasters
         var layers = {};
@@ -722,12 +699,11 @@
             }
         }
 
-        // UPDATED: supports admin basemap
+        // Supports OSM, street, and aerial basemaps
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
             map.removeLayer(streetMap);
             map.removeLayer(aerialMap);
-            map.removeLayer(adminBoundariesMap);
             
             if (basemapType === 'osm') {
                 osmMap.addTo(map);
@@ -735,8 +711,6 @@
                 streetMap.addTo(map);
             } else if (basemapType === 'aerial') {
                 aerialMap.addTo(map);
-            } else if (basemapType === 'admin') {
-                adminBoundariesMap.addTo(map);
             }
         }
 
@@ -879,6 +853,25 @@
                 })
                 .then(georaster => {
                     updateStatus(config.name + ' parsed successfully');
+                    
+                    // Debug: Log georaster properties
+                    console.log('Georaster info for ' + layerId + ':', {
+                        numberOfRasters: georaster.numberOfRasters,
+                        height: georaster.height,
+                        width: georaster.width,
+                        pixelHeight: georaster.pixelHeight,
+                        pixelWidth: georaster.pixelWidth,
+                        projection: georaster.projection,
+                        sourceType: georaster.sourceType,
+                        mins: georaster.mins,
+                        maxs: georaster.maxs,
+                        ranges: georaster.ranges,
+                        xmin: georaster.xmin,
+                        xmax: georaster.xmax,
+                        ymin: georaster.ymin,
+                        ymax: georaster.ymax
+                    });
+                    
                     georasters[layerId] = georaster;
                     
                     var pixelValuesToColorFn;
@@ -921,7 +914,8 @@
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    if (!currentLayer) {
+                    // Set the first layer to be 'enm', not the first alphabetically
+                    if (!currentLayer && layerId === 'enm') {
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
@@ -1008,19 +1002,23 @@
             var div = L.DomUtil.create('div', 'layer-control');
             
             div.innerHTML = '<h4>Basemaps</h4>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="admin" checked onchange="switchBasemap(\'admin\')">Admin Boundaries (Esri Gray)</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map (Esri)</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\'aerial\')">Aerial Imagery (Esri)</label>';
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
-            Object.keys(layerConfigs).forEach(function(key, index) {
-                var checked = index === 0 ? 'checked' : '';
-                div.innerHTML += 
-                    '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
-                    ' onchange="switchLayer(\'' + key + '\')">' + 
-                    layerConfigs[key].name + '</label>';
+            // Define explicit order for layers
+            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh'];
+            
+            layerOrder.forEach(function(key, index) {
+                if (layerConfigs[key]) {
+                    var checked = (key === 'enm') ? 'checked' : '';
+                    div.innerHTML += 
+                        '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
+                        ' onchange="switchLayer(\'' + key + '\')">' + 
+                        layerConfigs[key].name + '</label>';
+                }
             });
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Vector Overlays</h4>';
@@ -1036,13 +1034,18 @@
             div.innerHTML += '<div class="opacity-section">';
             div.innerHTML += '<h5>Layer Opacity</h5>';
             
-            Object.keys(layerConfigs).forEach(function(key) {
-                div.innerHTML += 
-                    '<div class="opacity-control">' +
-                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
-                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
-                    'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
-                    '</div>';
+            // Use same explicit order for opacity controls
+            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh'];
+            
+            layerOrder.forEach(function(key) {
+                if (layerConfigs[key]) {
+                    div.innerHTML += 
+                        '<div class="opacity-control">' +
+                        '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
+                        '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
+                        'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
+                        '</div>';
+                }
             });
             
             div.innerHTML += '</div>';
@@ -1093,9 +1096,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
