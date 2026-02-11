@@ -897,6 +897,29 @@
                 })
                 .then(georaster => {
                     updateStatus(config.name + ' parsed successfully');
+                    
+                    // Debug: Log georaster properties
+                    console.log('Georaster info for ' + layerId + ':', {
+                        numberOfRasters: georaster.numberOfRasters,
+                        height: georaster.height,
+                        width: georaster.width,
+                        pixelHeight: georaster.pixelHeight,
+                        pixelWidth: georaster.pixelWidth,
+                        projection: georaster.projection,
+                        sourceType: georaster.sourceType,
+                        mins: georaster.mins,
+                        maxs: georaster.maxs,
+                        ranges: georaster.ranges
+                    });
+                    
+                    // For binary layer, check if values are actually present
+                    if (layerId === 'binary_layer') {
+                        console.log('Binary layer loaded - checking data range...');
+                        console.log('Min values:', georaster.mins);
+                        console.log('Max values:', georaster.maxs);
+                        console.log('Expected values: 0 and 1');
+                    }
+                    
                     georasters[layerId] = georaster;
                     
                     var pixelValuesToColorFn;
@@ -907,6 +930,11 @@
                             if (value === null || value === undefined || isNaN(value)) return null;
                             
                             value = Math.round(value);
+                            
+                            // Debug logging for binary_layer
+                            if (layerId === 'binary_layer' && Math.random() < 0.001) {
+                                console.log('Binary layer pixel value:', value, 'Visible:', visibleClasses[layerId][value], 'Color:', config.discreteColors[value]);
+                            }
                             
                             if (!visibleClasses[layerId][value]) {
                                 return null;
@@ -939,7 +967,8 @@
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    if (!currentLayer) {
+                    // Set the first layer to be 'enm', not the first alphabetically
+                    if (!currentLayer && layerId === 'enm') {
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
@@ -1033,12 +1062,17 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
-            Object.keys(layerConfigs).forEach(function(key, index) {
-                var checked = index === 0 ? 'checked' : '';
-                div.innerHTML += 
-                    '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
-                    ' onchange="switchLayer(\'' + key + '\')">' + 
-                    layerConfigs[key].name + '</label>';
+            // Define explicit order for layers (instead of using Object.keys which sorts alphabetically)
+            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'binary_layer'];
+            
+            layerOrder.forEach(function(key, index) {
+                if (layerConfigs[key]) {
+                    var checked = (key === 'enm') ? 'checked' : '';
+                    div.innerHTML += 
+                        '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
+                        ' onchange="switchLayer(\'' + key + '\')">' + 
+                        layerConfigs[key].name + '</label>';
+                }
             });
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Vector Overlays</h4>';
@@ -1054,13 +1088,18 @@
             div.innerHTML += '<div class="opacity-section">';
             div.innerHTML += '<h5>Layer Opacity</h5>';
             
-            Object.keys(layerConfigs).forEach(function(key) {
-                div.innerHTML += 
-                    '<div class="opacity-control">' +
-                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
-                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
-                    'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
-                    '</div>';
+            // Use same explicit order for opacity controls
+            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'binary_layer'];
+            
+            layerOrder.forEach(function(key) {
+                if (layerConfigs[key]) {
+                    div.innerHTML += 
+                        '<div class="opacity-control">' +
+                        '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
+                        '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
+                        'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
+                        '</div>';
+                }
             });
             
             div.innerHTML += '</div>';
@@ -1111,5 +1150,3 @@
     </script>
 </body>
 </html>
-
-
