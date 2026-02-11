@@ -217,7 +217,7 @@
         }
         
         .leaflet-popup-content a {
-            color: #0066CC;
+            color: '#0066CC';
             text-decoration: none;
         }
         
@@ -356,20 +356,30 @@
         
         // Track which classes are visible for each layer
         var visibleClasses = {
+            'mtp_binary': {},
             'pop_risk_india': {},
             'lc_risk_india': {},
             'pop_risk_bangladesh': {},
-            'lc_risk_bangladesh': {},
-            'mtp_binary': {}
+            'lc_risk_bangladesh': {}
         };
 
-        // CORRECTED RASTER LAYER CONFIGURATIONS
+        // DEFINE LAYER ORDER EXPLICITLY - this fixes the legend order issue
+        var layerOrder = [
+            'enm',
+            'mtp_binary', 
+            'pop_risk_india',
+            'lc_risk_india',
+            'pop_risk_bangladesh',
+            'lc_risk_bangladesh'
+        ];
+
+        // RASTER LAYER CONFIGURATIONS - using the explicit order
         var layerConfigs = {
             'enm': {
                 file: 'enm_cog.tif',
                 name: 'Maxent - Regional Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
-                domain: [0, 100],  // CORRECTED: Your ENM values range 0-99.99
+                domain: [0, 100],
                 labels: ['Low Suitability (0)', 'High Suitability (100)'],
                 description: 'Regional ecological suitability (0-100 scale)',
                 mode: 'lch',
@@ -557,8 +567,8 @@
             }
         };
 
-        // Initialize all classes as visible
-        Object.keys(layerConfigs).forEach(function(layerId) {
+        // Initialize all classes as visible for discrete layers
+        layerOrder.forEach(function(layerId) {
             var config = layerConfigs[layerId];
             if (config.discreteColors) {
                 visibleClasses[layerId] = {};
@@ -661,7 +671,7 @@
         }
 
         function updateStatus(message, isError) {
-            console.log(message);
+            console.log((isError ? 'ERROR: ' : '') + message);
         }
 
         function updateLayerOpacity(layerId, opacity) {
@@ -675,11 +685,13 @@
             refreshLayer(layerId);
             
             var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
-            var item = checkbox.parentElement;
-            if (visibleClasses[layerId][classValue]) {
-                item.classList.remove('disabled');
-            } else {
-                item.classList.add('disabled');
+            if (checkbox) {
+                var item = checkbox.parentElement;
+                if (visibleClasses[layerId][classValue]) {
+                    item.classList.remove('disabled');
+                } else {
+                    item.classList.add('disabled');
+                }
             }
         }
 
@@ -935,7 +947,8 @@
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    if (!currentLayer) {
+                    // Initialize the first layer (ENM) as default
+                    if (layerId === 'enm') {
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
@@ -976,7 +989,7 @@
             
             if (config.customLegend && config.legendItems) {
                 config.legendItems.forEach(function(item) {
-                    var isChecked = visibleClasses[layerId][item.value];
+                    var isChecked = visibleClasses[layerId] && visibleClasses[layerId][item.value];
                     var disabledClass = isChecked ? '' : ' disabled';
                     
                     legendDiv.innerHTML += 
@@ -1016,7 +1029,7 @@
             }
         }
 
-        // Create layer control
+        // Create layer control using the explicit order
         var layerControl = L.control({position: 'topleft'});
         layerControl.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'layer-control');
@@ -1029,8 +1042,9 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
-            Object.keys(layerConfigs).forEach(function(key, index) {
-                var checked = index === 0 ? 'checked' : '';
+            // Use explicit layer order instead of Object.keys()
+            layerOrder.forEach(function(key, index) {
+                var checked = index === 0 ? 'checked' : '';  // ENM will be first and checked
                 div.innerHTML += 
                     '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
                     ' onchange="switchLayer(\'' + key + '\')">' + 
@@ -1050,7 +1064,7 @@
             div.innerHTML += '<div class="opacity-section">';
             div.innerHTML += '<h5>Layer Opacity</h5>';
             
-            Object.keys(layerConfigs).forEach(function(key) {
+            layerOrder.forEach(function(key) {
                 div.innerHTML += 
                     '<div class="opacity-control">' +
                     '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
@@ -1092,9 +1106,9 @@
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Load all raster layers
+        // Load all raster layers using explicit order
         updateStatus('Starting to load layers...');
-        Object.keys(layerConfigs).forEach(function(key) {
+        layerOrder.forEach(function(key) {
             loadLayer(key);
         });
 
