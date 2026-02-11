@@ -375,7 +375,7 @@
                 mode: 'lch',
                 continuousLegend: true,
                 center: [18.0, 82.5],
-                zoom: 5
+                zoom: 4
             },
             'enm_binary': {
                 file: 'mtp_cog.tif',  // Replace with your actual filename
@@ -386,12 +386,12 @@
                 },
                 customLegend: true,
                 legendItems: [
-                    { value: 0, color: 'transparent', label: '0 - Unsuitable' },
+                    { value: 0, color: '#000000', label: '0 - Unsuitable' },
                     { value: 1, color: '#dc143c', label: '1 - Suitable Habitat' }
                 ],
                 description: 'Binary presence threshold (0.21 cloglog)',
                 center: [18.0, 82.5],
-                zoom: 5
+                zoom: 4
             },
             'pop_risk_india': {
                 file: 'pop_risk_india_cog.tif',
@@ -1110,5 +1110,6 @@
     </script>
 </body>
 </html>
+
 
 
