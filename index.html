@@ -354,14 +354,8 @@
         var loadedCount = 0;
         var totalLayers = 6;  // Updated to include MTP layer
         
-        // Track which classes are visible for each layer
-        var visibleClasses = {
-            'pop_risk_india': {},
-            'lc_risk_india': {},
-            'pop_risk_bangladesh': {},
-            'lc_risk_bangladesh': {},
-            'mtp_binary': {}  // Added for MTP layer
-        };
+        // Track which classes are visible for each layer (robustly initialized)
+        var visibleClasses = {};
 
         // RASTER LAYER CONFIGURATIONS - Added MTP layer
         var layerConfigs = {
@@ -495,6 +489,17 @@
             }
         };
 
+        // Initialize visibleClasses robustly so all layers have an object to avoid undefined reads
+        Object.keys(layerConfigs).forEach(function(layerId) {
+            visibleClasses[layerId] = {};
+            var cfg = layerConfigs[layerId];
+            if (cfg.discreteColors) {
+                Object.keys(cfg.discreteColors).forEach(function(val) {
+                    visibleClasses[layerId][val] = true;
+                });
+            }
+        });
+
         // VECTOR LAYER CONFIGURATIONS
         var vectorConfigs = {
             'outbreaks': {
@@ -556,17 +561,6 @@
                 visible: true
             }
         };
-
-        // Initialize all classes as visible
-        Object.keys(layerConfigs).forEach(function(layerId) {
-            var config = layerConfigs[layerId];
-            if (config.discreteColors) {
-                visibleClasses[layerId] = {};
-                Object.keys(config.discreteColors).forEach(function(value) {
-                    visibleClasses[layerId][value] = true;
-                });
-            }
-        });
 
         // Measurement tools
         var drawnItems = new L.FeatureGroup();
@@ -666,25 +660,31 @@
 
         function updateLayerOpacity(layerId, opacity) {
             if (layers[layerId]) {
-                layers[layerId].setOpacity(opacity);
+                // GeoRasterLayer has setOpacity; ensure value 0-1
+                try { layers[layerId].setOpacity(opacity); } catch(e) {}
             }
         }
 
         function toggleClass(layerId, classValue) {
+            // Toggle the stored visibility and refresh the layer
+            if (!visibleClasses[layerId]) visibleClasses[layerId] = {};
             visibleClasses[layerId][classValue] = !visibleClasses[layerId][classValue];
             refreshLayer(layerId);
             
             var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
-            var item = checkbox.parentElement;
-            if (visibleClasses[layerId][classValue]) {
-                item.classList.remove('disabled');
-            } else {
-                item.classList.add('disabled');
+            if (checkbox && checkbox.parentElement) {
+                var item = checkbox.parentElement;
+                if (visibleClasses[layerId][classValue]) {
+                    item.classList.remove('disabled');
+                } else {
+                    item.classList.add('disabled');
+                }
             }
         }
 
         function selectAllClasses(layerId) {
             var config = layerConfigs[layerId];
+            if (!config.discreteColors) return;
             Object.keys(config.discreteColors).forEach(function(value) {
                 visibleClasses[layerId][value] = true;
             });
@@ -694,6 +694,7 @@
 
         function selectNoneClasses(layerId) {
             var config = layerConfigs[layerId];
+            if (!config.discreteColors) return;
             Object.keys(config.discreteColors).forEach(function(value) {
                 visibleClasses[layerId][value] = false;
             });
@@ -704,8 +705,13 @@
         function refreshLayer(layerId) {
             if (!layers[layerId] || !georasters[layerId]) return;
             
-            if (currentLayer === layerId) {
-                map.removeLayer(layers[layerId]);
+            // Remove existing layer instance for this id to avoid duplicates
+            try {
+                if (layers[layerId] && map.hasLayer(layers[layerId])) {
+                    map.removeLayer(layers[layerId]);
+                }
+            } catch(e) {
+                // ignore
             }
             
             var config = layerConfigs[layerId];
@@ -717,11 +723,12 @@
                 
                 value = Math.round(value);
                 
-                if (!visibleClasses[layerId][value]) {
+                // If class visibility is undefined, default to true (so continuous layers or uninitialized don't get hidden)
+                if (visibleClasses[layerId] && visibleClasses[layerId][value] === false) {
                     return null;
                 }
                 
-                return config.discreteColors[value] || null;
+                return (config.discreteColors && config.discreteColors[value]) ? config.discreteColors[value] : null;
             };
             
             var layer = new GeoRasterLayer({
@@ -904,7 +911,7 @@
                             
                             value = Math.round(value);
                             
-                            if (!visibleClasses[layerId][value]) {
+                            if (visibleClasses[layerId] && visibleClasses[layerId][value] === false) {
                                 return null;
                             }
                             
@@ -939,6 +946,10 @@
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
+
+                        // ensure the layer control radio reflects the actual currentLayer
+                        var radio = document.querySelector('input[name="layer"][value="' + layerId + '"]');
+                        if (radio) radio.checked = true;
                     }
                 })
                 .catch(error => {
@@ -950,7 +961,7 @@
 
         function switchLayer(layerId) {
             if (currentLayer && layers[currentLayer]) {
-                map.removeLayer(layers[currentLayer]);
+                try { map.removeLayer(layers[currentLayer]); } catch(e) {}
             }
             
             if (layers[layerId]) {
@@ -976,7 +987,11 @@
             
             if (config.customLegend && config.legendItems) {
                 config.legendItems.forEach(function(item) {
-                    var isChecked = visibleClasses[layerId][item.value];
+                    // default to checked (true) unless explicitly set false in visibleClasses
+                    var isChecked = true;
+                    if (visibleClasses[layerId] && visibleClasses[layerId][item.value] !== undefined) {
+                        isChecked = visibleClasses[layerId][item.value];
+                    }
                     var disabledClass = isChecked ? '' : ' disabled';
                     
                     legendDiv.innerHTML += 
@@ -1029,11 +1044,11 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
-            Object.keys(layerConfigs).forEach(function(key, index) {
-                var checked = index === 0 ? 'checked' : '';
+            // Build layer radios without pre-setting 'checked'; we'll set the checked radio when the first layer actually loads
+            Object.keys(layerConfigs).forEach(function(key) {
                 div.innerHTML += 
-                    '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
-                    ' onchange="switchLayer(\'' + key + '\')">' + 
+                    '<label><input type="radio" name="layer" value="' + key + '"' + 
+                    ' onchange="switchLayer(\'' + key + '\')"> ' + 
                     layerConfigs[key].name + '</label>';
             });
             
