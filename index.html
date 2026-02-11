@@ -343,7 +343,7 @@
             adminGrayReference
         ]);
 
-        // Default basemap: Admin Boundaries (change to osmMap.addTo(map) if desired)
+        // Default basemap: Admin Boundaries
         adminBoundariesMap.addTo(map);
 
         // Store layers and georasters
@@ -352,7 +352,7 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 6;  // Updated count to include binary threshold layer
+        var totalLayers = 6;
         
         // Track which classes are visible for each layer
         var visibleClasses = {
@@ -360,38 +360,38 @@
             'lc_risk_india': {},
             'pop_risk_bangladesh': {},
             'lc_risk_bangladesh': {},
-            'enm_binary': {}  // Added for binary threshold layer
+            'mtp_binary': {}
         };
 
-        // UPDATED RASTER LAYER CONFIGURATIONS
+        // CORRECTED RASTER LAYER CONFIGURATIONS
         var layerConfigs = {
             'enm': {
                 file: 'enm_cog.tif',
                 name: 'Maxent - Regional Suitability (1km)',
                 colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
-                domain: [0, 100],
-                labels: ['Low Suitability', 'High Suitability'],
-                description: 'Regional ecological suitability',
+                domain: [0, 100],  // CORRECTED: Your ENM values range 0-99.99
+                labels: ['Low Suitability (0)', 'High Suitability (100)'],
+                description: 'Regional ecological suitability (0-100 scale)',
                 mode: 'lch',
                 continuousLegend: true,
                 center: [18.0, 82.5],
-                zoom: 4
+                zoom: 5
             },
-            'enm_binary': {
-                file: 'mtp_cog.tif',  // Replace with your actual filename
+            'mtp_binary': {
+                file: 'mtp_cog.tif',
                 name: 'Minimum Training Presence Threshold (1km)',
                 discreteColors: {
-                    0: '#000000',        // Transparent/invisible for unsuitable
-                    1: '#dc143c'    // Crimson red for suitable habitat
+                    0: null,        // Transparent for unsuitable (0 values)
+                    1: '#dc143c'    // Crimson red for suitable (1 values)
                 },
                 customLegend: true,
                 legendItems: [
-                    { value: 0, color: '#000000', label: '0 - Unsuitable' },
+                    { value: 0, color: 'transparent', label: '0 - Below Threshold' },
                     { value: 1, color: '#dc143c', label: '1 - Suitable Habitat' }
                 ],
                 description: 'Binary presence threshold (0.21 cloglog)',
                 center: [18.0, 82.5],
-                zoom: 4
+                zoom: 5
             },
             'pop_risk_india': {
                 file: 'pop_risk_india_cog.tif',
@@ -739,7 +739,6 @@
             }
         }
 
-        // UPDATED: supports admin basemap
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
             map.removeLayer(streetMap);
@@ -809,7 +808,6 @@
                             pointToLayer: function(feature, latlng) {
                                 var marker = L.circleMarker(latlng, config.style);
                                 
-                                // Bind popup for points
                                 if (config.enablePopup) {
                                     if (config.customPopup && config.customPopupContent) {
                                         marker.bindPopup(config.customPopupContent(feature));
@@ -845,7 +843,6 @@
                                     createPopup(feature, featureLayer, config);
                                 }
                                 
-                                // Make layer non-interactive if specified
                                 if (config.interactive === false) {
                                     featureLayer.options.interactive = false;
                                 }
@@ -1095,13 +1092,13 @@
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Load all raster layers FIRST
+        // Load all raster layers
         updateStatus('Starting to load layers...');
         Object.keys(layerConfigs).forEach(function(key) {
             loadLayer(key);
         });
 
-        // Load all vector layers AFTER with slight delay
+        // Load vector layers with delay
         setTimeout(function() {
             Object.keys(vectorConfigs).forEach(function(key) {
                 loadVectorLayer(key);
@@ -1110,7 +1107,3 @@
     </script>
 </body>
 </html>
-
-
-
-
