@@ -352,14 +352,15 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 5;
+        var totalLayers = 6;  // Updated count to include binary threshold layer
         
         // Track which classes are visible for each layer
         var visibleClasses = {
             'pop_risk_india': {},
             'lc_risk_india': {},
             'pop_risk_bangladesh': {},
-            'lc_risk_bangladesh': {}
+            'lc_risk_bangladesh': {},
+            'enm_binary': {}  // Added for binary threshold layer
         };
 
         // UPDATED RASTER LAYER CONFIGURATIONS
@@ -373,6 +374,22 @@
                 description: 'Regional ecological suitability',
                 mode: 'lch',
                 continuousLegend: true,
+                center: [18.0, 82.5],
+                zoom: 5
+            },
+            'enm_binary': {
+                file: 'mtp_cog.tif',  // Replace with your actual filename
+                name: 'Minimum Training Presence Threshold (1km)',
+                discreteColors: {
+                    0: null,        // Transparent/invisible for unsuitable
+                    1: '#dc143c'    // Crimson red for suitable habitat
+                },
+                customLegend: true,
+                legendItems: [
+                    { value: 0, color: 'transparent', label: '0 - Unsuitable' },
+                    { value: 1, color: '#dc143c', label: '1 - Suitable Habitat' }
+                ],
+                description: 'Binary presence threshold (0.21 cloglog)',
                 center: [18.0, 82.5],
                 zoom: 5
             },
@@ -1093,11 +1110,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
