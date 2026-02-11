@@ -169,15 +169,82 @@
         
         .loading {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 20px;
+            left: 320px;
             background: white;
-            padding: 20px;
+            padding: 15px 20px;
             border-radius: 5px;
             box-shadow: 0 0 15px rgba(0,0,0,0.3);
             z-index: 1000;
-            text-align: center;
+            min-width: 250px;
+            max-width: 350px;
+        }
+        
+        .loading h4 {
+            margin: 0 0 10px;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .loading-item {
+            margin: 8px 0;
+            font-size: 12px;
+        }
+        
+        .loading-item-name {
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .loading-item.completed .progress-bar {
+            background: #4CAF50;
+        }
+        
+        .loading-item.loading .progress-bar {
+            background: linear-gradient(90deg, #2196F3, #03A9F4);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .loading-item.error .progress-bar {
+            background: #f44336;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .loading-status {
+            font-size: 10px;
+            color: #999;
+            margin-top: 2px;
+        }
+        
+        .loading-item.completed .loading-status {
+            color: #4CAF50;
+        }
+        
+        .loading-item.loading .loading-status {
+            color: #2196F3;
+        }
+        
+        .loading-item.error .loading-status {
+            color: #f44336;
         }
         
         .error {
@@ -283,6 +350,10 @@
     <div id="map"></div>
     <div class="north-arrow"></div>
     <div id="copy-notification" class="copy-notification"></div>
+    <div id="loading-indicator" class="loading" style="display: none;">
+        <h4>Loading Layers</h4>
+        <div id="loading-progress"></div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
@@ -336,6 +407,15 @@
         var currentLayer = null;
         var loadedCount = 0;
         var totalLayers = 5;
+        
+        // Track loading state for each layer
+        var loadingState = {
+            'enm': { status: 'pending', progress: 0 },
+            'pop_risk_india': { status: 'pending', progress: 0 },
+            'lc_risk_india': { status: 'pending', progress: 0 },
+            'pop_risk_bangladesh': { status: 'pending', progress: 0 },
+            'lc_risk_bangladesh': { status: 'pending', progress: 0 }
+        };
         
         // Track which classes are visible for each layer
         var visibleClasses = {
@@ -625,6 +705,68 @@
             }, 2000);
         }
 
+        function showLoadingIndicator() {
+            var indicator = document.getElementById('loading-indicator');
+            indicator.style.display = 'block';
+            updateLoadingProgress();
+        }
+
+        function hideLoadingIndicator() {
+            var indicator = document.getElementById('loading-indicator');
+            setTimeout(function() {
+                indicator.style.display = 'none';
+            }, 1000);
+        }
+
+        function updateLoadingProgress() {
+            var progressDiv = document.getElementById('loading-progress');
+            var html = '';
+            
+            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh'];
+            
+            layerOrder.forEach(function(layerId) {
+                var state = loadingState[layerId];
+                var config = layerConfigs[layerId];
+                var statusClass = state.status;
+                var statusText = '';
+                
+                if (state.status === 'pending') {
+                    statusText = 'Waiting...';
+                } else if (state.status === 'loading') {
+                    statusText = 'Loading...';
+                } else if (state.status === 'completed') {
+                    statusText = 'Ready ✓';
+                } else if (state.status === 'error') {
+                    statusText = 'Failed ✗';
+                }
+                
+                html += '<div class="loading-item ' + statusClass + '">' +
+                        '<div class="loading-item-name">' + config.name + '</div>' +
+                        '<div class="progress-bar-container">' +
+                        '<div class="progress-bar" style="width: ' + state.progress + '%"></div>' +
+                        '</div>' +
+                        '<div class="loading-status">' + statusText + '</div>' +
+                        '</div>';
+            });
+            
+            progressDiv.innerHTML = html;
+            
+            // Check if all layers are loaded
+            var allLoaded = layerOrder.every(function(layerId) {
+                return loadingState[layerId].status === 'completed';
+            });
+            
+            if (allLoaded) {
+                hideLoadingIndicator();
+            }
+        }
+
+        function setLoadingState(layerId, status, progress) {
+            loadingState[layerId].status = status;
+            loadingState[layerId].progress = progress || 0;
+            updateLoadingProgress();
+        }
+
         function updateStatus(message, isError) {
             console.log(message);
         }
@@ -843,6 +985,7 @@
             var config = layerConfigs[layerId];
             
             updateStatus('Loading ' + config.name + '...');
+            setLoadingState(layerId, 'loading', 10);
             
             fetch(config.file)
                 .then(response => {
@@ -850,14 +993,17 @@
                         throw new Error('HTTP error! status: ' + response.status);
                     }
                     updateStatus(config.name + ' fetched successfully');
+                    setLoadingState(layerId, 'loading', 30);
                     return response.arrayBuffer();
                 })
                 .then(arrayBuffer => {
                     updateStatus('Parsing ' + config.name + '...');
+                    setLoadingState(layerId, 'loading', 50);
                     return parseGeoraster(arrayBuffer);
                 })
                 .then(georaster => {
                     updateStatus(config.name + ' parsed successfully');
+                    setLoadingState(layerId, 'loading', 70);
                     
                     // Debug: Log georaster properties
                     console.log('Georaster info for ' + layerId + ':', {
@@ -904,6 +1050,8 @@
                     
                     var pixelValuesToColorFn;
                     
+                    setLoadingState(layerId, 'loading', 85);
+                    
                     if (config.discreteColors) {
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
@@ -941,6 +1089,7 @@
                     loadedCount++;
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
+                    setLoadingState(layerId, 'completed', 100);
                     
                     // Set the first layer to be 'enm', not the first alphabetically
                     if (!currentLayer && layerId === 'enm') {
@@ -952,6 +1101,7 @@
                 .catch(error => {
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
                     updateStatus(errorMsg, true);
+                    setLoadingState(layerId, 'error', 0);
                     console.error(errorMsg, error);
                 });
         }
@@ -1118,6 +1268,7 @@
 
         // Load all raster layers FIRST
         updateStatus('Starting to load layers...');
+        showLoadingIndicator();
         Object.keys(layerConfigs).forEach(function(key) {
             loadLayer(key);
         });
