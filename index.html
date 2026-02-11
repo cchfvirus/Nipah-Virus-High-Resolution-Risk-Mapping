@@ -352,14 +352,15 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 5;
+        var totalLayers = 6; // UPDATED: changed from 5 to 6
         
         // Track which classes are visible for each layer
         var visibleClasses = {
             'pop_risk_india': {},
             'lc_risk_india': {},
             'pop_risk_bangladesh': {},
-            'lc_risk_bangladesh': {}
+            'lc_risk_bangladesh': {},
+            'binary_layer': {} // ADDED: new layer for visibility tracking
         };
 
         // UPDATED RASTER LAYER CONFIGURATIONS
@@ -475,6 +476,23 @@
                 ],
                 center: [23.8, 90.4],
                 zoom: 7
+            },
+            // NEW BINARY LAYER ADDED HERE
+            'binary_layer': {
+                file: 'mtp_cog.tif',
+                name: 'Binary Classification (Regional)',
+                discreteColors: {
+                    0: '#CCCCCC',
+                    1: '#006837'
+                },
+                customLegend: true,
+                legendItems: [
+                    { value: 0, color: '#CCCCCC', label: '0 - Absent' },
+                    { value: 1, color: '#006837', label: '1 - Present' }
+                ],
+                description: 'Binary presence/absence classification',
+                center: [18.0, 82.5],
+                zoom: 6
             }
         };
 
@@ -1093,10 +1111,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
