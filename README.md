@@ -7,46 +7,58 @@
 
 ---
 
-## Overview
+Overview
 
-This map provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Bangladesh and South India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance and intervention.
+This map provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Bangladesh and South India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance, preparedness, and intervention. The platform integrates ecological suitability modeling, fine-scale risk surfaces, historical outbreak data, and uncertainty estimates into a single, browser-based visualization tool.
 
-## Map Features
-
+Map Features
 Nipah Virus Risk Mapping — Bangladesh & South India
 
-This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, browser-based way to explore where environmental suitability and risk signals are highest, and how these patterns relate to known outbreak locations and administrative context.
+This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, intuitive way to explore where environmental suitability and modeled risk signals are highest, and how these patterns relate to known outbreak locations and geographic context.
 
-Regional layer (1 km)
-ENM – Regional Suitability: A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater suitability relative to the study domain.
+Regional Layer (1 km)
 
-High-resolution layers (100 m)
-Population Risk and Landcover Risk surfaces are provided separately for:
+ENM – Regional Suitability
+A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater environmental suitability relative to the study domain. This layer provides a regional overview and helps identify broad geographic patterns of potential spillover risk.
+
+High-Resolution Layers (100 m)
+
+Detailed risk surfaces are provided separately for:
 
 Bangladesh
 South India
 
-These layers use a discrete risk classification scheme (e.g., No Risk → Very High Risk). You can toggle individual risk classes in the legend to isolate specific zones.
+These include:
 
-Vector overlays
+Population Risk
+Landcover Risk
 
-Historical Nipah events (2001–2026) are shown as clickable point markers with attribute popups (year, coordinates, and reference).
-A study region boundary (“M Region”) provides geographic context for model extent.
-The January 2026 West Bengal district overlay includes a narrative popup with an external reference link.
+Both layers use a discrete risk classification scheme (e.g., No Risk → Very High Risk). Users can toggle individual risk classes in the legend to isolate specific zones, such as focusing only on High and Very High Risk areas. These layers support fine-scale analysis for district-level planning and surveillance prioritization.
 
-How to use the map
+Uncertainty Layers (500 m)
 
-Use the Layer Control (top-left) to switch basemaps, change raster layers, and toggle vector overlays.
-Use the Legend (bottom-right) to interpret color ramps and risk classes. For discrete risk layers, you can turn classes on/off to simplify interpretation.
-Adjust raster visibility using the Opacity sliders.
-Use the measurement tools (top-right) to draw distance/area shapes.
-Right-click anywhere on the map to copy coordinates to your clipboard.
+Standard deviation (SD) surfaces are provided to show model uncertainty. These layers help users understand where predictions are more stable and where additional caution or further data collection may be warranted.
 
-Technical notes
+Vector Overlays
 
-Raster layers are served as Cloud-Optimized GeoTIFFs (COGs) for efficient web loading.
-Vector overlays are GeoJSON and rendered above the rasters for clear interpretation.
+Historical Nipah events (2001–2026) are displayed as clickable point markers with popups containing year, coordinates, and reference information.
 
-Disclaimer
+A study region boundary (“M Region”) provides geographic context for the model extent.
 
-This map is intended for visualization and research support. It does not represent real-time case reporting or a clinical/public health advisory. Interpret results within the limits of the underlying data and modeling assumptions.
+The January 2026 West Bengal district overlay includes a narrative popup with an external reference link for additional context.
+
+These overlays allow users to visually compare modeled risk with documented outbreak locations.
+
+How to Use the Map
+
+Use the Layer Control (top-left) to:
+
+Switch basemaps
+Change raster layers
+Toggle vector overlays
+Use the Legend (bottom-right) to:
+Interpret color ramps and risk classes
+Turn individual risk classes on or off (for discrete layers)
+Adjust raster visibility using the Opacity sliders to compare risk layers with underlying geography.
+Use the Measurement tools (top-right) to draw lines (distance) or polygons (area).
+Right-click anywhere on the map to copy geographic coordinates to your clipboard.
