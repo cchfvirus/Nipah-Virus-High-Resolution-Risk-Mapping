@@ -335,7 +335,7 @@
         var vectorLayers = {};
         var currentLayer = null;
         var loadedCount = 0;
-        var totalLayers = 5;
+        var totalLayers = 9;
         
         // Track which classes are visible for each layer
         var visibleClasses = {
@@ -455,6 +455,54 @@
                     { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
+                center: [23.594194, 89.802246],
+                zoom: 7
+            },
+            'sd_india_pop': {
+                file: 'sd_india_pop.tif',
+                name: 'SD - Population Risk India (100m)',
+                colors: ['#000080', '#2ACBBD', '#9ACD32', '#FFB700', '#FFE625'],
+                domain: [0, 0.099],
+                labels: ['Low Uncertainty', 'High Uncertainty'],
+                description: 'Standard deviation of population risk estimates',
+                mode: 'lch',
+                continuousLegend: true,
+                center: [10.401378, 75.157471],
+                zoom: 8
+            },
+            'sd_india_lc': {
+                file: 'sd_india_lc.tif',
+                name: 'SD - Landcover Risk India (100m)',
+                colors: ['#000080', '#2ACBBD', '#9ACD32', '#FFB700', '#FFE625'],
+                domain: [0, 0.078],
+                labels: ['Low Uncertainty', 'High Uncertainty'],
+                description: 'Standard deviation of landcover risk estimates',
+                mode: 'lch',
+                continuousLegend: true,
+                center: [10.401378, 75.157471],
+                zoom: 8
+            },
+            'sd_bang_pop': {
+                file: 'sd_bang_pop.tif',
+                name: 'SD - Population Risk Bangladesh (100m)',
+                colors: ['#000080', '#2ACBBD', '#9ACD32', '#FFB700', '#FFE625'],
+                domain: [0, 0.057],
+                labels: ['Low Uncertainty', 'High Uncertainty'],
+                description: 'Standard deviation of population risk estimates',
+                mode: 'lch',
+                continuousLegend: true,
+                center: [23.594194, 89.802246],
+                zoom: 7
+            },
+            'sd_bang_lc': {
+                file: 'sd_bang_lc.tif',
+                name: 'SD - Landcover Risk Bangladesh (100m)',
+                colors: ['#000080', '#2ACBBD', '#9ACD32', '#FFB700', '#FFE625'],
+                domain: [0, 0.046],
+                labels: ['Low Uncertainty', 'High Uncertainty'],
+                description: 'Standard deviation of landcover risk estimates',
+                mode: 'lch',
+                continuousLegend: true,
                 center: [23.594194, 89.802246],
                 zoom: 7
             }
@@ -1044,7 +1092,7 @@
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
             // Define explicit order for layers
-            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh'];
+            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
             
             layerOrder.forEach(function(key, index) {
                 if (layerConfigs[key]) {
@@ -1070,7 +1118,7 @@
             div.innerHTML += '<h5>Layer Opacity</h5>';
             
             // Use same explicit order for opacity controls
-            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh'];
+            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
             
             layerOrder.forEach(function(key) {
                 if (layerConfigs[key]) {
