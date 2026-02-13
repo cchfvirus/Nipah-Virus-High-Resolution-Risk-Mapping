@@ -21,7 +21,7 @@ Regional Layer (1 km)
 ENM – Regional Suitability
 A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater environmental suitability relative to the study domain. This layer provides a regional overview and helps identify broad geographic patterns of potential spillover risk.
 
-High-Resolution Layers (100 m)
+High-Resolution Layers (100 m) (~30second load time)
 
 Detailed risk surfaces are provided separately for:
 
@@ -62,5 +62,3 @@ Turn individual risk classes on or off (for discrete layers)
 Adjust raster visibility using the Opacity sliders to compare risk layers with underlying geography.
 Use the Measurement tools (top-right) to draw lines (distance) or polygons (area).
 Right-click anywhere on the map to copy geographic coordinates to your clipboard.
-
-###Please all for around ~30 seconds of loading time for the Population Risk and Landcover Risk layers.
