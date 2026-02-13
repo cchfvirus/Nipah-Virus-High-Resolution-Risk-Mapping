@@ -62,3 +62,5 @@ Turn individual risk classes on or off (for discrete layers)
 Adjust raster visibility using the Opacity sliders to compare risk layers with underlying geography.
 Use the Measurement tools (top-right) to draw lines (distance) or polygons (area).
 Right-click anywhere on the map to copy geographic coordinates to your clipboard.
+
+###Please all for around ~30 seconds of loading time for the Population Risk and Landcover Risk layers.
