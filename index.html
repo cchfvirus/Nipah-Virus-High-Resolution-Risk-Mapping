@@ -244,15 +244,6 @@
         .copy-notification.show {
             opacity: 1;
         }
-
-        /* Styling for 1000 m grid lines (shown only when zoomed in) */
-        .grid1000m {
-            stroke: #000;
-            stroke-width: 1;
-            fill: none;
-            opacity: 0.35;
-            pointer-events: none;
-        }
     </style>
 </head>
 <body>
@@ -319,17 +310,6 @@
             'pop_risk_bangladesh': {},
             'lc_risk_bangladesh': {}
         };
-
-        // ===== Grid globals for 1000 m tessellation =====
-        var gridLayer1000m = null;
-        var gridEnabled = false;
-
-        // Show grid only when zoomed in (tweak as desired)
-        var GRID_MIN_ZOOM = 9;
-
-        // Which layers should show the grid (SD layers)
-        var sdLayerIds = new Set(['sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc']);
-        // =================================================
 
         // UPDATED RASTER LAYER CONFIGURATIONS
         var layerConfigs = {
@@ -442,7 +422,7 @@
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
                 ],
                 center: [23.594194, 89.802246],
-                zoom: 10
+                zoom: 8
             },
             'sd_india_pop': {
                 file: 'sd_india_pop.tif',
@@ -453,8 +433,8 @@
                 description: 'Posterior Standard Deviation of Smoothed Risk',
                 mode: 'lch',
                 continuousLegend: true,
-                center: [10.854886, 76.055603],
-                zoom: 10
+                center: [10.401378, 75.157471],
+                zoom: 8
             },
             'sd_india_lc': {
                 file: 'sd_india_lc.tif',
@@ -465,7 +445,7 @@
                 description: 'Posterior Standard Deviation of Smoothed Risk',
                 mode: 'lch',
                 continuousLegend: true,
-                center: [10.854886, 76.055603],
+                center: [10.401378, 75.157471],
                 zoom: 8
             },
             'sd_bang_pop': {
@@ -478,7 +458,7 @@
                 mode: 'lch',
                 continuousLegend: true,
                 center: [23.594194, 89.802246],
-                zoom: 8
+                zoom: 7
             },
             'sd_bang_lc': {
                 file: 'sd_bang_lc.tif',
@@ -490,7 +470,7 @@
                 mode: 'lch',
                 continuousLegend: true,
                 center: [23.594194, 89.802246],
-                zoom: 8
+                zoom: 7
             }
         };
 
@@ -738,121 +718,6 @@
             }
         }
 
-        // ===== 1000 m grid helper functions (zoom-gated for performance) =====
-        function metersToDegreesLat(meters) {
-            return meters / 111320;
-        }
-
-        function metersToDegreesLng(meters, atLat) {
-            return meters / (111320 * Math.cos(atLat * Math.PI / 180));
-        }
-
-        function shouldShowGridNow() {
-            return gridEnabled && (map.getZoom() >= GRID_MIN_ZOOM);
-        }
-
-        function build1000mGridForView() {
-            // If zoomed out, remove any existing grid and exit
-            if (!shouldShowGridNow()) {
-                if (gridLayer1000m) {
-                    map.removeLayer(gridLayer1000m);
-                    gridLayer1000m = null;
-                }
-                return;
-            }
-
-            // Remove existing grid before rebuilding
-            if (gridLayer1000m) {
-                map.removeLayer(gridLayer1000m);
-                gridLayer1000m = null;
-            }
-
-            var bounds = map.getBounds();
-            var south = bounds.getSouth();
-            var north = bounds.getNorth();
-            var west  = bounds.getWest();
-            var east  = bounds.getEast();
-
-            var midLat = (south + north) / 2;
-
-            var stepLat = metersToDegreesLat(1000);
-            var stepLng = metersToDegreesLng(1000, midLat);
-
-            // Snap start coords to a grid so it doesn't "swim" too much while panning
-            var startLat = Math.floor(south / stepLat) * stepLat;
-            var startLng = Math.floor(west  / stepLng) * stepLng;
-
-            var features = [];
-
-            // Cap to prevent giant builds even when zoomed in
-            var maxCells = 2500;
-            var cellCount = 0;
-
-            for (var lat = startLat; lat <= north; lat += stepLat) {
-                for (var lng = startLng; lng <= east; lng += stepLng) {
-                    if (cellCount++ > maxCells) break;
-
-                    var polyCoords = [
-                        [lng, lat],
-                        [lng + stepLng, lat],
-                        [lng + stepLng, lat + stepLat],
-                        [lng, lat + stepLat],
-                        [lng, lat]
-                    ];
-
-                    features.push({
-                        "type": "Feature",
-                        "geometry": { "type": "Polygon", "coordinates": [polyCoords] },
-                        "properties": {}
-                    });
-                }
-                if (cellCount > maxCells) break;
-            }
-
-            gridLayer1000m = L.geoJSON({
-                "type": "FeatureCollection",
-                "features": features
-            }, {
-                style: function() {
-                    return {
-                        color: '#000000',
-                        weight: 1,
-                        fillOpacity: 0,
-                        opacity: 0.35,
-                        interactive: false,
-                        className: 'grid1000m'
-                    };
-                },
-                pane: 'vectorPane'
-            });
-
-            gridLayer1000m.addTo(map);
-        }
-
-        function enableGrid1000m() {
-            gridEnabled = true;
-
-            // Build only if zoom is high enough
-            build1000mGridForView();
-
-            // Re-check on pan/zoom end (zoomend is key for gating)
-            map.on('moveend', build1000mGridForView);
-            map.on('zoomend', build1000mGridForView);
-        }
-
-        function disableGrid1000m() {
-            gridEnabled = false;
-
-            map.off('moveend', build1000mGridForView);
-            map.off('zoomend', build1000mGridForView);
-
-            if (gridLayer1000m) {
-                map.removeLayer(gridLayer1000m);
-                gridLayer1000m = null;
-            }
-        }
-        // ===============================================================
-
         // Supports OSM, street, and aerial basemaps
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
@@ -920,7 +785,6 @@
                             pointToLayer: function(feature, latlng) {
                                 var marker = L.circleMarker(latlng, config.style);
                                 
-                                // Bind popup for points
                                 if (config.enablePopup) {
                                     if (config.customPopup && config.customPopupContent) {
                                         marker.bindPopup(config.customPopupContent(feature));
@@ -955,8 +819,6 @@
                                 if (config.enablePopup) {
                                     createPopup(feature, featureLayer, config);
                                 }
-                                
-                                // Make layer non-interactive if specified
                                 if (config.interactive === false) {
                                     featureLayer.options.interactive = false;
                                 }
@@ -1008,7 +870,6 @@
                 .then(georaster => {
                     updateStatus(config.name + ' parsed successfully');
                     
-                    // Debug: Log georaster properties
                     console.log('Georaster info for ' + layerId + ':', {
                         numberOfRasters: georaster.numberOfRasters,
                         height: georaster.height,
@@ -1068,7 +929,6 @@
                     
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    // Set the first layer to be 'enm', not the first alphabetically
                     if (!currentLayer && layerId === 'enm') {
                         layer.addTo(map);
                         currentLayer = layerId;
@@ -1091,15 +951,6 @@
                 layers[layerId].addTo(map);
                 currentLayer = layerId;
                 updateLegend(layerId);
-
-                // Toggle 1000m grid only for SD layers (and only shows at zoom >= GRID_MIN_ZOOM)
-                if (sdLayerIds.has(layerId)) {
-                    if (!gridEnabled) enableGrid1000m();
-                    // If already enabled, ensure grid state matches current zoom
-                    build1000mGridForView();
-                } else {
-                    if (gridEnabled) disableGrid1000m();
-                }
                 
                 var config = layerConfigs[layerId];
                 
@@ -1132,7 +983,7 @@
                         '<div class="item' + disabledClass + '">' +
                         '<input type="checkbox" id="class-' + layerId + '-' + item.value + '" ' +
                         (isChecked ? 'checked' : '') + ' ' +
-                        'onchange="toggleClass(\'' + layerId + '\', ' + item.value + ')">' +
+                        'onchange="toggleClass(\\'' + layerId + '\\', ' + item.value + ')">' +
                         '<i style="background:' + item.color + '"></i> ' +
                         item.label +
                         '</div>';
@@ -1140,8 +991,8 @@
                 
                 legendDiv.innerHTML += 
                     '<div class="legend-controls">' +
-                    '<button onclick="selectAllClasses(\'' + layerId + '\')">All</button>' +
-                    '<button onclick="selectNoneClasses(\'' + layerId + '\')">None</button>' +
+                    '<button onclick="selectAllClasses(\\'' + layerId + '\\')">All</button>' +
+                    '<button onclick="selectNoneClasses(\\'' + layerId + '\\')">None</button>' +
                     '</div>';
             } else if (config.continuousLegend) {
                 var gradientStops = [];
@@ -1171,13 +1022,12 @@
             var div = L.DomUtil.create('div', 'layer-control');
             
             div.innerHTML = '<h4>Basemaps</h4>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map (Esri)</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\'aerial\')">Aerial Imagery (Esri)</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\\'osm\\')">OpenStreetMap</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\\'street\\')">Street Map (Esri)</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\\'aerial\\')">Aerial Imagery (Esri)</label>';
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
             
-            // Define explicit order for layers
             var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
             
             layerOrder.forEach(function(key) {
@@ -1185,7 +1035,7 @@
                     var checked = (key === 'enm') ? 'checked' : '';
                     div.innerHTML += 
                         '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
-                        ' onchange="switchLayer(\'' + key + '\')">' + 
+                        ' onchange="switchLayer(\\'' + key + '\\')">' + 
                         layerConfigs[key].name + '</label>';
                 }
             });
@@ -1196,7 +1046,7 @@
                 var checked = vectorConfigs[key].visible ? 'checked' : '';
                 div.innerHTML += 
                     '<label><input type="checkbox" id="vector-' + key + '" ' + checked + 
-                    ' onchange="toggleVectorLayer(\'' + key + '\')">' + 
+                    ' onchange="toggleVectorLayer(\\'' + key + '\\')">' + 
                     vectorConfigs[key].name + '</label>';
             });
             
@@ -1209,7 +1059,7 @@
                         '<div class="opacity-control">' +
                         '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
                         '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
-                        'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
+                        'oninput="updateLayerOpacity(\\'' + key + '\\', this.value/100); document.getElementById(\\'opacity-value-' + key + '\\').textContent = this.value + \\'%\\'">' +
                         '</div>';
                 }
             });
@@ -1238,8 +1088,7 @@
                 '<p>Multi-scale Analysis</p>' +
                 '<p><em>Regional: 1km resolution overview</em></p>' +
                 '<p><em>Country-specific: 100m detail</em></p>' +
-                '<p><em>Right-click: Copy coordinates</em></p>' +
-                '<p><em>Grid: 1000m (zoom ' + GRID_MIN_ZOOM + '+ on SD layers)</em></p>';
+                '<p><em>Right-click: Copy coordinates</em></p>';
             return div;
         };
         info.addTo(map);
@@ -1263,5 +1112,3 @@
     </script>
 </body>
 </html>
-
-
