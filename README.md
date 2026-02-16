@@ -7,38 +7,38 @@
 
 ---
 
-**_Overview**_
+**Overview**
 
 This map provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Bangladesh and South India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance, preparedness, and intervention. The platform integrates ecological suitability modeling, fine-scale risk surfaces, historical outbreak data, and uncertainty estimates into a single, browser-based visualization tool.
 
-**_Map Features**_
+**Map Features**
 Nipah Virus Risk Mapping — Bangladesh & South India
 
 This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, intuitive way to explore where environmental suitability and modeled risk signals are highest, and how these patterns relate to known outbreak locations and geographic context.
 
-**_ENM Regional Layer (1 km)**_
+**ENM Regional Layer (1 km)**
 
 A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater environmental suitability relative to the study domain. This layer provides a regional overview and helps identify broad geographic patterns of potential spillover risk.
 
-**_High-Resolution Layers (100 m) (~30second load time)**_
+**High-Resolution Layers (100 m) (~30second load time)**
 
 Detailed risk surfaces are provided separately for:
 
-**_Bangladesh, Eastern India, Eastern Nepal, Southern Bhutan**_
-**_Southern India**_
+**Bangladesh, Eastern India, Eastern Nepal, Southern Bhutan**
+**Southern India**
 
 These include:
 
-**_Population Risk (100m)**_
-**_Landcover Risk (100m)**_
+**Population Risk (100m)**
+**Landcover Risk (100m)**
 
 Both layers use a discrete risk classification scheme (e.g., No Risk → Very High Risk). Users can toggle individual risk classes in the legend to isolate specific zones, such as focusing only on High and Very High Risk areas. These layers support fine-scale analysis for district-level planning and surveillance prioritization.
 
-**_Uncertainty Layers (500m)**_
+**Uncertainty Layers (500m)**
 
 Standard deviation (SD) surfaces are provided to show model uncertainty. These layers help users understand where predictions are more stable and where additional caution or further data collection may be warranted.
 
-**_Vector Overlays**_
+**Vector Overlays**
 
 -Historical Nipah events (2001–2026) are displayed as clickable point markers with popups containing year, coordinates, and reference information.
 
@@ -48,7 +48,7 @@ Standard deviation (SD) surfaces are provided to show model uncertainty. These l
 
 -These overlays allow users to visually compare modeled risk with documented outbreak locations.
 
-**_How to Use the Map**_
+**How to Use the Map**
 
 -Use the Layer Control (top-left) to:
 
