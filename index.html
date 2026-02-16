@@ -283,7 +283,7 @@
         map.createPane('pointsPane');
         map.getPane('pointsPane').style.zIndex = 800;
 
-        // NEW MINIMAL EDIT: ensure popups/tooltips draw above pointsPane
+        // ensure popups/tooltips draw above pointsPane
         map.getPane('popupPane').style.zIndex = 10000;
         map.getPane('tooltipPane').style.zIndex = 10000;
 
@@ -321,6 +321,17 @@
             'pop_risk_bangladesh': {},
             'lc_risk_bangladesh': {}
         };
+
+        // NEW: switch admin outline color based on selected raster layer
+        function updateAdminsOutlineForRaster(layerId) {
+            var admins = vectorLayers['admins_with_records'];
+            if (!admins) return;
+
+            var isRiskLayer = (layerId.indexOf('pop_risk_') === 0) || (layerId.indexOf('lc_risk_') === 0);
+            var outlineColor = isRiskLayer ? '#FFFFFF' : '#000000';
+
+            admins.setStyle({ color: outlineColor });
+        }
 
         // UPDATED RASTER LAYER CONFIGURATIONS
         var layerConfigs = {
@@ -872,6 +883,11 @@
                     if (config.visible) {
                         layer.addTo(map);
                     }
+
+                    // NEW: once admins_with_records loads, sync outline color to current raster
+                    if (vectorId === 'admins_with_records' && currentLayer) {
+                        updateAdminsOutlineForRaster(currentLayer);
+                    }
                 })
                 .catch(error => {
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
@@ -998,6 +1014,9 @@
                         layer.addTo(map);
                         currentLayer = layerId;
                         updateLegend(layerId);
+
+                        // NEW: set admin outline for initial layer too (once admins load, it will sync again)
+                        updateAdminsOutlineForRaster(currentLayer);
                     }
                 })
                 .catch(error => {
@@ -1016,6 +1035,9 @@
                 layers[layerId].addTo(map);
                 currentLayer = layerId;
                 updateLegend(layerId);
+
+                // NEW: update admin outline color when switching rasters
+                updateAdminsOutlineForRaster(layerId);
                 
                 var config = layerConfigs[layerId];
                 
@@ -1182,10 +1204,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
