@@ -28,7 +28,7 @@ Both layers use a discrete risk classification scheme (e.g., No Risk → Very Hi
 
 **Uncertainty Layers (500m)**
 
-Standard deviation (SD) surfaces are provided to show model uncertainty. These layers help users understand where predictions are more stable and where additional caution or further data collection may be warranted.
+Standard deviation (SD) surfaces are provided to show model uncertainty based on the posterior SD of Smoothed Risk (Population and Landcover). These layers help users understand where predictions are more stable and where additional caution or further data collection may be warranted.
 
 **Vector Overlays**
 
@@ -37,6 +37,8 @@ Standard deviation (SD) surfaces are provided to show model uncertainty. These l
 -A study region boundary (“M Region”) provides geographic context for the model extent.
 
 -The January 2026 West Bengal district overlay includes a narrative popup with an external reference link for additional context.
+
+-First-order Administrative Division (ADM1) with documented records.
 
 -These overlays allow users to visually compare modeled risk with documented outbreak locations.
 
