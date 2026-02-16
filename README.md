@@ -9,28 +9,20 @@
 
 **Overview**
 
-This map provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Bangladesh and South India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance, preparedness, and intervention. The platform integrates ecological suitability modeling, fine-scale risk surfaces, historical outbreak data, and uncertainty estimates into a single, browser-based visualization tool.
+This map provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Eastern South Asia (Bangladesh, Eastern India, Eastern Nepal, Southern Bhutan) and Southern India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance, preparedness, and intervention. The platform integrates ecological suitability modeling, fine-scale risk surfaces, historical outbreak data, and uncertainty estimates into a single, browser-based visualization tool.
 
 **Map Features**
-Nipah Virus Risk Mapping — Bangladesh & South India
 
 This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, intuitive way to explore where environmental suitability and modeled risk signals are highest, and how these patterns relate to known outbreak locations and geographic context.
 
-**ENM Regional Layer (1 km)**
+**ENM Regional Layer (1km)**
 
 A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater environmental suitability relative to the study domain. This layer provides a regional overview and helps identify broad geographic patterns of potential spillover risk.
 
-**High-Resolution Layers (100 m) (~30second load time)**
+**High-Resolution Layers (100m) (~30second load time)**
 
-Detailed risk surfaces are provided separately for:
-
-**Bangladesh, Eastern India, Eastern Nepal, Southern Bhutan**
-**Southern India**
-
-These include:
-
-**Population Risk (100m)**
-**Landcover Risk (100m)**
+Population Risk(100m)
+Landcover Risk(100m)
 
 Both layers use a discrete risk classification scheme (e.g., No Risk → Very High Risk). Users can toggle individual risk classes in the legend to isolate specific zones, such as focusing only on High and Very High Risk areas. These layers support fine-scale analysis for district-level planning and surveillance prioritization.
 
