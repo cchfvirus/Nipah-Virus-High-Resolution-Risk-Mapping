@@ -245,8 +245,8 @@
             opacity: 1;
         }
 
-        /* Styling for 500 m grid lines */
-        .grid500m {
+        /* Styling for 1000 m grid lines */
+        .grid1000m {
             stroke: #000;
             stroke-width: 1;
             fill: none;
@@ -320,8 +320,8 @@
             'lc_risk_bangladesh': {}
         };
 
-        // ===== Grid globals for 500 m tessellation =====
-        var gridLayer500m = null;
+        // ===== Grid globals for 1000 m tessellation =====
+        var gridLayer1000m = null;
         var gridEnabled = false;
         // Which layers should show the grid (SD layers)
         var sdLayerIds = new Set(['sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc']);
@@ -734,7 +734,7 @@
             }
         }
 
-        // ===== 500 m grid helper functions (approximate conversion) =====
+        // ===== 1000 m grid helper functions (approximate conversion) =====
         function metersToDegreesLat(meters) {
             // Approx: 1 deg latitude ≈ 111,320 m
             return meters / 111320;
@@ -745,13 +745,13 @@
             return meters / (111320 * Math.cos(atLat * Math.PI / 180));
         }
 
-        function build500mGridForView() {
+        function build1000mGridForView() {
             if (!gridEnabled) return;
 
             // Remove existing grid before rebuilding
-            if (gridLayer500m) {
-                map.removeLayer(gridLayer500m);
-                gridLayer500m = null;
+            if (gridLayer1000m) {
+                map.removeLayer(gridLayer1000m);
+                gridLayer1000m = null;
             }
 
             var bounds = map.getBounds();
@@ -763,8 +763,8 @@
             // Use mid-lat for lng conversion
             var midLat = (south + north) / 2;
 
-            var stepLat = metersToDegreesLat(500);
-            var stepLng = metersToDegreesLng(500, midLat);
+            var stepLat = metersToDegreesLat(1000);
+            var stepLng = metersToDegreesLng(1000, midLat);
 
             // Snap start coords to a grid so it doesn't "swim" too much while panning
             var startLat = Math.floor(south / stepLat) * stepLat;
@@ -798,7 +798,7 @@
                 if (cellCount > maxCells) break;
             }
 
-            gridLayer500m = L.geoJSON({
+            gridLayer1000m = L.geoJSON({
                 "type": "FeatureCollection",
                 "features": features
             }, {
@@ -809,30 +809,28 @@
                         fillOpacity: 0,
                         opacity: 0.35,
                         interactive: false,
-                        className: 'grid500m'
+                        className: 'grid1000m'
                     };
                 },
                 pane: 'vectorPane' // ensure above rasterPane
             });
 
-            gridLayer500m.addTo(map);
+            gridLayer1000m.addTo(map);
         }
 
-        function enableGrid500m() {
+        function enableGrid1000m() {
             gridEnabled = true;
-            build500mGridForView();
-
-            // Regenerate on pan/zoom to keep grid aligned with viewport.
-            map.on('moveend', build500mGridForView);
+            build1000mGridForView();
+            map.on('moveend', build1000mGridForView);
         }
 
-        function disableGrid500m() {
+        function disableGrid1000m() {
             gridEnabled = false;
-            map.off('moveend', build500mGridForView);
+            map.off('moveend', build1000mGridForView);
 
-            if (gridLayer500m) {
-                map.removeLayer(gridLayer500m);
-                gridLayer500m = null;
+            if (gridLayer1000m) {
+                map.removeLayer(gridLayer1000m);
+                gridLayer1000m = null;
             }
         }
         // ===============================================================
@@ -1010,29 +1008,6 @@
                         ymax: georaster.ymax
                     });
                     
-                    // DIAGNOSTIC: Check actual unique values for discrete layers
-                    if (config.discreteColors && layerId.includes('risk')) {
-                        console.log('=== DIAGNOSTIC FOR ' + layerId + ' ===');
-                        console.log('Expected values in config:', Object.keys(config.discreteColors));
-                        console.log('Min value in raster:', georaster.mins);
-                        console.log('Max value in raster:', georaster.maxs);
-                        
-                        // Sample actual values
-                        if (georaster.values && georaster.values[0]) {
-                            var uniqueValues = new Set();
-                            var sampleSize = Math.min(10000, georaster.values[0].length);
-                            for (var i = 0; i < sampleSize; i++) {
-                                var val = georaster.values[0][i];
-                                if (val !== null && val !== undefined && !isNaN(val)) {
-                                    uniqueValues.add(Math.round(val));
-                                }
-                            }
-                            var sortedUnique = Array.from(uniqueValues).sort((a, b) => a - b);
-                            console.log('Actual unique values found (sample of ' + sampleSize + ' pixels):', sortedUnique);
-                            console.log('>>> ACTION NEEDED: Update discreteColors in config to match these values! <<<');
-                        }
-                    }
-                    
                     georasters[layerId] = georaster;
                     
                     var pixelValuesToColorFn;
@@ -1099,11 +1074,11 @@
                 currentLayer = layerId;
                 updateLegend(layerId);
 
-                // Toggle 500m grid only for SD layers
+                // Toggle 1000m grid only for SD layers
                 if (sdLayerIds.has(layerId)) {
-                    if (!gridEnabled) enableGrid500m();
+                    if (!gridEnabled) enableGrid1000m();
                 } else {
-                    if (gridEnabled) disableGrid500m();
+                    if (gridEnabled) disableGrid1000m();
                 }
                 
                 var config = layerConfigs[layerId];
