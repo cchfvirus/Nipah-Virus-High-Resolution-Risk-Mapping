@@ -273,6 +273,9 @@
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 200;
         
+        map.createPane('adminPane');
+        map.getPane('adminPane').style.zIndex = 400;
+        
         map.createPane('vectorPane');
         map.getPane('vectorPane').style.zIndex = 450;
 
@@ -536,17 +539,18 @@
             },
             'admins_with_records': {
                 file: 'admins_with_records.json',
-                name: 'Administrative Areas with Records',
+                name: 'Administrative Boundaries with Records',
                 type: 'polygon',
                 style: {
                     color: '#FF6600',
                     weight: 2,
-                    fillOpacity: 0.4,
-                    fillColor: '#FFFFFF'
+                    fillOpacity: 0.2,
+                    fillColor: '#FF6600'
                 },
-                popupFields: ['Name'],
+                popupFields: [],
                 enablePopup: true,
-                visible: true
+                visible: false,
+                pane: 'adminPane'
             }
         };
 
@@ -825,7 +829,7 @@
                                 
                                 return marker;
                             },
-                            pane: 'vectorPane'
+                            pane: config.pane || 'vectorPane'
                         });
                     } else {
                         layer = L.geoJSON(data, {
@@ -840,8 +844,13 @@
                                     featureLayer.options.interactive = false;
                                 }
                             },
-                            pane: 'vectorPane'
+                            pane: config.pane || 'vectorPane'
                         });
+                        
+                        // Set z-index if specified
+                        if (config.zIndex !== undefined && layer.setZIndex) {
+                            layer.setZIndex(config.zIndex);
+                        }
                     }
                     
                     vectorLayers[vectorId] = layer;
@@ -1159,4 +1168,3 @@
     </script>
 </body>
 </html>
-
