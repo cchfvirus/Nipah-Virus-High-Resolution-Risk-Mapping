@@ -223,7 +223,10 @@
         var map = L.map('map').setView([18.0, 82.5], 6);
 
         // Store the initial view to restore later
-        var initialView = { center: [18.0, 82.5], zoom: 6 };
+        var initialView = {
+            center: [18.0, 82.5],
+            zoom: 6
+        };
 
         // Ensure basemaps render beneath rasters
         map.getPane('tilePane').style.zIndex = 100;
@@ -293,7 +296,15 @@
             'pop_risk_india': {
                 file: 'pop_risk_india_cog.tif',
                 name: 'Population Risk - South India (100m)',
-                discreteColors: { 0:'#000000',1:'#FFFFBE',2:'#FFDD00',3:'#FFAA00',4:'#FF6600',6:'#FF0000',9:'#A80000' },
+                discreteColors: {
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
+                },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
@@ -310,7 +321,15 @@
             'lc_risk_india': {
                 file: 'lc_risk_india_cog.tif',
                 name: 'Landcover Risk - South India (100m)',
-                discreteColors: { 0:'#000000',1:'#FFFFBE',2:'#FFDD00',3:'#FFAA00',4:'#FF6600',6:'#FF0000',9:'#A80000' },
+                discreteColors: {
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
+                },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
@@ -327,7 +346,15 @@
             'pop_risk_bangladesh': {
                 file: 'pop_risk_bang_cog.tif',
                 name: 'Population Risk - Eastern South Asia (100m)',
-                discreteColors: { 0:'#000000',1:'#FFFFBE',2:'#FFDD00',3:'#FFAA00',4:'#FF6600',6:'#FF0000',9:'#A80000' },
+                discreteColors: {
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
+                },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
@@ -344,7 +371,15 @@
             'lc_risk_bangladesh': {
                 file: 'lc_risk_bang_cog.tif',
                 name: 'Landcover Risk - Eastern South Asia (100m)',
-                discreteColors: { 0:'#000000',1:'#FFFFBE',2:'#FFDD00',3:'#FFAA00',4:'#FF6600',6:'#FF0000',9:'#A80000' },
+                discreteColors: {
+                    0: '#000000',
+                    1: '#FFFFBE',
+                    2: '#FFDD00',
+                    3: '#FFAA00',
+                    4: '#FF6600',
+                    6: '#FF0000',
+                    9: '#A80000'
+                },
                 customLegend: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
@@ -424,7 +459,7 @@
                 popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
                 enablePopup: true,
                 visible: true,
-                // NEW: force outbreaks into pointsPane so they always draw on top
+                // NEW: ensure outbreaks always draw on top
                 pane: 'pointsPane'
             },
             'study': {
@@ -442,7 +477,6 @@
                 enablePopup: false,
                 visible: true,
                 interactive: false,
-                // (optional) keep polygons in adminPane
                 pane: 'adminPane'
             },
             'district_2026': {
@@ -461,17 +495,16 @@
                 customPopup: true,
                 customPopupContent: function(feature) {
                     return '<div style="max-width: 300px;">' +
-                           '<h3 style="margin: 0 0 10px; font-size: 15px; color: #8B0000;">2026 Nipah Outbreak - West Bengal</h3>' +
-                           '<p style="margin: 0 0 8px; font-size: 12px; line-height: 1.5;">' +
-                           'In January 2026, authorities in West Bengal confirmed laboratory-confirmed Nipah virus infections in two healthcare workers (nurses) at a private hospital in Barasat, North 24 Parganas district. This event represents the third NiV infection outbreak reported in West Bengal (previous outbreaks reported in Siliguri in 2001 and Nadia in 2007).' +
-                           '</p>' +
-                           '<p style="margin: 0; font-size: 11px; color: #666; font-style: italic;">' +
-                           'Source: <a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON593" target="_blank" style="color: #0066CC;">Nipah virus disease - India (WHO)</a>' +
-                           '</p>' +
-                           '</div>';
+                        '<h3 style="margin: 0 0 10px; font-size: 15px; color: #8B0000;">2026 Nipah Outbreak - West Bengal</h3>' +
+                        '<p style="margin: 0 0 8px; font-size: 12px; line-height: 1.5;">' +
+                        'In January 2026, authorities in West Bengal confirmed laboratory-confirmed Nipah virus infections in two healthcare workers (nurses) at a private hospital in Barasat, North 24 Parganas district. This event represents the third NiV infection outbreak reported in West Bengal (previous outbreaks reported in Siliguri in 2001 and Nadia in 2007).' +
+                        '</p>' +
+                        '<p style="margin: 0; font-size: 11px; color: #666; font-style: italic;">' +
+                        'Source: <a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON593" target="_blank" style="color: #0066CC;">Nipah virus disease - India (WHO)</a>' +
+                        '</p>' +
+                        '</div>';
                 },
                 visible: true,
-                // (optional) keep polygons in adminPane
                 pane: 'adminPane'
             },
             'admins_with_records': {
@@ -598,9 +631,7 @@
         function updateStatus(message, isError) { console.log(message); }
 
         function updateLayerOpacity(layerId, opacity) {
-            if (layers[layerId]) {
-                layers[layerId].setOpacity(opacity);
-            }
+            if (layers[layerId]) layers[layerId].setOpacity(opacity);
         }
 
         function toggleClass(layerId, classValue) {
@@ -608,7 +639,9 @@
             refreshLayer(layerId);
 
             var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
+            if (!checkbox) return;
             var item = checkbox.parentElement;
+
             if (visibleClasses[layerId][classValue]) item.classList.remove('disabled');
             else item.classList.add('disabled');
         }
@@ -666,7 +699,6 @@
             }
         }
 
-        // Supports OSM, street, and aerial basemaps
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
             map.removeLayer(streetMap);
@@ -693,9 +725,9 @@
                     if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
                         var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
                         popupContent += '<tr>' +
-                                       '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
-                                       '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
-                                       '</tr>';
+                            '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
+                            '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
+                            '</tr>';
                     }
                 });
 
@@ -737,9 +769,9 @@
                                             if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
                                                 var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
                                                 popupContent += '<tr>' +
-                                                               '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
-                                                               '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
-                                                               '</tr>';
+                                                    '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
+                                                    '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
+                                                    '</tr>';
                                             }
                                         });
 
@@ -753,7 +785,7 @@
                             pane: config.pane || 'vectorPane'
                         });
 
-                        // OPTIONAL HARDENING: ensure outbreaks sit above everything
+                        // Optional hardening: keep points above other vectors
                         if (vectorId === 'outbreaks') {
                             layer.on('add', function() { layer.bringToFront(); });
                         }
@@ -772,9 +804,7 @@
 
                     vectorLayers[vectorId] = layer;
 
-                    if (config.visible) {
-                        layer.addTo(map);
-                    }
+                    if (config.visible) layer.addTo(map);
                 })
                 .catch(error => {
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
@@ -784,10 +814,10 @@
         }
 
         function toggleVectorLayer(vectorId) {
-            if (vectorLayers[vectorId]) {
-                if (map.hasLayer(vectorLayers[vectorId])) map.removeLayer(vectorLayers[vectorId]);
-                else vectorLayers[vectorId].addTo(map);
-            }
+            if (!vectorLayers[vectorId]) return;
+
+            if (map.hasLayer(vectorLayers[vectorId])) map.removeLayer(vectorLayers[vectorId]);
+            else vectorLayers[vectorId].addTo(map);
         }
 
         function loadLayer(layerId) {
@@ -873,32 +903,36 @@
             }
         }
 
+        // UPDATED: template-literal legend builder (avoids quote-escaping errors)
         function updateLegend(layerId) {
             var config = layerConfigs[layerId];
             var legendDiv = document.getElementById('legend-content');
 
-            legendDiv.innerHTML = '<h4>' + config.name + '</h4>';
+            legendDiv.innerHTML = `<h4>${config.name}</h4>`;
 
             if (config.customLegend && config.legendItems) {
                 config.legendItems.forEach(function(item) {
                     var isChecked = visibleClasses[layerId][item.value];
                     var disabledClass = isChecked ? '' : ' disabled';
 
-                    legendDiv.innerHTML +=
-                        '<div class="item' + disabledClass + '">' +
-                        '<input type="checkbox" id="class-' + layerId + '-' + item.value + '" ' +
-                        (isChecked ? 'checked' : '') + ' ' +
-                        'onchange="toggleClass(\\'' + layerId + '\\', ' + item.value + ')">' +
-                        '<i style="background:' + item.color + '"></i> ' +
-                        item.label +
-                        '</div>';
+                    legendDiv.innerHTML += `
+                        <div class="item${disabledClass}">
+                            <input type="checkbox"
+                                   id="class-${layerId}-${item.value}"
+                                   ${isChecked ? 'checked' : ''}
+                                   onchange="toggleClass('${layerId}', ${item.value})">
+                            <i style="background:${item.color}"></i>
+                            ${item.label}
+                        </div>
+                    `;
                 });
 
-                legendDiv.innerHTML +=
-                    '<div class="legend-controls">' +
-                    '<button onclick="selectAllClasses(\\'' + layerId + '\\')">All</button>' +
-                    '<button onclick="selectNoneClasses(\\'' + layerId + '\\')">None</button>' +
-                    '</div>';
+                legendDiv.innerHTML += `
+                    <div class="legend-controls">
+                        <button onclick="selectAllClasses('${layerId}')">All</button>
+                        <button onclick="selectNoneClasses('${layerId}')">None</button>
+                    </div>
+                `;
             } else if (config.continuousLegend) {
                 var gradientStops = [];
                 for (var i = 0; i < config.colors.length; i++) {
@@ -907,17 +941,17 @@
                 }
                 var gradientCSS = 'linear-gradient(to right, ' + gradientStops.join(', ') + ')';
 
-                legendDiv.innerHTML +=
-                    '<div class="gradient-bar" style="background: ' + gradientCSS + ';"></div>' +
-                    '<div class="gradient-labels">' +
-                    '<span>' + config.labels[0] + '</span>' +
-                    '<span>' + config.labels[1] + '</span>' +
-                    '</div>';
+                legendDiv.innerHTML += `
+                    <div class="gradient-bar" style="background:${gradientCSS};"></div>
+                    <div class="gradient-labels">
+                        <span>${config.labels[0]}</span>
+                        <span>${config.labels[1]}</span>
+                    </div>
+                `;
             }
 
             if (config.description) {
-                legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' +
-                                       config.description + '</p>';
+                legendDiv.innerHTML += `<p style="margin-top:10px; font-size:11px; color:#777;">${config.description}</p>`;
             }
         }
 
@@ -926,50 +960,65 @@
         layerControl.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'layer-control');
 
-            div.innerHTML = '<h4>Basemaps</h4>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\\'osm\\')">OpenStreetMap</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\\'street\\')">Street Map (Esri)</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\\'aerial\\')">Aerial Imagery (Esri)</label>';
+            div.innerHTML = `
+                <h4>Basemaps</h4>
+                <label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap('osm')">OpenStreetMap</label>
+                <label><input type="radio" name="basemap" value="street" onchange="switchBasemap('street')">Street Map (Esri)</label>
+                <label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap('aerial')">Aerial Imagery (Esri)</label>
 
-            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
+                <h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>
+            `;
 
             var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
 
             layerOrder.forEach(function(key) {
                 if (layerConfigs[key]) {
                     var checked = (key === 'enm') ? 'checked' : '';
-                    div.innerHTML +=
-                        '<label><input type="radio" name="layer" value="' + key + '" ' + checked +
-                        ' onchange="switchLayer(\\'' + key + '\\')">' +
-                        layerConfigs[key].name + '</label>';
+                    div.innerHTML += `
+                        <label>
+                            <input type="radio" name="layer" value="${key}" ${checked} onchange="switchLayer('${key}')">
+                            ${layerConfigs[key].name}
+                        </label>
+                    `;
                 }
             });
 
-            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Vector Overlays</h4>';
+            div.innerHTML += `
+                <h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Vector Overlays</h4>
+            `;
 
             Object.keys(vectorConfigs).forEach(function(key) {
                 var checked = vectorConfigs[key].visible ? 'checked' : '';
-                div.innerHTML +=
-                    '<label><input type="checkbox" id="vector-' + key + '" ' + checked +
-                    ' onchange="toggleVectorLayer(\\'' + key + '\\')">' +
-                    vectorConfigs[key].name + '</label>';
+                div.innerHTML += `
+                    <label>
+                        <input type="checkbox" id="vector-${key}" ${checked} onchange="toggleVectorLayer('${key}')">
+                        ${vectorConfigs[key].name}
+                    </label>
+                `;
             });
 
-            div.innerHTML += '<div class="opacity-section">';
-            div.innerHTML += '<h5>Layer Opacity</h5>';
+            div.innerHTML += `
+                <div class="opacity-section">
+                    <h5>Layer Opacity</h5>
+            `;
 
             layerOrder.forEach(function(key) {
                 if (layerConfigs[key]) {
-                    div.innerHTML +=
-                        '<div class="opacity-control">' +
-                        '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
-                        '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
-                        'oninput="updateLayerOpacity(\\'' + key + '\\', this.value/100); document.getElementById(\\'opacity-value-' + key + '\\').textContent = this.value + \\'%\\'">' +
-                        '</div>';
+                    div.innerHTML += `
+                        <div class="opacity-control">
+                            <label>
+                                ${layerConfigs[key].name}
+                                <span class="opacity-value" id="opacity-value-${key}">70%</span>
+                            </label>
+                            <input type="range" id="opacity-${key}" min="0" max="100" value="70"
+                                   oninput="updateLayerOpacity('${key}', this.value/100);
+                                            document.getElementById('opacity-value-${key}').textContent = this.value + '%'">
+                        </div>
+                    `;
                 }
             });
 
-            div.innerHTML += '</div>';
+            div.innerHTML += `</div>`;
             return div;
         };
         layerControl.addTo(map);
