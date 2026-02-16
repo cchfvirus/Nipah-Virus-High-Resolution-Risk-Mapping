@@ -322,15 +322,16 @@
             'lc_risk_bangladesh': {}
         };
 
-        // NEW: switch admin outline color based on selected raster layer
-        function updateAdminsOutlineForRaster(layerId) {
+        // switch admin + district outline color based on selected raster layer
+        function updateOutlinesForRaster(layerId) {
             var admins = vectorLayers['admins_with_records'];
-            if (!admins) return;
+            var district = vectorLayers['district_2026'];
 
             var isRiskLayer = (layerId.indexOf('pop_risk_') === 0) || (layerId.indexOf('lc_risk_') === 0);
             var outlineColor = isRiskLayer ? '#FFFFFF' : '#000000';
 
-            admins.setStyle({ color: outlineColor });
+            if (admins) admins.setStyle({ color: outlineColor });
+            if (district) district.setStyle({ color: outlineColor });
         }
 
         // UPDATED RASTER LAYER CONFIGURATIONS
@@ -536,7 +537,7 @@
                 type: 'polygon',
                 style: {
                     color: '#000000',
-                    weight: 2,
+                    weight: 3,
                     fillOpacity: 0.4,
                     fillColor: '#FFFFFF',
                     dashArray: '10, 5'
@@ -563,7 +564,7 @@
                 type: 'polygon',
                 style: {
                     color: '#000000',
-                    weight: 1.5,
+                    weight: 1,
                     fillOpacity: 0.0,
                     fillColor: null
                 },
@@ -884,9 +885,9 @@
                         layer.addTo(map);
                     }
 
-                    // NEW: once admins_with_records loads, sync outline color to current raster
-                    if (vectorId === 'admins_with_records' && currentLayer) {
-                        updateAdminsOutlineForRaster(currentLayer);
+                    // sync outlines after relevant vectors load
+                    if ((vectorId === 'admins_with_records' || vectorId === 'district_2026') && currentLayer) {
+                        updateOutlinesForRaster(currentLayer);
                     }
                 })
                 .catch(error => {
@@ -1015,8 +1016,8 @@
                         currentLayer = layerId;
                         updateLegend(layerId);
 
-                        // NEW: set admin outline for initial layer too (once admins load, it will sync again)
-                        updateAdminsOutlineForRaster(currentLayer);
+                        // set outlines for initial layer too (vectors may sync again when they load)
+                        updateOutlinesForRaster(currentLayer);
                     }
                 })
                 .catch(error => {
@@ -1036,8 +1037,8 @@
                 currentLayer = layerId;
                 updateLegend(layerId);
 
-                // NEW: update admin outline color when switching rasters
-                updateAdminsOutlineForRaster(layerId);
+                // update admin + district outline color when switching rasters
+                updateOutlinesForRaster(layerId);
                 
                 var config = layerConfigs[layerId];
                 
@@ -1204,6 +1205,3 @@
     </script>
 </body>
 </html>
-
-
-
