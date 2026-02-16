@@ -245,7 +245,7 @@
             opacity: 1;
         }
 
-        /* Styling for 1000 m grid lines */
+        /* Styling for 1000 m grid lines (shown only when zoomed in) */
         .grid1000m {
             stroke: #000;
             stroke-width: 1;
@@ -323,6 +323,10 @@
         // ===== Grid globals for 1000 m tessellation =====
         var gridLayer1000m = null;
         var gridEnabled = false;
+
+        // Show grid only when zoomed in (tweak as desired)
+        var GRID_MIN_ZOOM = 9;
+
         // Which layers should show the grid (SD layers)
         var sdLayerIds = new Set(['sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc']);
         // =================================================
@@ -338,7 +342,7 @@
                 description: 'Regional ecological suitability',
                 mode: 'lch',
                 continuousLegend: true,
-                useInitialView: true  // Flag to use initial view instead of custom center/zoom
+                useInitialView: true
             },
             'pop_risk_india': {
                 file: 'pop_risk_india_cog.tif',
@@ -734,19 +738,28 @@
             }
         }
 
-        // ===== 1000 m grid helper functions (approximate conversion) =====
+        // ===== 1000 m grid helper functions (zoom-gated for performance) =====
         function metersToDegreesLat(meters) {
-            // Approx: 1 deg latitude ≈ 111,320 m
             return meters / 111320;
         }
 
         function metersToDegreesLng(meters, atLat) {
-            // Approx: shrink by cos(latitude)
             return meters / (111320 * Math.cos(atLat * Math.PI / 180));
         }
 
+        function shouldShowGridNow() {
+            return gridEnabled && (map.getZoom() >= GRID_MIN_ZOOM);
+        }
+
         function build1000mGridForView() {
-            if (!gridEnabled) return;
+            // If zoomed out, remove any existing grid and exit
+            if (!shouldShowGridNow()) {
+                if (gridLayer1000m) {
+                    map.removeLayer(gridLayer1000m);
+                    gridLayer1000m = null;
+                }
+                return;
+            }
 
             // Remove existing grid before rebuilding
             if (gridLayer1000m) {
@@ -760,7 +773,6 @@
             var west  = bounds.getWest();
             var east  = bounds.getEast();
 
-            // Use mid-lat for lng conversion
             var midLat = (south + north) / 2;
 
             var stepLat = metersToDegreesLat(1000);
@@ -772,15 +784,14 @@
 
             var features = [];
 
-            // Limit number of tiles to avoid huge grids at small zooms
-            var maxCells = 5000; // safeguard
+            // Cap to prevent giant builds even when zoomed in
+            var maxCells = 2500;
             var cellCount = 0;
 
             for (var lat = startLat; lat <= north; lat += stepLat) {
                 for (var lng = startLng; lng <= east; lng += stepLng) {
                     if (cellCount++ > maxCells) break;
 
-                    // Each square as a polygon ring: [ [lng,lat], ... ]
                     var polyCoords = [
                         [lng, lat],
                         [lng + stepLng, lat],
@@ -812,7 +823,7 @@
                         className: 'grid1000m'
                     };
                 },
-                pane: 'vectorPane' // ensure above rasterPane
+                pane: 'vectorPane'
             });
 
             gridLayer1000m.addTo(map);
@@ -820,13 +831,20 @@
 
         function enableGrid1000m() {
             gridEnabled = true;
+
+            // Build only if zoom is high enough
             build1000mGridForView();
+
+            // Re-check on pan/zoom end (zoomend is key for gating)
             map.on('moveend', build1000mGridForView);
+            map.on('zoomend', build1000mGridForView);
         }
 
         function disableGrid1000m() {
             gridEnabled = false;
+
             map.off('moveend', build1000mGridForView);
+            map.off('zoomend', build1000mGridForView);
 
             if (gridLayer1000m) {
                 map.removeLayer(gridLayer1000m);
@@ -1074,16 +1092,17 @@
                 currentLayer = layerId;
                 updateLegend(layerId);
 
-                // Toggle 1000m grid only for SD layers
+                // Toggle 1000m grid only for SD layers (and only shows at zoom >= GRID_MIN_ZOOM)
                 if (sdLayerIds.has(layerId)) {
                     if (!gridEnabled) enableGrid1000m();
+                    // If already enabled, ensure grid state matches current zoom
+                    build1000mGridForView();
                 } else {
                     if (gridEnabled) disableGrid1000m();
                 }
                 
                 var config = layerConfigs[layerId];
                 
-                // Check if this layer should use the initial view
                 if (config.useInitialView) {
                     map.setView(initialView.center, initialView.zoom, {
                         animate: true,
@@ -1161,7 +1180,7 @@
             // Define explicit order for layers
             var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
             
-            layerOrder.forEach(function(key, index) {
+            layerOrder.forEach(function(key) {
                 if (layerConfigs[key]) {
                     var checked = (key === 'enm') ? 'checked' : '';
                     div.innerHTML += 
@@ -1183,9 +1202,6 @@
             
             div.innerHTML += '<div class="opacity-section">';
             div.innerHTML += '<h5>Layer Opacity</h5>';
-            
-            // Use same explicit order for opacity controls
-            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
             
             layerOrder.forEach(function(key) {
                 if (layerConfigs[key]) {
@@ -1222,7 +1238,8 @@
                 '<p>Multi-scale Analysis</p>' +
                 '<p><em>Regional: 1km resolution overview</em></p>' +
                 '<p><em>Country-specific: 100m detail</em></p>' +
-                '<p><em>Right-click: Copy coordinates</em></p>';
+                '<p><em>Right-click: Copy coordinates</em></p>' +
+                '<p><em>Grid: 1000m (zoom ' + GRID_MIN_ZOOM + '+ on SD layers)</em></p>';
             return div;
         };
         info.addTo(map);
