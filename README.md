@@ -14,11 +14,11 @@ This map provides high-resolution spatial risk assessments for Nipah virus (NiV)
 
 This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, intuitive way to explore where environmental suitability and modeled risk signals are highest, and how these patterns relate to known outbreak locations and geographic context.
 
-**ENM Regional Layer (1km)**
+**Maxent - ENM Regional Layer (1km)**
 
 A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater environmental suitability relative to the study domain. This layer provides a regional overview and helps identify broad geographic patterns of potential spillover risk.
 
-**High-Resolution Layers (100m) (~30second load time)**
+**High-Resolution Layers (100m) (~30 second load time)**
 
 Population Risk(100m)
 Landcover Risk(100m)
