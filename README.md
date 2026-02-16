@@ -1,5 +1,4 @@
 # Nipah Virus High-Resolution Risk Mapping
-### Bangladesh & South India
 
 ## 🌐 Interactive Map
 
@@ -28,7 +27,7 @@ Both layers use a discrete risk classification scheme (e.g., No Risk → Very Hi
 
 **Uncertainty Layers (500m)**
 
-Standard deviation (SD) surfaces are provided to show model uncertainty based on the posterior SD of Smoothed Risk (Population and Landcover). These layers help users understand where predictions are more stable and where additional caution or further data collection may be warranted.
+Standard deviation (SD) surfaces are provided to show model uncertainty based on the posterior SD of smoothed risk (Population and Landcover). These layers help users understand where predictions are more stable and where additional caution or further data collection may be warranted.
 
 **Vector Overlays**
 
