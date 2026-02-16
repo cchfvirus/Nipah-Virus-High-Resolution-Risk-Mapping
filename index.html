@@ -245,12 +245,43 @@
             opacity: 1;
         }
         
-        /* NORTH ARROW REMOVED */
+        .north-arrow {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #c30b0b;
+        }
+        
+        .north-arrow::before {
+            content: "N";
+        }
+        
+        .north-arrow::after {
+            content: "";
+            position: absolute;
+            top: 8px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid #c30b0b;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <!-- NORTH ARROW REMOVED -->
+    <div class="north-arrow"></div>
     <div id="copy-notification" class="copy-notification"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -510,19 +541,6 @@
                 visible: true,
                 interactive: false
             },
-            'admins_with_records': {
-                file: 'admins_with_records.json',
-                name: 'Admins with records',
-                type: 'polygon',
-                style: {
-                    color: '#000000',
-                    weight: 3,
-                    fillOpacity: 0.4,
-                    fillColor: '#FFFFFF',
-                    dashArray: '10, 5'
-                },
-                visible: true
-            }
             'district_2026': {
                 file: 'nipah_2026.json',
                 name: 'January 2026 - Barasat, North 24 Parganas district',
@@ -1161,4 +1179,25 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
