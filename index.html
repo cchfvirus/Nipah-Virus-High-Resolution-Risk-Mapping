@@ -279,9 +279,13 @@
         map.createPane('vectorPane');
         map.getPane('vectorPane').style.zIndex = 450;
 
-        // MINIMAL EDIT #1: dedicated pane for outbreak points (always above admin boundaries)
+        // Dedicated pane for outbreak points (always above admin boundaries)
         map.createPane('pointsPane');
         map.getPane('pointsPane').style.zIndex = 800;
+
+        // NEW MINIMAL EDIT: ensure popups/tooltips draw above pointsPane
+        map.getPane('popupPane').style.zIndex = 10000;
+        map.getPane('tooltipPane').style.zIndex = 10000;
 
         // Define basemaps
         var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -497,7 +501,6 @@
                 popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
                 enablePopup: true,
                 visible: true,
-                // MINIMAL EDIT #2: force outbreaks into pointsPane
                 pane: 'pointsPane'
             },
             'study': {
@@ -808,7 +811,7 @@
                     if (config.type === 'point') {
                         layer = L.geoJSON(data, {
                             pointToLayer: function(feature, latlng) {
-                                // MINIMAL EDIT #3: apply pane to the circleMarker itself
+                                // apply pane to the circleMarker itself
                                 var marker = L.circleMarker(
                                     latlng,
                                     Object.assign({}, config.style, { pane: config.pane || 'vectorPane' })
