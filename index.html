@@ -244,13 +244,19 @@
         .copy-notification.show {
             opacity: 1;
         }
-        
-        /* NORTH ARROW REMOVED */
+
+        /* Styling for 500 m grid lines */
+        .grid500m {
+            stroke: #000;
+            stroke-width: 1;
+            fill: none;
+            opacity: 0.35;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <!-- NORTH ARROW REMOVED -->
     <div id="copy-notification" class="copy-notification"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -313,6 +319,13 @@
             'pop_risk_bangladesh': {},
             'lc_risk_bangladesh': {}
         };
+
+        // ===== Grid globals for 500 m tessellation =====
+        var gridLayer500m = null;
+        var gridEnabled = false;
+        // Which layers should show the grid (SD layers)
+        var sdLayerIds = new Set(['sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc']);
+        // =================================================
 
         // UPDATED RASTER LAYER CONFIGURATIONS
         var layerConfigs = {
@@ -721,6 +734,109 @@
             }
         }
 
+        // ===== 500 m grid helper functions (approximate conversion) =====
+        function metersToDegreesLat(meters) {
+            // Approx: 1 deg latitude ≈ 111,320 m
+            return meters / 111320;
+        }
+
+        function metersToDegreesLng(meters, atLat) {
+            // Approx: shrink by cos(latitude)
+            return meters / (111320 * Math.cos(atLat * Math.PI / 180));
+        }
+
+        function build500mGridForView() {
+            if (!gridEnabled) return;
+
+            // Remove existing grid before rebuilding
+            if (gridLayer500m) {
+                map.removeLayer(gridLayer500m);
+                gridLayer500m = null;
+            }
+
+            var bounds = map.getBounds();
+            var south = bounds.getSouth();
+            var north = bounds.getNorth();
+            var west  = bounds.getWest();
+            var east  = bounds.getEast();
+
+            // Use mid-lat for lng conversion
+            var midLat = (south + north) / 2;
+
+            var stepLat = metersToDegreesLat(500);
+            var stepLng = metersToDegreesLng(500, midLat);
+
+            // Snap start coords to a grid so it doesn't "swim" too much while panning
+            var startLat = Math.floor(south / stepLat) * stepLat;
+            var startLng = Math.floor(west  / stepLng) * stepLng;
+
+            var features = [];
+
+            // Limit number of tiles to avoid huge grids at small zooms
+            var maxCells = 5000; // safeguard
+            var cellCount = 0;
+
+            for (var lat = startLat; lat <= north; lat += stepLat) {
+                for (var lng = startLng; lng <= east; lng += stepLng) {
+                    if (cellCount++ > maxCells) break;
+
+                    // Each square as a polygon ring: [ [lng,lat], ... ]
+                    var polyCoords = [
+                        [lng, lat],
+                        [lng + stepLng, lat],
+                        [lng + stepLng, lat + stepLat],
+                        [lng, lat + stepLat],
+                        [lng, lat]
+                    ];
+
+                    features.push({
+                        "type": "Feature",
+                        "geometry": { "type": "Polygon", "coordinates": [polyCoords] },
+                        "properties": {}
+                    });
+                }
+                if (cellCount > maxCells) break;
+            }
+
+            gridLayer500m = L.geoJSON({
+                "type": "FeatureCollection",
+                "features": features
+            }, {
+                style: function() {
+                    return {
+                        color: '#000000',
+                        weight: 1,
+                        fillOpacity: 0,
+                        opacity: 0.35,
+                        interactive: false,
+                        className: 'grid500m'
+                    };
+                },
+                pane: 'vectorPane' // ensure above rasterPane
+            });
+
+            gridLayer500m.addTo(map);
+        }
+
+        function enableGrid500m() {
+            gridEnabled = true;
+            build500mGridForView();
+
+            // Regenerate on pan/zoom to keep grid aligned with viewport.
+            map.on('moveend', build500mGridForView);
+        }
+
+        function disableGrid500m() {
+            gridEnabled = false;
+            map.off('moveend', build500mGridForView);
+
+            if (gridLayer500m) {
+                map.removeLayer(gridLayer500m);
+                gridLayer500m = null;
+            }
+        }
+        // ===============================================================
+
         // Supports OSM, street, and aerial basemaps
         function switchBasemap(basemapType) {
             map.removeLayer(osmMap);
@@ -982,6 +1098,13 @@
                 layers[layerId].addTo(map);
                 currentLayer = layerId;
                 updateLegend(layerId);
+
+                // Toggle 500m grid only for SD layers
+                if (sdLayerIds.has(layerId)) {
+                    if (!gridEnabled) enableGrid500m();
+                } else {
+                    if (gridEnabled) disableGrid500m();
+                }
                 
                 var config = layerConfigs[layerId];
                 
