@@ -10,47 +10,195 @@
 
 This map provides high-resolution spatial risk assessments for Nipah virus (NiV) transmission in Eastern South Asia (Bangladesh, Eastern India, Eastern Nepal, Southern Bhutan) and Southern India. The interactive web map allows researchers, public health officials, and decision-makers to explore risk patterns and identify high-priority areas for surveillance, preparedness, and intervention. The platform integrates ecological suitability modeling, fine-scale risk surfaces, historical outbreak data, and uncertainty estimates into a single, browser-based visualization tool.
 
-**Map Features**
+# Nipah Virus Risk Mapping — Bangladesh & South India (Leaflet + GeoRaster)
 
-This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, intuitive way to explore where environmental suitability and modeled risk signals are highest, and how these patterns relate to known outbreak locations and geographic context.
+A single-page, client-side web GIS viewer for interactive Nipah virus risk mapping across Bangladesh / Eastern South Asia and South India, including a regional ecological suitability surface. This interactive web map visualizes multi-scale Nipah virus suitability and risk surfaces across Bangladesh and South India. The goal is to provide a fast, intuitive way to explore where environmental suitability and modeled risk signals are highest, and how these patterns relate to known outbreak locations and geographic context.
 
-**Maxent - ENM Regional Layer (1km)**
+## **1) Purpose and scope**
 
-A continuous surface representing modeled ecological suitability for Nipah virus spillover conditions across the broader region. Higher values indicate greater environmental suitability relative to the study domain. This layer provides a regional overview and helps identify broad geographic patterns of potential spillover risk.
+- **Application type:** Single-page, client-side web GIS viewer  
+- **Primary function:** Interactive Nipah virus risk mapping for Bangladesh / Eastern South Asia and South India, plus a regional suitability surface  
+- **Data types supported:**
+  - **Raster:** GeoTIFFs (including Cloud Optimized GeoTIFFs: `*_cog.tif`)
+  - **Vector:** GeoJSON/JSON polygons and points (`.geojson`, `.json`)
 
-**High-Resolution Layers (100m) (~30 second load time)**
+## **2) Runtime environment**
 
-Population Risk(100m)
-Landcover Risk(100m)
+- **Execution model:** Runs entirely in the browser (no server-side code in this repo)
+- **Network requirements:**
+  - External CDNs for JS/CSS libraries
+  - Local/relative `fetch()` for raster/vector files (e.g., `enm_cog.tif`, `outbreaks.json`)  
+    - Files must be hosted alongside the HTML (same origin) or be CORS-accessible
+- **Browser APIs used:**
+  - `fetch()` for loading rasters/vectors
+  - Clipboard API: `navigator.clipboard.writeText()` with fallback to `document.execCommand('copy')`
+  - `setTimeout()` to delay vector loading
 
-Both layers use a discrete risk classification scheme (e.g., No Risk → Very High Risk). Users can toggle individual risk classes in the legend to isolate specific zones, such as focusing only on High and Very High Risk areas. These layers support fine-scale analysis for district-level planning and surveillance prioritization.
+## **3) Core libraries and versions (dependencies)**
 
-**Uncertainty Layers (500m)**
+Loaded via `<script>` tags / CDNs:
 
-Standard deviation (SD) surfaces are provided to show model uncertainty based on the posterior SD of smoothed risk (Population and Landcover). These layers help users understand where predictions are more stable and where additional caution or further data collection may be warranted.
+- **Leaflet 1.9.4** — map rendering, layer system, controls, popups  
+- **georaster 1.6.0** — parses GeoTIFF `ArrayBuffer`s in-browser  
+- **georaster-layer-for-leaflet 3.10.0** — renders parsed georasters as Leaflet layers  
+- **chroma-js 2.4.2** — color scales for continuous rasters  
+- **leaflet-draw 1.0.4** — interactive measurement/drawing tools (polyline, polygon)
 
-**Vector Overlays**
+## **4) Map initialization and display stack**
 
--Historical Nipah events (2001–2026) are displayed as clickable point markers with popups containing year, coordinates, and reference information.
+- **Initial view:** `center=[18.0, 82.5]`, `zoom=6` (regional view)
+- Stores an `initialView` to restore for specific layers (**`enm`** uses it)
 
--A study region boundary (“M Region”) provides geographic context for the model extent.
+### **Basemaps (tile layers)**
+- OpenStreetMap: `https://{s}.tile.openstreetmap.org/...`
+- Esri World Street Map
+- Esri World Imagery
 
--The January 2026 West Bengal district overlay includes a narrative popup with an external reference link for additional context.
+### **Custom Leaflet panes and z-index ordering**
+This establishes a deliberate cartographic stack so rasters don’t hide boundaries and points don’t get buried:
 
--First-order Administrative Division (ADM1) with documented records.
+- `tilePane`: **100** (basemap beneath everything)
+- `rasterPane`: **200** (GeoTIFF rasters)
+- `adminPane`: **400** (admin boundaries)
+- `vectorPane`: **450** (general vectors)
+- `pointsPane`: **800** (outbreak points always above boundaries)
+- `popupPane` / `tooltipPane`: **10000** (always above points)
 
--These overlays allow users to visually compare modeled risk with documented outbreak locations.
+## **5) Data layers and configuration model**
 
-**How to Use the Map**
+The script uses two configuration objects:
 
--Use the Layer Control (top-left) to:
+### **A) Raster layers (`layerConfigs`)**
+- **Total raster layers:** **9** (`totalLayers = 9`)
 
-Switch basemaps
-Change raster layers
-Toggle vector overlays
-Use the Legend (bottom-right) to:
-Interpret color ramps and risk classes
-Turn individual risk classes on or off (for discrete layers)
-Adjust raster visibility using the Opacity sliders to compare risk layers with underlying geography.
-Use the Measurement tools (top-right) to draw lines (distance) or polygons (area).
-Right-click anywhere on the map to copy geographic coordinates to your clipboard.
+#### **1 continuous “regional suitability” layer**
+- `enm` → `enm_cog.tif`
+- **Domain:** `[0, 1]`
+- **Colors:** 7-color ramp (gray → dark red)
+- **Legend:** continuous gradient bar (“Low Suitability” → “High Suitability”)
+- **Special behavior:** `useInitialView: true` (returns to regional overview)
+
+#### **4 discrete “risk class” layers (100m)**
+- `pop_risk_india`, `lc_risk_india`, `pop_risk_bangladesh`, `lc_risk_bangladesh`
+- Discrete palette keyed by integer classes: `{0, 1, 2, 3, 4, 6, 9}`
+- **Legend:** checkbox list to toggle class visibility (per layer)
+- **View targeting:** custom `center` + `zoom` per region/layer
+
+#### **4 continuous uncertainty layers labeled “SD” (500m)**
+- `sd_india_pop`, `sd_india_lc`, `sd_bang_pop`, `sd_bang_lc`
+- Continuous chroma scale with numeric domains (e.g., `[0, 0.099]`)
+- **Legend:** continuous gradient bar (“Low” → “High”)
+- **View targeting:** custom `center` + `zoom` per region
+
+### **B) Vector overlays (`vectorConfigs`)**
+
+#### **outbreaks (points)**
+- File: `outbreaks.json`
+- Style: `circleMarker` (blue fill, white stroke, radius 7)
+- Popup fields: `Latitude`, `Longitude`, `Year`, `Reference`
+- Uses `pointsPane` (above admin boundaries)
+
+#### **study (polygon)**
+- File: `study.geojson`
+- Dashed outline, transparent fill
+- Marked **non-interactive** (no hover/click)
+
+#### **district_2026 (polygon)**
+- File: `nipah_2026.json`
+- White fill, dashed outline, semi-transparent
+- Uses a **custom popup** containing narrative text and an external link to WHO
+
+#### **admins_with_records (polygon)**
+- File: `admins_with_records.json`
+- Outline-only, initially hidden (`visible: false`)
+- Interactive with popup showing `Name`
+- Uses `adminPane`
+
+## **6) Rendering logic for rasters (important implementation detail)**
+
+### **Continuous rasters**
+- Creates `chroma.scale(config.colors).domain(config.domain)`
+- Per pixel:
+  - Returns `scale(value).hex()` for valid numeric values
+  - Returns `null` for nodata/NaN → transparent
+
+### **Discrete rasters (classed risk)**
+- Pixel values are rounded: `Math.round(value)`
+- Each class can be toggled via: `visibleClasses[layerId][classValue]`
+- If a class is disabled, the pixel returns `null` → transparent  
+- Enables interactive “masking” of classes without reloading the raster
+
+### **Performance/quality settings**
+GeoRasterLayer uses:
+- `opacity: 0.7` (default)
+- `resolution: 256` (render sampling; lower = faster, higher = sharper/heavier)
+- `pane: 'rasterPane'`
+
+## **7) UI controls and interactions**
+
+### **Layer Control (top-left)**
+A custom Leaflet control containing:
+- Basemap radio buttons (OSM / Esri street / Esri imagery)
+- Raster layer radio buttons (explicit ordering, default `enm`)
+- Vector overlay checkboxes (toggle show/hide)
+- Per-raster opacity sliders (0–100%, default 70%) calling `layer.setOpacity(opacity)`
+
+### **Legend (bottom-right)**
+Updates dynamically for the active raster layer:
+- **Discrete risk:** checkbox list by class + “All/None” buttons
+- **Continuous:** gradient bar + low/high labels
+- Optional description text per layer
+
+### **Info box (top-right)**
+Static text describing:
+- Multi-scale nature (1km regional vs 100m detail)
+- Right-click behavior (copy coordinates)
+
+### **Measurement / drawing tools (leaflet-draw)**
+- Enabled drawing: **polyline** and **polygon**
+- Disabled: rectangle, circle, marker, circlemarker
+- On creation:
+  - Polyline: sums segment distances; popup shows **km**
+  - Polygon: geodesic area via `L.GeometryUtil.geodesicArea`; popup shows **km²**
+- Includes edit/remove support for drawn shapes
+
+### **Right-click coordinate copy**
+- `contextmenu` handler copies `lat,lng` to 6 decimals
+- Clipboard API if available; fallback textarea copy
+- Temporary on-screen notification
+
+## **8) Layer switching behavior**
+
+When switching rasters:
+- Removes previous raster: `map.removeLayer(layers[currentLayer])`
+- Adds selected raster
+- Updates legend
+- Adjusts map view:
+  - If `useInitialView`: returns to `[18.0, 82.5]`, `zoom=6`
+  - Else uses that layer’s `center` + `zoom`
+- Adjusts boundary outline colors depending on raster type:
+  - Risk layer (`pop_risk_*`, `lc_risk_*`) → **white** outlines
+  - Non-risk layers (e.g., `SD`, `ENM`) → **black** outlines
+
+## **9) Loading strategy and sequencing**
+
+- Immediately starts loading **all rasters**: `Object.keys(layerConfigs).forEach(loadLayer)`
+- After **1 second**, starts loading **all vectors**
+- Tracks raster progress with `loadedCount / totalLayers`
+- First displayed raster is explicitly **`enm`** (not first-loaded or alphabetical)
+
+## **10) Error handling and diagnostics**
+
+- `fetch()` failures throw with HTTP status and log errors to console
+- `updateStatus()` currently logs to console (CSS exists for `.loading` / `.error`, but no visual widget is wired up)
+- Includes a diagnostic block for discrete risk rasters:
+  - Logs expected discrete values vs observed min/max and sampled unique pixel values
+  - Helps detect mismatches between raster encoding and `discreteColors` keys
+
+## **11) Technical assumptions / constraints (implicit specs)**
+
+- Raster and vector files must be reachable via browser `fetch()`:
+  - Opening via `file://` often breaks due to browser security/CORS rules  
+  - Serve via HTTP(S) (local server or hosted site)
+- GeoTIFFs must be compatible with in-browser parsing (projection and bounds are read from the file)
+- Discrete “risk” rasters are assumed to contain integer-like class values (or values very close to integers)
