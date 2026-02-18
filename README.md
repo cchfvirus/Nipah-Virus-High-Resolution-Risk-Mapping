@@ -83,7 +83,7 @@ The script uses two configuration objects:
 - Discrete palette keyed by integer classes: `{0, 1, 2, 3, 4, 6, 9}`
 - **Legend:** checkbox list to toggle class visibility (per layer)
 - **View targeting:** custom `center` + `zoom` per region/layer
-- Please allow for a ~30-second load time for these risk class layers.
+- ~30-second load time.
 
 #### **4 continuous uncertainty layers labeled “SD” (500m)**
 - `sd_india_pop`, `sd_india_lc`, `sd_bang_pop`, `sd_bang_lc`
