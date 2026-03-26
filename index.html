@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nipah Virus Risk Mapping - Bangladesh & South India</title>
+    <title>Nipah Risk Mapping - Interactive Layers</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -17,7 +17,7 @@
             background: white; 
             box-shadow: 0 0 15px rgba(0,0,0,0.2); 
             border-radius: 5px; 
-            max-width: 320px;
+            max-width: 300px;
         }
         
         .info h4 { margin: 0 0 5px; color: #333; }
@@ -30,7 +30,9 @@
             padding: 10px;
             border-radius: 5px;
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            max-width: 240px;
+            max-width: 250px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
         
         .legend h4 { margin: 0 0 8px; font-size: 14px; }
@@ -48,22 +50,27 @@
             margin-bottom: 5px; 
             overflow: hidden; 
             font-size: 11px;
+        }
+        
+        .legend .item.toggleable {
             cursor: pointer;
-            padding: 3px;
+            padding: 2px 4px;
             border-radius: 3px;
-            transition: background-color 0.2s;
+            transition: opacity 0.2s;
         }
         
-        .legend .item:hover {
-            background-color: #f0f0f0;
+        .legend .item.toggleable:hover {
+            background: #f0f0f0;
         }
         
-        .legend .item.disabled {
-            opacity: 0.3;
+        .legend .item.toggleable.hidden-class {
+            opacity: 0.35;
+            text-decoration: line-through;
         }
         
-        .legend .item input[type="checkbox"] {
-            margin-right: 5px;
+        .legend .item.toggleable input[type="checkbox"] {
+            margin-right: 4px;
+            vertical-align: middle;
             cursor: pointer;
         }
         
@@ -81,25 +88,19 @@
             margin-top: 3px;
         }
         
-        .legend-controls {
-            margin-top: 10px;
-            padding-top: 8px;
+        .legend .plague-cases-section {
+            margin-top: 15px;
+            padding-top: 10px;
             border-top: 1px solid #ddd;
-            font-size: 10px;
         }
         
-        .legend-controls button {
-            font-size: 10px;
-            padding: 3px 8px;
-            margin-right: 5px;
-            cursor: pointer;
-            border: 1px solid #ccc;
-            background: white;
-            border-radius: 3px;
-        }
-        
-        .legend-controls button:hover {
-            background: #f0f0f0;
+        .legend .plague-case-symbol {
+            display: inline-block;
+            font-size: 18px;
+            color: #1e88e5;
+            text-shadow: 1px 1px 2px #FFF, -1px -1px 2px #FFF, 1px -1px 2px #FFF, -1px 1px 2px #FFF;
+            margin-right: 8px;
+            vertical-align: middle;
         }
         
         .layer-control {
@@ -109,7 +110,7 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
             max-height: 90vh;
             overflow-y: auto;
-            max-width: 280px;
+            max-width: 220px;
         }
         
         .layer-control h4 { 
@@ -124,9 +125,24 @@
             font-size: 13px;
         }
         
-        .layer-control input[type="radio"],
+        .layer-control input[type="radio"] {
+            margin-right: 8px;
+        }
+        
         .layer-control input[type="checkbox"] {
             margin-right: 8px;
+        }
+        
+        .layer-control .overlay-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .layer-control .overlay-section h5 {
+            margin: 0 0 8px;
+            font-size: 12px;
+            font-weight: bold;
         }
         
         .opacity-section {
@@ -216,15 +232,6 @@
             width: 50%;
         }
         
-        .leaflet-popup-content a {
-            color: #0066CC;
-            text-decoration: none;
-        }
-        
-        .leaflet-popup-content a:hover {
-            text-decoration: underline;
-        }
-        
         .copy-notification {
             position: fixed;
             top: 50%;
@@ -247,6 +254,10 @@
     </style>
 </head>
 <body>
+    <div id="loading" class="loading">
+        <div>Loading map layers...</div>
+        <div id="load-status" style="margin-top: 10px; font-size: 12px;"></div>
+    </div>
     <div id="map"></div>
     <div id="copy-notification" class="copy-notification"></div>
 
@@ -257,99 +268,158 @@
     <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
     <script>
-        // Initialize map - start with regional view
-        var map = L.map('map').setView([18.0, 82.5], 6);
+        // =====================================================================
+        // MAP INITIALIZATION - centered on Bangladesh/India Nipah endemic region
+        // =====================================================================
+        var map = L.map('map').setView([20.0, 85.0], 5);
 
-        // Store the initial view to restore later
-        var initialView = {
-            center: [18.0, 82.5],
-            zoom: 6
-        };
-
-        // Ensure basemaps render beneath rasters
-        map.getPane('tilePane').style.zIndex = 100;
-
-        // Create custom panes with explicit z-index ordering
+        // Create custom panes with specific z-index ordering
+        map.createPane('backgroundPane');
+        map.getPane('backgroundPane').style.zIndex = 250;
+        
         map.createPane('rasterPane');
-        map.getPane('rasterPane').style.zIndex = 200;
+        map.getPane('rasterPane').style.zIndex = 300;
         
-        map.createPane('adminPane');
-        map.getPane('adminPane').style.zIndex = 400;
+        map.createPane('analysisPane');
+        map.getPane('analysisPane').style.zIndex = 310;
         
-        map.createPane('vectorPane');
-        map.getPane('vectorPane').style.zIndex = 450;
-
-        // Dedicated pane for outbreak points (always above admin boundaries)
-        map.createPane('pointsPane');
-        map.getPane('pointsPane').style.zIndex = 800;
-
-        // ensure popups/tooltips draw above pointsPane
-        map.getPane('popupPane').style.zIndex = 10000;
-        map.getPane('tooltipPane').style.zIndex = 10000;
+        map.createPane('speciesRasterPane');
+        map.getPane('speciesRasterPane').style.zIndex = 315;
+        
+        map.createPane('speciesVectorPane');
+        map.getPane('speciesVectorPane').style.zIndex = 360;
+        
+        map.createPane('boundariesPane');
+        map.getPane('boundariesPane').style.zIndex = 350;
 
         // Define basemaps
-        var osmMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        });
-
         var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri',
+            attribution: 'Tiles &copy; Esri',
             maxZoom: 19
         });
 
-        var aerialMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri',
+        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
             maxZoom: 19
         });
 
-        // Default basemap: OpenStreetMap
-        osmMap.addTo(map);
+        // Add default basemap
+        satelliteMap.addTo(map);
 
-        // Store layers and georasters
+        // =====================================================================
+        // STATE VARIABLES
+        // =====================================================================
         var layers = {};
         var georasters = {};
-        var vectorLayers = {};
         var currentLayer = null;
+        var activeLayers = {};
         var loadedCount = 0;
-        var totalLayers = 9;
+        var totalLayers = 7; // enm, enm_cv, basic_risk, blend_risk, risk_blend_cv, diff_blend_minus_basic, elevation
+        var nipahCasesLayer = null;
+        var adminBoundariesLayer = null;
+
+        var DEFAULT_OPACITY = 0.8;
         
-        // Track which classes are visible for each layer
-        var visibleClasses = {
-            'pop_risk_india': {},
-            'lc_risk_india': {},
-            'pop_risk_bangladesh': {},
-            'lc_risk_bangladesh': {}
+        var hiddenClasses = {
+            'enm': {},
+            'enm_cv': {},
+            'basic_risk': {},
+            'blend_risk': {},
+            'risk_blend_cv': {},
+            'diff_blend_minus_basic': {},
+            'elevation': {}
         };
 
-        // switch admin + district outline color based on selected raster layer
-        function updateOutlinesForRaster(layerId) {
-            var admins = vectorLayers['admins_with_records'];
-            var district = vectorLayers['district_2026'];
-
-            var isRiskLayer = (layerId.indexOf('pop_risk_') === 0) || (layerId.indexOf('lc_risk_') === 0);
-            var outlineColor = isRiskLayer ? '#FFFFFF' : '#000000';
-
-            if (admins) admins.setStyle({ color: outlineColor });
-            if (district) district.setStyle({ color: outlineColor });
+        // =====================================================================
+        // GBIF Role-based coloring (placeholder — kept from original)
+        // =====================================================================
+        var gbifRoleColorPalette = {
+            'Reservoir':       '#e31a1c',
+            'Host':            '#ff7f00',
+            'Vector':          '#6a3d9a',
+            'Predator':        '#1f78b4',
+            'Prey':            '#b2df8a',
+            'Carrier':         '#fb9a99',
+            'Sentinel':        '#33a02c',
+            'Commensal':       '#fdbf6f',
+            'Unknown':         '#999999',
+            'Incidental Host': '#cab2d6'
+        };
+        var gbifRoleFallbackColors = [
+            '#a6cee3', '#b15928', '#ffff99', '#66c2a5', '#fc8d62',
+            '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f', '#e5c494'
+        ];
+        var gbifRoleFallbackIndex = 0;
+        var gbifRoleColors = {};
+        var gbifRoleList = [];
+        var gbifRoleCounts = {};
+        var hiddenGbifRoles = {};
+        
+        function getGbifRoleColor(role) {
+            if (!role || role === '' || role === null) role = 'Unknown';
+            if (gbifRoleColors[role]) return gbifRoleColors[role];
+            if (gbifRoleColorPalette[role]) {
+                gbifRoleColors[role] = gbifRoleColorPalette[role];
+            } else {
+                gbifRoleColors[role] = gbifRoleFallbackColors[gbifRoleFallbackIndex % gbifRoleFallbackColors.length];
+                gbifRoleFallbackIndex++;
+            }
+            return gbifRoleColors[role];
         }
 
-        // UPDATED RASTER LAYER CONFIGURATIONS
+        // =====================================================================
+        // SPECIES & SURVEY GEOJSON (placeholder configs — swap in your files)
+        // =====================================================================
+        var speciesSurveyLayers = {};
+        var speciesSurveyConfigs = {
+            'gbif_species': {
+                file: 'GBIF_species.geojson',
+                name: 'GBIF Species Occurrences',
+                color: '#8B5CF6',
+                fillColor: '#8B5CF6',
+                radius: 6,
+                weight: 2,
+                icon: 'circle',
+                colorByRole: true
+            }
+            // Add more survey GeoJSON configs here as needed:
+            // 'nipah_survey': {
+            //     file: 'nipah_survey.geojson',
+            //     name: 'Nipah Survey Data',
+            //     color: '#F59E0B',
+            //     fillColor: '#F59E0B',
+            //     radius: 6,
+            //     icon: 'diamond'
+            // }
+        };
+
+        // =====================================================================
+        // LAYER CONFIGURATIONS
+        // =====================================================================
         var layerConfigs = {
             'enm': {
                 file: 'enm_cog.tif',
-                name: 'Maxent - Regional Suitability (1km)',
-                colors: ['#808080', '#ffed6f', '#ffc100', '#ff8c00', '#ff4500', '#dc143c', '#8b0000'],
-                domain: [0, 1],
+                name: 'Ecological Niche Model (1km)',
+                colors: ['#969696', '#fed976', '#feb24c', '#fd8d3c', '#fc4e2a', '#e31a1c', '#b10026'],
+                domain: [0, 916],
                 labels: ['Low Suitability', 'High Suitability'],
-                description: 'Regional ecological suitability',
+                description: 'Nipah ENM habitat suitability',
                 mode: 'lch',
-                continuousLegend: true,
-                useInitialView: true  // Flag to use initial view instead of custom center/zoom
+                continuousLegend: true
             },
-            'pop_risk_india': {
-                file: 'pop_risk_india_cog.tif',
-                name: 'Population Risk - South India (100m)',
+            'enm_cv': {
+                file: 'enm_cv.tif',
+                name: 'ENM Coefficient of Variation (1km)',
+                colors: ['#f7fcf5', '#c7e9c0', '#74c476', '#31a354', '#006d2c'],
+                domain: [0, 200],
+                labels: ['Low Uncertainty', 'High Uncertainty'],
+                description: 'Model uncertainty (CV across replicates)',
+                mode: 'lch',
+                continuousLegend: true
+            },
+            'basic_risk': {
+                file: 'basic_risk.tif',
+                name: 'Basic Exposure Risk Index (100m)',
                 discreteColors: {
                     0: '#000000',
                     1: '#FFFFBE',
@@ -359,7 +429,10 @@
                     6: '#FF0000',
                     9: '#A80000'
                 },
+                labels: ['No Risk', 'Very High Risk'],
+                description: 'Nipah Transmission Risk – Basic Model',
                 customLegend: true,
+                discreteDisplay: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
                     { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
@@ -368,13 +441,11 @@
                     { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
                     { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-                ],
-                center: [10.854886, 76.055603],
-                zoom: 10
+                ]
             },
-            'lc_risk_india': {
-                file: 'lc_risk_india_cog.tif',
-                name: 'Landcover Risk - South India (100m)',
+            'blend_risk': {
+                file: 'blend_risk.tif',
+                name: 'Blended Exposure Risk Index (100m)',
                 discreteColors: {
                     0: '#000000',
                     1: '#FFFFBE',
@@ -384,7 +455,10 @@
                     6: '#FF0000',
                     9: '#A80000'
                 },
+                labels: ['No Risk', 'Very High Risk'],
+                description: 'Nipah Transmission Risk – Blended Model',
                 customLegend: true,
+                discreteDisplay: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 - No Risk' },
                     { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
@@ -393,201 +467,73 @@
                     { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
                     { value: 6, color: '#FF0000', label: '6 - High Risk' },
                     { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-                ],
-                center: [10.854886, 76.055603],
-                zoom: 10
+                ]
             },
-            'pop_risk_bangladesh': {
-                file: 'pop_risk_bang_cog.tif',
-                name: 'Population Risk - Eastern South Asia (100m)',
+            'risk_blend_cv': {
+                file: 'risk_blend_cv.tif',
+                name: 'Risk Blend CV (100m)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#2166ac',
+                    1: '#4393c3',
+                    2: '#92c5de',
+                    3: '#d1e5f0',
+                    5: '#fddbc7',
+                    6: '#f4a582',
+                    7: '#d6604d',
+                    8: '#b2182b'
                 },
+                labels: ['Low Variability', 'High Variability'],
+                description: 'Coefficient of variation across blended risk models',
                 customLegend: true,
+                discreteDisplay: true,
                 legendItems: [
-                    { value: 0, color: '#000000', label: '0 - No Risk' },
-                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
-                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
-                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
-                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
-                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
-                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-                ],
-                center: [23.594194, 89.802246],
-                zoom: 8
+                    { value: 0, color: '#2166ac', label: '0 - Very Low CV' },
+                    { value: 1, color: '#4393c3', label: '1 - Low CV' },
+                    { value: 2, color: '#92c5de', label: '2 - Low-Moderate CV' },
+                    { value: 3, color: '#d1e5f0', label: '3 - Moderate CV' },
+                    { value: 5, color: '#fddbc7', label: '5 - Moderate-High CV' },
+                    { value: 6, color: '#f4a582', label: '6 - High CV' },
+                    { value: 7, color: '#d6604d', label: '7 - Very High CV' },
+                    { value: 8, color: '#b2182b', label: '8 - Extreme CV' }
+                ]
             },
-            'lc_risk_bangladesh': {
-                file: 'lc_risk_bang_cog.tif',
-                name: 'Landcover Risk - Eastern South Asia (100m)',
+            'diff_blend_minus_basic': {
+                file: 'diff_blend_minus_basic.tif',
+                name: 'Difference: Blend − Basic (100m)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#808080'
                 },
+                labels: ['No Difference'],
+                description: 'Difference between blended and basic risk models',
                 customLegend: true,
+                discreteDisplay: true,
                 legendItems: [
-                    { value: 0, color: '#000000', label: '0 - No Risk' },
-                    { value: 1, color: '#FFFFBE', label: '1 - Very Low Risk' },
-                    { value: 2, color: '#FFDD00', label: '2 - Low Risk' },
-                    { value: 3, color: '#FFAA00', label: '3 - Moderate Risk' },
-                    { value: 4, color: '#FF6600', label: '4 - Elevated Risk' },
-                    { value: 6, color: '#FF0000', label: '6 - High Risk' },
-                    { value: 9, color: '#A80000', label: '9 - Very High Risk' }
-                ],
-                center: [23.594194, 89.802246],
-                zoom: 8
+                    { value: 0, color: '#808080', label: '0 - No Difference' }
+                ]
             },
-            'sd_india_pop': {
-                file: 'sd_india_pop.tif',
-                name: 'SD - Population Risk - India (500m)',
-                colors: ['#FFFFFF', '#FFE0B2', '#FFB74D', '#FF8A65', '#F4511E', '#D32F2F', '#B71C1C', '#880E4F', '#4A148C', '#1A237E'],
-                domain: [0, 0.099],
-                labels: ['Low', 'High'],
-                description: 'Posterior Standard Deviation of Smoothed Risk',
-                mode: 'lch',
-                continuousLegend: true,
-                center: [10.401378, 75.157471],
-                zoom: 8
-            },
-            'sd_india_lc': {
-                file: 'sd_india_lc.tif',
-                name: 'SD - Landcover Risk - India (500m)',
-                colors: ['#FFFFFF', '#FFE0B2', '#FFB74D', '#FF8A65', '#F4511E', '#D32F2F', '#B71C1C', '#880E4F', '#4A148C', '#1A237E'],
-                domain: [0, 0.078],
-                labels: ['Low', 'High'],
-                description: 'Posterior Standard Deviation of Smoothed Risk',
-                mode: 'lch',
-                continuousLegend: true,
-                center: [10.401378, 75.157471],
-                zoom: 8
-            },
-            'sd_bang_pop': {
-                file: 'sd_bang_pop.tif',
-                name: 'SD - Population Risk - Eastern South Asia (500m)',
-                colors: ['#FFFFFF', '#FFE0B2', '#FFB74D', '#FF8A65', '#F4511E', '#D32F2F', '#B71C1C', '#880E4F', '#4A148C', '#1A237E'],
-                domain: [0, 0.057],
-                labels: ['Low', 'High'],
-                description: 'Posterior Standard Deviation of Smoothed Risk',
-                mode: 'lch',
-                continuousLegend: true,
-                center: [23.594194, 89.802246],
-                zoom: 7
-            },
-            'sd_bang_lc': {
-                file: 'sd_bang_lc.tif',
-                name: 'SD - Landcover Risk - Eastern South Asia (500m)',
-                colors: ['#FFFFFF', '#FFE0B2', '#FFB74D', '#FF8A65', '#F4511E', '#D32F2F', '#B71C1C', '#880E4F', '#4A148C', '#1A237E'],
-                domain: [0, 0.046],
-                labels: ['Low', 'High'],
-                description: 'Posterior Standard Deviation of Smoothed Risk',
-                mode: 'lch',
-                continuousLegend: true,
-                center: [23.594194, 89.802246],
-                zoom: 7
+            'elevation': {
+                file: 'ele.tif',
+                name: 'Elevation (DEM)',
+                domain: [0, 7177],
+                labels: ['Low Elevation', 'High Elevation'],
+                description: 'Digital Elevation Model (meters)',
+                customLegend: true,
+                discreteDisplay: false,
+                elevationBreaks: [50, 200, 700, 1500, 7177],
+                elevationColors: ['#FFFFFF', '#BFBFBF', '#808080', '#404040', '#000000'],
+                legendItems: [
+                    { value: 1, color: '#FFFFFF', label: '0 – 50 m' },
+                    { value: 2, color: '#BFBFBF', label: '50 – 200 m' },
+                    { value: 3, color: '#808080', label: '200 – 700 m' },
+                    { value: 4, color: '#404040', label: '700 – 1,500 m' },
+                    { value: 5, color: '#000000', label: '1,500 – 7,177 m' }
+                ]
             }
         };
 
-        // VECTOR LAYER CONFIGURATIONS
-        var vectorConfigs = {
-            'outbreaks': {
-                file: 'outbreaks.json',
-                name: 'Nipah virus (NiV) (2001 - 2026)',
-                type: 'point',
-                style: {
-                    color: '#FFFFFF',
-                    fillColor: '#0096FF',
-                    fillOpacity: 1,
-                    radius: 7,
-                    weight: 1
-                },
-                popupFields: ['Latitude', 'Longitude', 'Year', 'Reference'],
-                enablePopup: true,
-                visible: true,
-                pane: 'pointsPane'
-            },
-            'study': {
-                file: 'study.geojson',
-                name: 'M Region',
-                type: 'polygon',
-                style: {
-                    color: '#000000',
-                    weight: 1,
-                    fillOpacity: 0,
-                    fillColor: '#0066CC',
-                    dashArray: '10, 5'
-                },
-                popupFields: [],
-                enablePopup: false,
-                visible: true,
-                interactive: false
-            },
-            'district_2026': {
-                file: 'nipah_2026.json',
-                name: 'Reported Cases: 2 (as of February 2026)',
-                type: 'polygon',
-                style: {
-                    color: '#000000',
-                    weight: 2.5,
-                    fillOpacity: 0.4,
-                    fillColor: '#FFFFFF',
-                    dashArray: '10, 5'
-                },
-                popupFields: [],
-                enablePopup: true,
-                customPopup: true,
-                customPopupContent: function(feature) {
-                    return '<div style="max-width: 300px;">' +
-                           '<h3 style="margin: 0 0 10px; font-size: 15px; color: #8B0000;">2026 Nipah Outbreak - West Bengal</h3>' +
-                           '<p style="margin: 0 0 8px; font-size: 12px; line-height: 1.5;">' +
-                           'In January 2026, authorities in West Bengal confirmed laboratory-confirmed Nipah virus infections in two healthcare workers (nurses) at a private hospital in Barasat, North 24 Parganas district. This event represents the third NiV infection outbreak reported in West Bengal (previous outbreaks reported in Siliguri in 2001 and Nadia in 2007).' +
-                           '</p>' +
-                           '<p style="margin: 0; font-size: 11px; color: #666; font-style: italic;">' +
-                           'Source: <a href="https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON593" target="_blank" style="color: #0066CC;">Nipah virus disease - India (WHO)</a>' +
-                           '</p>' +
-                           '</div>';
-                },
-                visible: false
-            },
-            'admins_with_records': {
-                file: 'admins_with_records.json',
-                name: 'Administrative Divisions with Nipah Records',
-                type: 'polygon',
-                style: {
-                    color: '#000000',
-                    weight: 1.5,
-                    fillOpacity: 0.0,
-                    fillColor: null
-                },
-                popupFields: ['Name'],
-                enablePopup: true,
-                visible: true,
-                pane: 'adminPane',
-                interactive: true
-            }
-        };
-
-        // Initialize all classes as visible
-        Object.keys(layerConfigs).forEach(function(layerId) {
-            var config = layerConfigs[layerId];
-            if (config.discreteColors) {
-                visibleClasses[layerId] = {};
-                Object.keys(config.discreteColors).forEach(function(value) {
-                    visibleClasses[layerId][value] = true;
-                });
-            }
-        });
-
-        // Measurement tools
+        // =====================================================================
+        // MEASUREMENT TOOLS
+        // =====================================================================
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
@@ -605,7 +551,9 @@
                     showArea: true,
                     metric: true
                 },
-                rectangle: false,
+                rectangle: {
+                    shapeOptions: { color: '#4CAF50', weight: 3, fillOpacity: 0.1 }
+                },
                 circle: false,
                 marker: false,
                 circlemarker: false
@@ -627,22 +575,32 @@
                 for (var i = 0; i < latlngs.length - 1; i++) {
                     length += latlngs[i].distanceTo(latlngs[i + 1]);
                 }
-                layer.bindPopup('<b>Distance:</b> ' + (length / 1000).toFixed(2) + ' km');
+                var lengthKm = (length / 1000).toFixed(2);
+                layer.bindPopup('<b>Distance:</b> ' + lengthKm + ' km');
                 drawnItems.addLayer(layer);
             } else if (type === 'polygon') {
                 var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                layer.bindPopup('<b>Area:</b> ' + (area / 1000000).toFixed(2) + ' km²');
+                var areaKm = (area / 1000000).toFixed(2);
+                layer.bindPopup('<b>Area:</b> ' + areaKm + ' km²');
+                drawnItems.addLayer(layer);
+            } else if (type === 'rectangle') {
+                var bounds = layer.getBounds();
+                var area = (bounds.getNorth() - bounds.getSouth()) * 
+                           (bounds.getEast() - bounds.getWest()) * 111 * 111;
+                layer.bindPopup('<b>Rectangle Area:</b> ~' + area.toFixed(2) + ' km²');
                 drawnItems.addLayer(layer);
             }
         });
 
+        // =====================================================================
+        // COORDINATE COPY
+        // =====================================================================
         function copyCoordinatesToClipboard(lat, lng) {
             var coordText = lat.toFixed(6) + ', ' + lng.toFixed(6);
-            
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(coordText).then(function() {
                     showCopyNotification('Coordinates copied: ' + coordText);
-                }).catch(function() {
+                }).catch(function(err) {
                     fallbackCopyTextToClipboard(coordText);
                 });
             } else {
@@ -656,15 +614,18 @@
             textArea.style.position = "fixed";
             textArea.style.top = "-9999px";
             document.body.appendChild(textArea);
+            textArea.focus();
             textArea.select();
-            
             try {
-                document.execCommand('copy');
-                showCopyNotification('Coordinates copied: ' + text);
+                var successful = document.execCommand('copy');
+                if (successful) {
+                    showCopyNotification('Coordinates copied: ' + text);
+                } else {
+                    showCopyNotification('Failed to copy coordinates', true);
+                }
             } catch (err) {
                 showCopyNotification('Failed to copy coordinates', true);
             }
-            
             document.body.removeChild(textArea);
         }
 
@@ -673,13 +634,21 @@
             notification.textContent = message;
             notification.style.background = isError ? 'rgba(198, 40, 40, 0.9)' : 'rgba(0, 0, 0, 0.8)';
             notification.classList.add('show');
-            
             setTimeout(function() {
                 notification.classList.remove('show');
             }, 2000);
         }
 
+        // =====================================================================
+        // UTILITY FUNCTIONS
+        // =====================================================================
         function updateStatus(message, isError) {
+            var statusDiv = document.getElementById('load-status');
+            if (isError) {
+                statusDiv.innerHTML += '<div class="error">' + message + '</div>';
+            } else {
+                statusDiv.innerHTML += '<div>' + message + '</div>';
+            }
             console.log(message);
         }
 
@@ -689,234 +658,333 @@
             }
         }
 
-        function toggleClass(layerId, classValue) {
-            visibleClasses[layerId][classValue] = !visibleClasses[layerId][classValue];
-            refreshLayer(layerId);
-            
-            var checkbox = document.getElementById('class-' + layerId + '-' + classValue);
-            var item = checkbox.parentElement;
-            if (visibleClasses[layerId][classValue]) {
-                item.classList.remove('disabled');
-            } else {
-                item.classList.add('disabled');
-            }
-        }
-
-        function selectAllClasses(layerId) {
-            var config = layerConfigs[layerId];
-            Object.keys(config.discreteColors).forEach(function(value) {
-                visibleClasses[layerId][value] = true;
-            });
-            refreshLayer(layerId);
-            updateLegend(layerId);
-        }
-
-        function selectNoneClasses(layerId) {
-            var config = layerConfigs[layerId];
-            Object.keys(config.discreteColors).forEach(function(value) {
-                visibleClasses[layerId][value] = false;
-            });
-            refreshLayer(layerId);
-            updateLegend(layerId);
-        }
-
-        function refreshLayer(layerId) {
-            if (!layers[layerId] || !georasters[layerId]) return;
-            
-            if (currentLayer === layerId) {
-                map.removeLayer(layers[layerId]);
-            }
-            
-            var config = layerConfigs[layerId];
-            var georaster = georasters[layerId];
-            
-            var pixelValuesToColorFn = function(values) {
-                var value = values[0];
-                if (value === null || value === undefined || isNaN(value)) return null;
-                
-                value = Math.round(value);
-                
-                if (!visibleClasses[layerId][value]) {
-                    return null;
+        function getRasterValueAtPoint(layerId, latlng) {
+            if (!georasters[layerId]) return null;
+            try {
+                var georaster = georasters[layerId];
+                var x = latlng.lng;
+                var y = latlng.lat;
+                var xmin = georaster.xmin, xmax = georaster.xmax;
+                var ymin = georaster.ymin, ymax = georaster.ymax;
+                var width = georaster.width, height = georaster.height;
+                if (x < xmin || x > xmax || y < ymin || y > ymax) return null;
+                var pixelWidth = (xmax - xmin) / width;
+                var pixelHeight = (ymax - ymin) / height;
+                var pixelX = Math.floor((x - xmin) / pixelWidth);
+                var pixelY = Math.floor((ymax - y) / pixelHeight);
+                if (pixelX < 0 || pixelX >= width || pixelY < 0 || pixelY >= height) return null;
+                var values = georaster.values;
+                if (values && values[0] && values[0][pixelY]) {
+                    var value = values[0][pixelY][pixelX];
+                    if (value !== null && value !== undefined && !isNaN(value)) {
+                        if (value === 255 || value === -9999 || value === -3.4e38 || 
+                            Math.abs(value) > 1e10 || value === -32768) return null;
+                        if (georaster.noDataValue !== null && georaster.noDataValue !== undefined && !isNaN(georaster.noDataValue)) {
+                            if (Math.abs(value - georaster.noDataValue) < 0.0001) return null;
+                        }
+                        return value;
+                    }
                 }
-                
-                return config.discreteColors[value] || null;
-            };
-            
-            var layer = new GeoRasterLayer({
-                georaster: georaster,
-                opacity: 0.7,
-                pixelValuesToColorFn: pixelValuesToColorFn,
-                resolution: 256,
-                pane: 'rasterPane'
-            });
-            
-            layers[layerId] = layer;
-            
-            if (currentLayer === layerId) {
-                layer.addTo(map);
+            } catch (error) {
+                console.log('Error getting value for ' + layerId + ':', error);
             }
+            return null;
         }
 
-        // Supports OSM, street, and aerial basemaps
-        function switchBasemap(basemapType) {
-            map.removeLayer(osmMap);
-            map.removeLayer(streetMap);
-            map.removeLayer(aerialMap);
-            
-            if (basemapType === 'osm') {
-                osmMap.addTo(map);
-            } else if (basemapType === 'street') {
-                streetMap.addTo(map);
-            } else if (basemapType === 'aerial') {
-                aerialMap.addTo(map);
-            }
-        }
-
-        function createPopup(feature, layer, config) {
-            if (!config.enablePopup) {
-                return;
-            }
-            
-            var popupContent;
-            
-            if (config.customPopup && config.customPopupContent) {
-                popupContent = config.customPopupContent(feature);
-            } else {
-                popupContent = '<div style="max-width: 250px;">';
-                popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
-                popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
-                
-                config.popupFields.forEach(function(field) {
-                    if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
-                        var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-                        popupContent += '<tr>' +
-                                       '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
-                                       '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
-                                       '</tr>';
-                    }
-                });
-                
-                popupContent += '</table></div>';
-            }
-            
-            layer.bindPopup(popupContent);
-        }
-
-        function loadVectorLayer(vectorId) {
-            var config = vectorConfigs[vectorId];
-            
-            updateStatus('Loading ' + config.name + '...');
-            
-            fetch(config.file)
+        // =====================================================================
+        // NIPAH CASES (placeholder — swap in your GeoJSON file)
+        // =====================================================================
+        function loadNipahCases() {
+            fetch('cases.geojson')
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('HTTP error! status: ' + response.status);
-                    }
+                    if (!response.ok) throw new Error('Cases file not found');
                     return response.json();
                 })
                 .then(data => {
-                    updateStatus(config.name + ' loaded successfully');
-                    
-                    var layer;
-                    
-                    if (config.type === 'point') {
-                        layer = L.geoJSON(data, {
-                            pointToLayer: function(feature, latlng) {
-                                // apply pane to the circleMarker itself
-                                var marker = L.circleMarker(
-                                    latlng,
-                                    Object.assign({}, config.style, { pane: config.pane || 'vectorPane' })
-                                );
-                                
-                                // Bind popup for points
-                                if (config.enablePopup) {
-                                    if (config.customPopup && config.customPopupContent) {
-                                        marker.bindPopup(config.customPopupContent(feature));
-                                    } else {
-                                        var popupContent = '<div style="max-width: 250px;">';
-                                        popupContent += '<h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">' + config.name + '</h3>';
-                                        popupContent += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
-                                        
-                                        config.popupFields.forEach(function(field) {
-                                            if (feature.properties[field] !== undefined && feature.properties[field] !== null) {
-                                                var label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-                                                popupContent += '<tr>' +
-                                                               '<td style="font-weight: bold; padding: 3px 8px 3px 0; color: #666; vertical-align: top;">' + label + ':</td>' +
-                                                               '<td style="padding: 3px 0;">' + feature.properties[field] + '</td>' +
-                                                               '</tr>';
-                                            }
-                                        });
-                                        
-                                        popupContent += '</table></div>';
-                                        marker.bindPopup(popupContent);
-                                    }
+                    updateStatus('Loaded ' + data.features.length + ' Nipah cases');
+                    nipahCasesLayer = L.geoJSON(data, {
+                        pointToLayer: function(feature, latlng) {
+                            var size = 24;
+                            var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
+                                '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="1.5"/>' +
+                                '<circle cx="12" cy="12" r="7" fill="white" stroke="#000000" stroke-width="1.5"/>' +
+                                '<circle cx="12" cy="12" r="3" fill="white" stroke="#000000" stroke-width="1.5"/>' +
+                                '</svg>';
+                            var icon = L.divIcon({ html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
+                            return L.marker(latlng, { icon: icon });
+                        },
+                        onEachFeature: function(feature, layer) {
+                            var popupContent = '<h3>Nipah Cases</h3><table>';
+                            for (var key in feature.properties) {
+                                if (feature.properties.hasOwnProperty(key)) {
+                                    var value = feature.properties[key];
+                                    var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
+                                    popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
                                 }
-                                
-                                return marker;
-                            },
-                            pane: config.pane || 'vectorPane'
-                        });
-                    } else {
-                        layer = L.geoJSON(data, {
-                            style: config.style,
-                            onEachFeature: function(feature, featureLayer) {
-                                if (config.enablePopup) {
-                                    createPopup(feature, featureLayer, config);
-                                }
-                                
-                                // Make layer non-interactive if specified
-                                if (config.interactive === false) {
-                                    featureLayer.options.interactive = false;
-                                }
-                            },
-                            pane: config.pane || 'vectorPane'
-                        });
-                        
-                        // Set z-index if specified
-                        if (config.zIndex !== undefined && layer.setZIndex) {
-                            layer.setZIndex(config.zIndex);
+                            }
+                            popupContent += '</table>';
+                            layer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
                         }
-                    }
-                    
-                    vectorLayers[vectorId] = layer;
-                    
-                    if (config.visible) {
-                        layer.addTo(map);
-                    }
-
-                    // sync outlines after relevant vectors load
-                    if ((vectorId === 'admins_with_records' || vectorId === 'district_2026') && currentLayer) {
-                        updateOutlinesForRaster(currentLayer);
-                    }
+                    });
+                    nipahCasesLayer.addTo(map);
+                    updateLegend();
                 })
                 .catch(error => {
-                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
-                    updateStatus(errorMsg, true);
-                    console.error(errorMsg, error);
+                    console.log('Cases file not found - layer will not be available');
                 });
         }
 
-        function toggleVectorLayer(vectorId) {
-            if (vectorLayers[vectorId]) {
-                if (map.hasLayer(vectorLayers[vectorId])) {
-                    map.removeLayer(vectorLayers[vectorId]);
-                } else {
-                    vectorLayers[vectorId].addTo(map);
-                }
+        function toggleNipahCases(show) {
+            if (nipahCasesLayer) {
+                if (show) { nipahCasesLayer.addTo(map); } else { map.removeLayer(nipahCasesLayer); }
             }
         }
 
-        function loadLayer(layerId) {
-            var config = layerConfigs[layerId];
-            
-            updateStatus('Loading ' + config.name + '...');
-            
+        // =====================================================================
+        // ADMIN BOUNDARIES (placeholder — swap in your boundary file)
+        // =====================================================================
+        function updateAdminBoundaryStyle() {
+            if (adminBoundariesLayer) {
+                var boundaryColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
+                adminBoundariesLayer.setStyle({
+                    fillColor: 'transparent',
+                    fillOpacity: 0,
+                    color: boundaryColor,
+                    weight: 1,
+                    opacity: 1
+                });
+            }
+        }
+
+        function loadAdminBoundaries() {
+            fetch('admin2.json')
+                .then(response => {
+                    if (!response.ok) throw new Error('Admin boundaries file not found');
+                    return response.json();
+                })
+                .then(data => {
+                    updateStatus('Loaded admin boundaries');
+                    var initialColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
+                    adminBoundariesLayer = L.geoJSON(data, {
+                        style: {
+                            fillColor: 'transparent',
+                            fillOpacity: 0,
+                            color: initialColor,
+                            weight: 1,
+                            opacity: 1
+                        },
+                        pane: 'boundariesPane',
+                        interactive: false
+                    });
+                    adminBoundariesLayer.addTo(map);
+                })
+                .catch(error => {
+                    console.log('Admin boundaries file not found - layer will not be available');
+                });
+        }
+
+        function toggleAdminBoundaries(show) {
+            if (adminBoundariesLayer) {
+                if (show) { adminBoundariesLayer.addTo(map); } else { map.removeLayer(adminBoundariesLayer); }
+            }
+        }
+
+        // =====================================================================
+        // SPECIES / SURVEY GEOJSON LAYER LOADING (placeholder)
+        // =====================================================================
+        function createSvgIcon(shape, color, size) {
+            var s = size || 12;
+            var svg;
+            if (shape === 'diamond') {
+                var half = s / 2;
+                svg = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" xmlns="http://www.w3.org/2000/svg">' +
+                      '<polygon points="' + half + ',0 ' + s + ',' + half + ' ' + half + ',' + s + ' 0,' + half + '" ' +
+                      'fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
+            } else if (shape === 'triangle') {
+                svg = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" xmlns="http://www.w3.org/2000/svg">' +
+                      '<polygon points="' + (s/2) + ',0 ' + s + ',' + s + ' 0,' + s + '" ' +
+                      'fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
+            } else if (shape === 'square') {
+                svg = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" xmlns="http://www.w3.org/2000/svg">' +
+                      '<rect x="1" y="1" width="' + (s-2) + '" height="' + (s-2) + '" ' +
+                      'fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
+            } else {
+                return null;
+            }
+            return L.divIcon({ html: svg, className: '', iconSize: [s, s], iconAnchor: [s/2, s/2] });
+        }
+        
+        function loadSpeciesSurveyLayer(layerId) {
+            var config = speciesSurveyConfigs[layerId];
             fetch(config.file)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('HTTP error! status: ' + response.status);
+                    if (!response.ok) throw new Error(config.name + ' file not found');
+                    return response.json();
+                })
+                .then(data => {
+                    var featureCount = data.features ? data.features.length : 0;
+                    updateStatus('Loaded ' + config.name + ' (' + featureCount + ' features)');
+                    
+                    if (layerId === 'gbif_species' && config.colorByRole) {
+                        gbifRoleList = [];
+                        gbifRoleCounts = {};
+                        gbifRoleColors = {};
+                        gbifRoleFallbackIndex = 0;
+                        data.features.forEach(function(f) {
+                            var role = (f.properties && f.properties.Role) ? f.properties.Role.trim() : 'Unknown';
+                            if (!role || role === '') role = 'Unknown';
+                            if (!gbifRoleCounts[role]) { gbifRoleCounts[role] = 0; gbifRoleList.push(role); }
+                            gbifRoleCounts[role]++;
+                        });
+                        var roleOrder = ['Reservoir', 'Host', 'Vector', 'Carrier', 'Predator', 'Prey', 'Sentinel', 'Commensal', 'Incidental Host'];
+                        gbifRoleList.sort(function(a, b) {
+                            var ia = roleOrder.indexOf(a), ib = roleOrder.indexOf(b);
+                            if (ia === -1 && ib === -1) return a.localeCompare(b);
+                            if (ia === -1) return 1;
+                            if (ib === -1) return -1;
+                            return ia - ib;
+                        });
+                        gbifRoleList.forEach(function(role) { getGbifRoleColor(role); });
                     }
+                    
+                    var geojsonLayer = L.geoJSON(data, {
+                        pointToLayer: function(feature, latlng) {
+                            if (layerId === 'gbif_species' && config.colorByRole) {
+                                var role = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
+                                if (!role || role === '') role = 'Unknown';
+                                var roleColor = getGbifRoleColor(role);
+                                return L.circleMarker(latlng, {
+                                    color: '#000000', fillColor: roleColor, fillOpacity: 0.9,
+                                    radius: config.radius, weight: config.weight || 2, pane: 'speciesVectorPane'
+                                });
+                            }
+                            if (config.icon && config.icon !== 'circle') {
+                                var icon = createSvgIcon(config.icon, config.fillColor, 14);
+                                if (icon) return L.marker(latlng, { icon: icon, pane: 'speciesVectorPane' });
+                            }
+                            return L.circleMarker(latlng, {
+                                color: '#000000', fillColor: config.fillColor, fillOpacity: 0.9,
+                                radius: config.radius, weight: config.weight || 2, pane: 'speciesVectorPane'
+                            });
+                        },
+                        style: function(feature) {
+                            if (feature.geometry && feature.geometry.type === 'Point') return {};
+                            return { color: config.color, fillColor: config.fillColor, fillOpacity: 0.4, weight: 2, opacity: 0.8 };
+                        },
+                        filter: function(feature) {
+                            if (layerId === 'gbif_species' && config.colorByRole) {
+                                var role = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
+                                if (!role || role === '') role = 'Unknown';
+                                if (hiddenGbifRoles[role]) return false;
+                            }
+                            return true;
+                        },
+                        pane: 'speciesVectorPane',
+                        onEachFeature: function(feature, layer) {
+                            var popupContent = '<h3>' + config.name + '</h3><table>';
+                            for (var key in feature.properties) {
+                                if (feature.properties.hasOwnProperty(key)) {
+                                    var value = feature.properties[key];
+                                    if (value === null || value === undefined || value === '') continue;
+                                    var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
+                                    popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
+                                }
+                            }
+                            popupContent += '</table>';
+                            layer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
+                        }
+                    });
+                    
+                    speciesSurveyLayers[layerId] = geojsonLayer;
+                    if (layerId === 'gbif_species') speciesSurveyLayers['gbif_species_data'] = data;
+
+                    geojsonLayer.addTo(map);
+                    activeLayers['species_' + layerId] = true;
+                    updateLegend();
+                })
+                .catch(error => {
+                    console.log(config.name + ' not found - layer will not be available:', error.message);
+                });
+        }
+        
+        function toggleGbifRole(role, show) {
+            if (show) { delete hiddenGbifRoles[role]; } else { hiddenGbifRoles[role] = true; }
+            if (activeLayers['species_gbif_species'] && speciesSurveyLayers['gbif_species_data']) {
+                if (speciesSurveyLayers['gbif_species']) map.removeLayer(speciesSurveyLayers['gbif_species']);
+                var config = speciesSurveyConfigs['gbif_species'];
+                var data = speciesSurveyLayers['gbif_species_data'];
+                var geojsonLayer = L.geoJSON(data, {
+                    pointToLayer: function(feature, latlng) {
+                        var r = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
+                        if (!r || r === '') r = 'Unknown';
+                        var roleColor = getGbifRoleColor(r);
+                        return L.circleMarker(latlng, {
+                            color: '#000000', fillColor: roleColor, fillOpacity: 0.9,
+                            radius: config.radius, weight: config.weight || 2, pane: 'speciesVectorPane'
+                        });
+                    },
+                    filter: function(feature) {
+                        var r = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
+                        if (!r || r === '') r = 'Unknown';
+                        return !hiddenGbifRoles[r];
+                    },
+                    pane: 'speciesVectorPane',
+                    onEachFeature: function(feature, layer) {
+                        var popupContent = '<h3>' + config.name + '</h3><table>';
+                        for (var key in feature.properties) {
+                            if (feature.properties.hasOwnProperty(key)) {
+                                var value = feature.properties[key];
+                                if (value === null || value === undefined || value === '') continue;
+                                var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
+                                popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
+                            }
+                        }
+                        popupContent += '</table>';
+                        layer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
+                    }
+                });
+                speciesSurveyLayers['gbif_species'] = geojsonLayer;
+                geojsonLayer.addTo(map);
+            }
+            updateLegend();
+        }
+        
+        function toggleSpeciesSurveyLayer(layerId, show) {
+            var lyr = speciesSurveyLayers[layerId];
+            if (!lyr) return;
+            if (show) { lyr.addTo(map); activeLayers['species_' + layerId] = true; }
+            else { map.removeLayer(lyr); delete activeLayers['species_' + layerId]; }
+            updateLegend();
+        }
+        
+        function updateSpeciesSurveyOpacity(layerId, opacity) {
+            var lyr = speciesSurveyLayers[layerId];
+            if (!lyr) return;
+            lyr.eachLayer(function(layer) {
+                if (layer.setStyle) { layer.setStyle({ fillOpacity: opacity, opacity: opacity }); }
+                else if (layer.setOpacity) { layer.setOpacity(opacity); }
+            });
+        }
+
+        // =====================================================================
+        // BASEMAP SWITCH
+        // =====================================================================
+        function switchBasemap(basemapType) {
+            map.removeLayer(streetMap);
+            map.removeLayer(satelliteMap);
+            if (basemapType === 'street') { streetMap.addTo(map); }
+            else if (basemapType === 'satellite') { satelliteMap.addTo(map); }
+        }
+
+        // =====================================================================
+        // RASTER LAYER LOADING
+        // =====================================================================
+        function loadLayer(layerId) {
+            var config = layerConfigs[layerId];
+            updateStatus('Loading ' + config.name + '...');
+            fetch(config.file)
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
                     updateStatus(config.name + ' fetched successfully');
                     return response.arrayBuffer();
                 })
@@ -926,237 +994,300 @@
                 })
                 .then(georaster => {
                     updateStatus(config.name + ' parsed successfully');
-                    
-                    // Debug: Log georaster properties
-                    console.log('Georaster info for ' + layerId + ':', {
-                        numberOfRasters: georaster.numberOfRasters,
-                        height: georaster.height,
-                        width: georaster.width,
-                        pixelHeight: georaster.pixelHeight,
-                        pixelWidth: georaster.pixelWidth,
-                        projection: georaster.projection,
-                        sourceType: georaster.sourceType,
-                        mins: georaster.mins,
-                        maxs: georaster.maxs,
-                        ranges: georaster.ranges,
-                        xmin: georaster.xmin,
-                        xmax: georaster.xmax,
-                        ymin: georaster.ymin,
-                        ymax: georaster.ymax
-                    });
-                    
-                    // DIAGNOSTIC: Check actual unique values for discrete layers
-                    if (config.discreteColors && layerId.includes('risk')) {
-                        console.log('=== DIAGNOSTIC FOR ' + layerId + ' ===');
-                        console.log('Expected values in config:', Object.keys(config.discreteColors));
-                        console.log('Min value in raster:', georaster.mins);
-                        console.log('Max value in raster:', georaster.maxs);
-                        
-                        // Sample actual values
-                        if (georaster.values && georaster.values[0]) {
-                            var uniqueValues = new Set();
-                            var sampleSize = Math.min(10000, georaster.values[0].length);
-                            for (var i = 0; i < sampleSize; i++) {
-                                var val = georaster.values[0][i];
-                                if (val !== null && val !== undefined && !isNaN(val)) {
-                                    uniqueValues.add(Math.round(val));
-                                }
-                            }
-                            var sortedUnique = Array.from(uniqueValues).sort((a, b) => a - b);
-                            console.log('Actual unique values found (sample of ' + sampleSize + ' pixels):', sortedUnique);
-                            console.log('>>> ACTION NEEDED: Update discreteColors in config to match these values! <<<');
-                        }
-                    }
-                    
                     georasters[layerId] = georaster;
                     
+                    var layerOpacity = DEFAULT_OPACITY;
                     var pixelValuesToColorFn;
                     
                     if (config.discreteColors) {
+                        var discreteColors = config.discreteColors;
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
-                            
-                            value = Math.round(value);
-                            
-                            if (!visibleClasses[layerId][value]) {
-                                return null;
+                            if (value === 255) return null;
+                            var intValue = Math.round(value);
+                            if (hiddenClasses[layerId] && hiddenClasses[layerId][intValue]) return null;
+                            if (discreteColors.hasOwnProperty(intValue)) return discreteColors[intValue];
+                            return null;
+                        };
+                    } else if (layerId === 'elevation' && config.elevationBreaks) {
+                        var breaks = config.elevationBreaks;
+                        var colors = config.elevationColors;
+                        pixelValuesToColorFn = function(values) {
+                            var value = values[0];
+                            if (value === null || value === undefined || isNaN(value)) return null;
+                            if (value === 255 || value === -9999 || value === -32768 || value === -3.4e38 || Math.abs(value) > 1e10) return null;
+                            if (value < -10) return null;
+                            for (var i = 0; i < breaks.length; i++) {
+                                if (value <= breaks[i]) return colors[i];
                             }
-                            
-                            return config.discreteColors[value] || null;
+                            return colors[colors.length - 1];
                         };
                     } else {
+                        // Continuous color scale (ENM, ENM CV)
                         var scale = config.mode 
                             ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
                             : chroma.scale(config.colors).domain(config.domain);
-                        
+                        var noDataVal = georaster.noDataValue;
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
+                            if (value === 255 || value === -9999 || value === -32768 || value === -3.4e38 || Math.abs(value) > 1e10) return null;
+                            if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal)) {
+                                if (Math.abs(value - noDataVal) < 0.0001) return null;
+                            }
                             return scale(value).hex();
                         };
                     }
                     
+                    var layerPane = (layerId === 'elevation') ? 'rasterPane' : 'analysisPane';
+                    
                     var layer = new GeoRasterLayer({
                         georaster: georaster,
-                        opacity: 0.7,
+                        opacity: layerOpacity,
                         pixelValuesToColorFn: pixelValuesToColorFn,
                         resolution: 256,
-                        pane: 'rasterPane'
+                        pane: layerPane
                     });
                     
                     layers[layerId] = layer;
                     loadedCount++;
-                    
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    // Set the first layer to be 'enm', not the first alphabetically
-                    if (!currentLayer && layerId === 'enm') {
+                    // Default: blend_risk shown on load
+                    if (layerId === 'blend_risk') {
                         layer.addTo(map);
-                        currentLayer = layerId;
-                        updateLegend(layerId);
-
-                        // set outlines for initial layer too (vectors may sync again when they load)
-                        updateOutlinesForRaster(currentLayer);
+                        activeLayers[layerId] = true;
+                        currentLayer = 'blend_risk';
+                        updateLegend();
+                        updateAdminBoundaryStyle();
+                    }
+                    
+                    if (loadedCount === totalLayers) {
+                        setTimeout(function() { document.getElementById('loading').style.display = 'none'; }, 1000);
                     }
                 })
                 .catch(error => {
                     var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
                     updateStatus(errorMsg, true);
                     console.error(errorMsg, error);
+                    if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+                        updateStatus('⚠️ CORS Error: You must serve files through a web server!', true);
+                        updateStatus('Try using: R servr::httd() or Python http.server', true);
+                    }
+                    loadedCount++;
+                    if (loadedCount === totalLayers) {
+                        setTimeout(function() { document.getElementById('loading').style.display = 'none'; }, 1000);
+                    }
                 });
         }
 
-        function switchLayer(layerId) {
-            if (currentLayer && layers[currentLayer]) {
-                map.removeLayer(layers[currentLayer]);
+        // =====================================================================
+        // LAYER TOGGLE / CLASS TOGGLE / REFRESH
+        // =====================================================================
+        function toggleLayer(layerId, show) {
+            if (!layers[layerId]) return;
+            if (show) { layers[layerId].addTo(map); activeLayers[layerId] = true; }
+            else { map.removeLayer(layers[layerId]); delete activeLayers[layerId]; }
+            // Determine which is the "top" active analysis layer for click queries
+            var analysisLayers = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
+            currentLayer = null;
+            for (var i = analysisLayers.length - 1; i >= 0; i--) {
+                if (activeLayers[analysisLayers[i]]) { currentLayer = analysisLayers[i]; break; }
             }
-            
-            if (layers[layerId]) {
-                layers[layerId].addTo(map);
-                currentLayer = layerId;
-                updateLegend(layerId);
-
-                // update admin + district outline color when switching rasters
-                updateOutlinesForRaster(layerId);
-                
-                var config = layerConfigs[layerId];
-                
-                // Check if this layer should use the initial view
-                if (config.useInitialView) {
-                    map.setView(initialView.center, initialView.zoom, {
-                        animate: true,
-                        duration: 1.0
-                    });
-                } else if (config.center && config.zoom !== undefined) {
-                    map.setView(config.center, config.zoom, {
-                        animate: true,
-                        duration: 1.0
-                    });
-                }
-            }
+            if (!currentLayer && activeLayers['elevation']) currentLayer = 'elevation';
+            updateLegend();
+            updateAdminBoundaryStyle();
         }
-
-        function updateLegend(layerId) {
+        
+        function toggleClass(layerId, classValue, show) {
+            if (!hiddenClasses[layerId]) return;
+            if (show) { delete hiddenClasses[layerId][classValue]; } else { hiddenClasses[layerId][classValue] = true; }
+            refreshLayer(layerId);
+        }
+        
+        function refreshLayer(layerId) {
+            if (!layers[layerId] || !activeLayers[layerId]) return;
             var config = layerConfigs[layerId];
+            var georaster = georasters[layerId];
+            if (!georaster) return;
+            map.removeLayer(layers[layerId]);
+            var layerOpacity = DEFAULT_OPACITY;
+            var opacitySlider = document.getElementById('opacity-' + layerId);
+            if (opacitySlider) layerOpacity = opacitySlider.value / 100;
+            var pixelValuesToColorFn;
+            
+            if (config.discreteColors) {
+                var discreteColors = config.discreteColors;
+                var hidden = hiddenClasses[layerId];
+                pixelValuesToColorFn = function(values) {
+                    var value = values[0];
+                    if (value === null || value === undefined || isNaN(value)) return null;
+                    if (value === 255) return null;
+                    var intValue = Math.round(value);
+                    if (hidden[intValue]) return null;
+                    if (discreteColors.hasOwnProperty(intValue)) return discreteColors[intValue];
+                    return null;
+                };
+            } else if (layerId === 'elevation' && config.elevationBreaks) {
+                var breaks = config.elevationBreaks;
+                var colors = config.elevationColors;
+                var hidden = hiddenClasses[layerId];
+                pixelValuesToColorFn = function(values) {
+                    var value = values[0];
+                    if (value === null || value === undefined || isNaN(value)) return null;
+                    if (value === 255 || value === -9999 || value === -32768 || value === -3.4e38 || Math.abs(value) > 1e10) return null;
+                    if (value < -10) return null;
+                    for (var i = 0; i < breaks.length; i++) {
+                        if (value <= breaks[i]) { if (hidden[i + 1]) return null; return colors[i]; }
+                    }
+                    if (hidden[colors.length]) return null;
+                    return colors[colors.length - 1];
+                };
+            }
+            if (!pixelValuesToColorFn) return;
+            
+            var layerPane = (layerId === 'elevation') ? 'rasterPane' : 'analysisPane';
+            var newLayer = new GeoRasterLayer({
+                georaster: georaster,
+                opacity: layerOpacity,
+                pixelValuesToColorFn: pixelValuesToColorFn,
+                resolution: 256,
+                pane: layerPane
+            });
+            layers[layerId] = newLayer;
+            newLayer.addTo(map);
+        }
+
+        // =====================================================================
+        // LEGEND
+        // =====================================================================
+        function updateLegend() {
             var legendDiv = document.getElementById('legend-content');
+            legendDiv.innerHTML = '';
+            var activeKeys = Object.keys(activeLayers);
+            if (activeKeys.length === 0) legendDiv.innerHTML = '<h4>No layers active</h4>';
             
-            legendDiv.innerHTML = '<h4>' + config.name + '</h4>';
-            
-            if (config.customLegend && config.legendItems) {
-                config.legendItems.forEach(function(item) {
-                    var isChecked = visibleClasses[layerId][item.value];
-                    var disabledClass = isChecked ? '' : ' disabled';
-                    
-                    legendDiv.innerHTML += 
-                        '<div class="item' + disabledClass + '">' +
-                        '<input type="checkbox" id="class-' + layerId + '-' + item.value + '" ' +
-                        (isChecked ? 'checked' : '') + ' ' +
-                        'onchange="toggleClass(\'' + layerId + '\', ' + item.value + ')">' +
-                        '<i style="background:' + item.color + '"></i> ' +
-                        item.label +
-                        '</div>';
-                });
-                
-                legendDiv.innerHTML += 
-                    '<div class="legend-controls">' +
-                    '<button onclick="selectAllClasses(\'' + layerId + '\')">All</button>' +
-                    '<button onclick="selectNoneClasses(\'' + layerId + '\')">None</button>' +
-                    '</div>';
-            } else if (config.continuousLegend) {
-                var gradientStops = [];
-                for (var i = 0; i < config.colors.length; i++) {
-                    var percentage = (i / (config.colors.length - 1)) * 100;
-                    gradientStops.push(config.colors[i] + ' ' + percentage + '%');
+            activeKeys.forEach(function(layerId, idx) {
+                if (layerId.startsWith('species_')) return;
+                var config = layerConfigs[layerId];
+                if (!config) return;
+                if (idx > 0) legendDiv.innerHTML += '<div style="margin:10px 0; border-top:1px solid #ddd;"></div>';
+                legendDiv.innerHTML += '<h4>' + config.name + '</h4>';
+                if (config.customLegend && config.legendItems) {
+                    config.legendItems.forEach(function(item) {
+                        var isHidden = hiddenClasses[layerId] && hiddenClasses[layerId][item.value];
+                        var checkedAttr = isHidden ? '' : 'checked';
+                        var hiddenClass = isHidden ? ' hidden-class' : '';
+                        legendDiv.innerHTML += '<div class="item toggleable' + hiddenClass + '">' +
+                            '<input type="checkbox" ' + checkedAttr + ' onchange="toggleClass(\'' + layerId + '\', ' + item.value + ', this.checked)">' +
+                            '<i style="background:' + item.color + '"></i> ' + item.label + '</div>';
+                    });
+                } else if (config.continuousLegend) {
+                    var gradientStops = [];
+                    for (var i = 0; i < config.colors.length; i++) {
+                        gradientStops.push(config.colors[i] + ' ' + ((i / (config.colors.length - 1)) * 100) + '%');
+                    }
+                    legendDiv.innerHTML += '<div class="gradient-bar" style="background: linear-gradient(to right, ' + gradientStops.join(', ') + ');"></div>' +
+                        '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
                 }
-                var gradientCSS = 'linear-gradient(to right, ' + gradientStops.join(', ') + ')';
-                
-                legendDiv.innerHTML += 
-                    '<div class="gradient-bar" style="background: ' + gradientCSS + ';"></div>' +
-                    '<div class="gradient-labels">' +
-                    '<span>' + config.labels[0] + '</span>' +
-                    '<span>' + config.labels[1] + '</span>' +
-                    '</div>';
+                if (config.description) legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' + config.description + '</p>';
+            });
+            
+            // Species/survey legend
+            var activeSpeciesVectors = [];
+            Object.keys(speciesSurveyConfigs).forEach(function(key) {
+                if (activeLayers['species_' + key]) activeSpeciesVectors.push(key);
+            });
+            if (activeSpeciesVectors.length > 0) {
+                legendDiv.innerHTML += '<div style="margin:10px 0; border-top:1px solid #ddd;"></div>';
+                legendDiv.innerHTML += '<h4>Species & Survey Data</h4>';
+                activeSpeciesVectors.forEach(function(key) {
+                    var cfg = speciesSurveyConfigs[key];
+                    if (key === 'gbif_species' && cfg.colorByRole && gbifRoleList.length > 0) {
+                        legendDiv.innerHTML += '<div style="font-size:11px; font-weight:bold; margin-bottom:4px;">GBIF Species by Ecology Role</div>';
+                        gbifRoleList.forEach(function(role) {
+                            var color = getGbifRoleColor(role);
+                            var count = gbifRoleCounts[role] || 0;
+                            var isHidden = hiddenGbifRoles[role];
+                            var checkedAttr = isHidden ? '' : 'checked';
+                            var hiddenClass = isHidden ? ' hidden-class' : '';
+                            var escapedRole = role.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            legendDiv.innerHTML += '<div class="item toggleable' + hiddenClass + '">' +
+                                '<input type="checkbox" ' + checkedAttr + ' onchange="toggleGbifRole(\'' + escapedRole + '\', this.checked)">' +
+                                '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + color + 
+                                ';border:2px solid #000000;margin-right:6px;vertical-align:middle;"></span>' +
+                                '<span style="font-size:11px;">' + role + ' <span style="color:#999;">(' + count + ')</span></span></div>';
+                        });
+                        return;
+                    }
+                    var symbolHtml = '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + cfg.fillColor + ';border:1px solid #000;margin-right:8px;vertical-align:middle;"></span>';
+                    legendDiv.innerHTML += '<div class="item">' + symbolHtml + '<span style="font-size:11px;">' + cfg.name + '</span></div>';
+                });
             }
             
-            if (config.description) {
-                legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' + 
-                                       config.description + '</p>';
+            // Cases legend
+            if (nipahCasesLayer) {
+                legendDiv.innerHTML += '<div class="plague-cases-section"><div class="item">' +
+                    '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
+                    '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="1.5"/>' +
+                    '<circle cx="12" cy="12" r="7" fill="white" stroke="#000000" stroke-width="1.5"/>' +
+                    '<circle cx="12" cy="12" r="3" fill="white" stroke="#000000" stroke-width="1.5"/>' +
+                    '</svg><span style="font-size:11px;">Nipah Cases</span></div></div>';
             }
         }
 
-        // Create layer control
+        // =====================================================================
+        // LAYER CONTROL PANEL
+        // =====================================================================
         var layerControl = L.control({position: 'topleft'});
         layerControl.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'layer-control');
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.disableScrollPropagation(div);
             
             div.innerHTML = '<h4>Basemaps</h4>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="osm" checked onchange="switchBasemap(\'osm\')">OpenStreetMap</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map (Esri)</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="aerial" onchange="switchBasemap(\'aerial\')">Aerial Imagery (Esri)</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="satellite" checked onchange="switchBasemap(\'satellite\')">Satellite Imagery</label>';
             
-            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Risk Layers</h4>';
+            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Analysis Layers</h4>';
             
-            // Define explicit order for layers
-            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
-            
-            layerOrder.forEach(function(key, index) {
-                if (layerConfigs[key]) {
-                    var checked = (key === 'enm') ? 'checked' : '';
-                    div.innerHTML += 
-                        '<label><input type="radio" name="layer" value="' + key + '" ' + checked + 
-                        ' onchange="switchLayer(\'' + key + '\')">' + 
-                        layerConfigs[key].name + '</label>';
-                }
+            // Raster layer checkboxes — blend_risk on by default
+            var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic', 'elevation'];
+            rasterKeys.forEach(function(key) {
+                var checked = (key === 'blend_risk') ? 'checked' : '';
+                div.innerHTML += '<label><input type="checkbox" name="layer" value="' + key + '" ' + checked + 
+                    ' onchange="toggleLayer(\'' + key + '\', this.checked)">' + layerConfigs[key].name + '</label>';
             });
             
-            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Vector Overlays</h4>';
+            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Species &amp; Survey Data</h4>';
             
-            Object.keys(vectorConfigs).forEach(function(key) {
-                var checked = vectorConfigs[key].visible ? 'checked' : '';
-                div.innerHTML += 
-                    '<label><input type="checkbox" id="vector-' + key + '" ' + checked + 
-                    ' onchange="toggleVectorLayer(\'' + key + '\')">' + 
-                    vectorConfigs[key].name + '</label>';
+            Object.keys(speciesSurveyConfigs).forEach(function(key) {
+                var cfg = speciesSurveyConfigs[key];
+                div.innerHTML += '<label><input type="checkbox" name="species-layer" value="' + key + '" checked ' + 
+                    'onchange="toggleSpeciesSurveyLayer(\'' + key + '\', this.checked)">' + cfg.name + '</label>';
             });
             
-            div.innerHTML += '<div class="opacity-section">';
-            div.innerHTML += '<h5>Layer Opacity</h5>';
+            div.innerHTML += '<div class="overlay-section">';
+            div.innerHTML += '<h5>Overlays</h5>';
+            div.innerHTML += '<label><input type="checkbox" id="nipah-cases-toggle" checked onchange="toggleNipahCases(this.checked)">Nipah Cases</label>';
+            div.innerHTML += '<label><input type="checkbox" id="admin-toggle" checked onchange="toggleAdminBoundaries(this.checked)">Admin Boundaries</label>';
+            div.innerHTML += '</div>';
             
-            // Use same explicit order for opacity controls
-            var layerOrder = ['enm', 'pop_risk_india', 'lc_risk_india', 'pop_risk_bangladesh', 'lc_risk_bangladesh', 'sd_india_pop', 'sd_india_lc', 'sd_bang_pop', 'sd_bang_lc'];
-            
-            layerOrder.forEach(function(key) {
-                if (layerConfigs[key]) {
-                    div.innerHTML += 
-                        '<div class="opacity-control">' +
-                        '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">70%</span></label>' +
-                        '<input type="range" id="opacity-' + key + '" min="0" max="100" value="70" ' +
-                        'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'">' +
-                        '</div>';
-                }
+            div.innerHTML += '<div class="opacity-section"><h5>Layer Opacity</h5>';
+            rasterKeys.forEach(function(key) {
+                div.innerHTML += '<div class="opacity-control">' +
+                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">' + Math.round(DEFAULT_OPACITY * 100) + '%</span></label>' +
+                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY * 100) + '" ' +
+                    'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'"></div>';
             });
-            
+            Object.keys(speciesSurveyConfigs).forEach(function(key) {
+                var cfg = speciesSurveyConfigs[key];
+                div.innerHTML += '<div class="opacity-control">' +
+                    '<label>' + cfg.name + ' <span class="opacity-value" id="opacity-value-species-' + key + '">' + Math.round(DEFAULT_OPACITY * 100) + '%</span></label>' +
+                    '<input type="range" id="opacity-species-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY * 100) + '" ' +
+                    'oninput="updateSpeciesSurveyOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-species-' + key + '\').textContent = this.value + \'%\'"></div>';
+            });
             div.innerHTML += '</div>';
             
             return div;
@@ -1168,43 +1299,46 @@
         legend.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'legend');
             div.id = 'legend-content';
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.disableScrollPropagation(div);
             return div;
         };
         legend.addTo(map);
 
-        // Create info box
-        var info = L.control({position: 'topright'});
-        info.onAdd = function (map) {
-            var div = L.DomUtil.create('div', 'info');
-            div.innerHTML = 
-                '<h4>Nipah Virus Risk Mapping</h4>' +
-                '<p>Multi-scale Analysis</p>' +
-                '<p><em>Regional: 1km resolution overview</em></p>' +
-                '<p><em>Country-specific: 100m detail</em></p>' +
-                '<p><em>Right-click: Copy coordinates</em></p>';
-            return div;
-        };
-        info.addTo(map);
-
+        // =====================================================================
+        // MAP CLICK & CONTEXT MENU
+        // =====================================================================
         map.on('contextmenu', function(e) {
             copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
         });
 
-        // Load all raster layers FIRST
-        updateStatus('Starting to load layers...');
-        Object.keys(layerConfigs).forEach(function(key) {
-            loadLayer(key);
+        map.on('click', function(e) {
+            if (!currentLayer || !georasters[currentLayer]) return;
+            var value = getRasterValueAtPoint(currentLayer, e.latlng);
+            var config = layerConfigs[currentLayer];
+            var displayValue;
+            if (value !== null) {
+                if (config.discreteDisplay) { displayValue = Math.round(value).toString(); }
+                else { displayValue = value.toFixed(4); }
+            } else {
+                displayValue = 'No Data';
+            }
+            var unitSuffix = (currentLayer === 'elevation' && value !== null) ? ' m' : '';
+            var popupContent = '<h3>' + config.name + '</h3><table>';
+            popupContent += '<tr><td>Coordinates</td><td>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '</td></tr>';
+            popupContent += '<tr><td>Cell Value</td><td>' + displayValue + unitSuffix + '</td></tr>';
+            popupContent += '</table>';
+            L.popup().setLatLng(e.latlng).setContent(popupContent).openOn(map);
         });
 
-        // Load all vector layers AFTER with slight delay
-        setTimeout(function() {
-            Object.keys(vectorConfigs).forEach(function(key) {
-                loadVectorLayer(key);
-            });
-        }, 1000);
+        // =====================================================================
+        // LOAD EVERYTHING
+        // =====================================================================
+        updateStatus('Starting to load layers...');
+        Object.keys(layerConfigs).forEach(function(key) { loadLayer(key); });
+        loadNipahCases();
+        loadAdminBoundaries();
+        Object.keys(speciesSurveyConfigs).forEach(function(key) { loadSpeciesSurveyLayer(key); });
     </script>
 </body>
 </html>
-
-
-
