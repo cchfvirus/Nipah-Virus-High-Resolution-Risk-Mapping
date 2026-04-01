@@ -686,11 +686,6 @@
         // NIPAH OUTBREAK LOCATIONS (outbreaks.json — 137 documented locations)
         // Colored by country: Bangladesh = red target, India = blue target
         // =====================================================================
-        var outbreakCountryColors = {
-            'BGD': '#e31a1c',
-            'IND': '#1f78b4'
-        };
-
         function loadNipahCases() {
             fetch('outbreaks.json')
                 .then(response => {
@@ -701,13 +696,11 @@
                     updateStatus('Loaded ' + data.features.length + ' Nipah outbreak locations');
                     nipahCasesLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
-                            var country = feature.properties.Country || 'BGD';
-                            var color = outbreakCountryColors[country] || '#e31a1c';
-                            var size = 20;
+                            var size = 14;
                             var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
-                                '<circle cx="12" cy="12" r="11" fill="white" fill-opacity="0.8" stroke="' + color + '" stroke-width="2"/>' +
-                                '<circle cx="12" cy="12" r="7" fill="none" stroke="' + color + '" stroke-width="1.5"/>' +
-                                '<circle cx="12" cy="12" r="3" fill="' + color + '"/>' +
+                                '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/>' +
+                                '<circle cx="12" cy="12" r="7" fill="none" stroke="#000000" stroke-width="1.5"/>' +
+                                '<circle cx="12" cy="12" r="3" fill="#000000"/>' +
                                 '</svg>';
                             var icon = L.divIcon({ html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
                             return L.marker(latlng, { icon: icon });
@@ -750,35 +743,67 @@
         function updateAdminBoundaryStyle() {
             if (adminBoundariesLayer) {
                 var boundaryColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
-                adminBoundariesLayer.setStyle({
-                    fillColor: 'transparent',
-                    fillOpacity: 0,
-                    color: boundaryColor,
-                    weight: 1,
-                    opacity: 1
+                adminBoundariesLayer.setStyle(function(feature) {
+                    return {
+                        fillColor: 'transparent',
+                        fillOpacity: 0,
+                        color: boundaryColor,
+                        weight: 1,
+                        opacity: 1
+                    };
                 });
             }
         }
 
         function loadAdminBoundaries() {
-            fetch('admin2.json')
+            fetch('admin.json')
                 .then(response => {
                     if (!response.ok) throw new Error('Admin boundaries file not found');
                     return response.json();
                 })
                 .then(data => {
-                    updateStatus('Loaded admin boundaries');
+                    updateStatus('Loaded ' + data.features.length + ' admin boundaries');
                     var initialColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
                     adminBoundariesLayer = L.geoJSON(data, {
-                        style: {
-                            fillColor: 'transparent',
-                            fillOpacity: 0,
-                            color: initialColor,
-                            weight: 1,
-                            opacity: 1
+                        style: function(feature) {
+                            return {
+                                fillColor: 'transparent',
+                                fillOpacity: 0,
+                                color: initialColor,
+                                weight: 1,
+                                opacity: 1
+                            };
                         },
                         pane: 'boundariesPane',
-                        interactive: false
+                        onEachFeature: function(feature, layer) {
+                            var p = feature.properties;
+                            var countryName = (p.Country === 'BGD') ? 'Bangladesh' : (p.Country === 'IND') ? 'India' : (p.Country || '');
+                            var popupContent = '<h3>' + (p.Name || '') + '</h3><table>';
+                            popupContent += '<tr><td>District</td><td>' + (p.Name || '') + '</td></tr>';
+                            popupContent += '<tr><td>Country</td><td>' + countryName + '</td></tr>';
+                            if (p.FID !== null && p.FID !== undefined && p.FID !== '') {
+                                popupContent += '<tr><td>FID</td><td>' + p.FID + '</td></tr>';
+                            }
+                            popupContent += '</table>';
+                            layer.bindPopup(popupContent, { maxWidth: 300 });
+
+                            // Highlight on hover
+                            layer.on('mouseover', function(e) {
+                                var hoverColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
+                                this.setStyle({
+                                    weight: 3,
+                                    color: hoverColor,
+                                    fillColor: hoverColor,
+                                    fillOpacity: 0.1
+                                });
+                                if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                                    this.bringToFront();
+                                }
+                            });
+                            layer.on('mouseout', function(e) {
+                                adminBoundariesLayer.resetStyle(this);
+                            });
+                        }
                     });
                     adminBoundariesLayer.addTo(map);
                 })
@@ -1238,19 +1263,12 @@
             // Outbreak locations legend
             if (nipahCasesLayer) {
                 legendDiv.innerHTML += '<div class="plague-cases-section">';
-                legendDiv.innerHTML += '<h4>Nipah Outbreak Locations (2001–2026)</h4>';
                 legendDiv.innerHTML += '<div class="item">' +
-                    '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
-                    '<circle cx="12" cy="12" r="11" fill="white" fill-opacity="0.8" stroke="#e31a1c" stroke-width="2"/>' +
-                    '<circle cx="12" cy="12" r="7" fill="none" stroke="#e31a1c" stroke-width="1.5"/>' +
-                    '<circle cx="12" cy="12" r="3" fill="#e31a1c"/>' +
-                    '</svg><span style="font-size:11px;">Bangladesh</span></div>';
-                legendDiv.innerHTML += '<div class="item">' +
-                    '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
-                    '<circle cx="12" cy="12" r="11" fill="white" fill-opacity="0.8" stroke="#1f78b4" stroke-width="2"/>' +
-                    '<circle cx="12" cy="12" r="7" fill="none" stroke="#1f78b4" stroke-width="1.5"/>' +
-                    '<circle cx="12" cy="12" r="3" fill="#1f78b4"/>' +
-                    '</svg><span style="font-size:11px;">India</span></div>';
+                    '<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
+                    '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/>' +
+                    '<circle cx="12" cy="12" r="7" fill="none" stroke="#000000" stroke-width="1.5"/>' +
+                    '<circle cx="12" cy="12" r="3" fill="#000000"/>' +
+                    '</svg><span style="font-size:11px;">Nipah Outbreak Locations (2001–2026)</span></div>';
                 legendDiv.innerHTML += '</div>';
             }
         }
@@ -1287,7 +1305,7 @@
             });
             
             div.innerHTML += '<div class="overlay-section">';
-            div.innerHTML += '<h5>Overlays</h5>';
+            div.innerHTML += '<h4 style="margin:0 0 8px; font-size:13px;">Overlays</h4>';
             div.innerHTML += '<label><input type="checkbox" id="nipah-cases-toggle" checked onchange="toggleNipahCases(this.checked)">Nipah Outbreak Locations</label>';
             div.innerHTML += '<label><input type="checkbox" id="admin-toggle" checked onchange="toggleAdminBoundaries(this.checked)">Admin Boundaries</label>';
             div.innerHTML += '</div>';
