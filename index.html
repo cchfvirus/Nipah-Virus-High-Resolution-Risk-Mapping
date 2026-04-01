@@ -271,7 +271,7 @@
         // =====================================================================
         // MAP INITIALIZATION - centered on Bangladesh/India Nipah endemic region
         // =====================================================================
-        var map = L.map('map').setView([20.0, 85.0], 4);
+        var map = L.map('map').setView([20.0, 85.0], 5);
 
         // Create custom panes with specific z-index ordering
         map.createPane('backgroundPane');
@@ -367,29 +367,20 @@
         }
 
         // =====================================================================
-        // SPECIES & SURVEY GEOJSON (placeholder configs — swap in your files)
+        // VECTOR OVERLAY CONFIGS — Outbreaks & Survey Data
         // =====================================================================
         var speciesSurveyLayers = {};
         var speciesSurveyConfigs = {
-            'gbif_species': {
-                file: 'GBIF_species.geojson',
-                name: 'GBIF Species Occurrences',
-                color: '#8B5CF6',
-                fillColor: '#8B5CF6',
-                radius: 6,
+            'nipah_survey': {
+                file: 'survey.json',
+                name: 'Bat Survey & Phylogeographic Data',
+                color: '#10B981',
+                fillColor: '#10B981',
+                radius: 7,
                 weight: 2,
-                icon: 'circle',
-                colorByRole: true
+                icon: 'diamond',
+                colorByRole: false
             }
-            // Add more survey GeoJSON configs here as needed:
-            // 'nipah_survey': {
-            //     file: 'nipah_survey.geojson',
-            //     name: 'Nipah Survey Data',
-            //     color: '#F59E0B',
-            //     fillColor: '#F59E0B',
-            //     radius: 6,
-            //     icon: 'diamond'
-            // }
         };
 
         // =====================================================================
@@ -692,45 +683,53 @@
         }
 
         // =====================================================================
-        // NIPAH CASES (placeholder — swap in your GeoJSON file)
+        // NIPAH OUTBREAK LOCATIONS (outbreaks.json — 137 documented locations)
+        // Colored by country: Bangladesh = red target, India = blue target
         // =====================================================================
+        var outbreakCountryColors = {
+            'BGD': '#e31a1c',
+            'IND': '#1f78b4'
+        };
+
         function loadNipahCases() {
-            fetch('cases.geojson')
+            fetch('outbreaks.json')
                 .then(response => {
-                    if (!response.ok) throw new Error('Cases file not found');
+                    if (!response.ok) throw new Error('Outbreaks file not found');
                     return response.json();
                 })
                 .then(data => {
-                    updateStatus('Loaded ' + data.features.length + ' Nipah cases');
+                    updateStatus('Loaded ' + data.features.length + ' Nipah outbreak locations');
                     nipahCasesLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
-                            var size = 24;
+                            var country = feature.properties.Country || 'BGD';
+                            var color = outbreakCountryColors[country] || '#e31a1c';
+                            var size = 20;
                             var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
-                                '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="1.5"/>' +
-                                '<circle cx="12" cy="12" r="7" fill="white" stroke="#000000" stroke-width="1.5"/>' +
-                                '<circle cx="12" cy="12" r="3" fill="white" stroke="#000000" stroke-width="1.5"/>' +
+                                '<circle cx="12" cy="12" r="11" fill="white" fill-opacity="0.8" stroke="' + color + '" stroke-width="2"/>' +
+                                '<circle cx="12" cy="12" r="7" fill="none" stroke="' + color + '" stroke-width="1.5"/>' +
+                                '<circle cx="12" cy="12" r="3" fill="' + color + '"/>' +
                                 '</svg>';
                             var icon = L.divIcon({ html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
                             return L.marker(latlng, { icon: icon });
                         },
                         onEachFeature: function(feature, layer) {
-                            var popupContent = '<h3>Nipah Cases</h3><table>';
-                            for (var key in feature.properties) {
-                                if (feature.properties.hasOwnProperty(key)) {
-                                    var value = feature.properties[key];
-                                    var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
-                                    popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
-                                }
-                            }
+                            var p = feature.properties;
+                            var countryName = (p.Country === 'BGD') ? 'Bangladesh' : (p.Country === 'IND') ? 'India' : p.Country;
+                            var popupContent = '<h3>Nipah Outbreak – ' + (p.Admin_Name || '') + '</h3><table>';
+                            popupContent += '<tr><td>Location</td><td>' + (p.Admin_Name || '') + '</td></tr>';
+                            popupContent += '<tr><td>Country</td><td>' + countryName + '</td></tr>';
+                            popupContent += '<tr><td>Year</td><td>' + (p.Year || '') + '</td></tr>';
+                            popupContent += '<tr><td>Reference</td><td style="font-size:10px; max-width:200px; word-wrap:break-word;">' + (p.Reference || '') + '</td></tr>';
+                            popupContent += '<tr><td>Coordinates</td><td>' + (p.Latitude ? parseFloat(p.Latitude).toFixed(4) : '') + ', ' + (p.Longitude ? parseFloat(p.Longitude).toFixed(4) : '') + '</td></tr>';
                             popupContent += '</table>';
-                            layer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
+                            layer.bindPopup(popupContent, { maxWidth: 350, maxHeight: 400 });
                         }
                     });
                     nipahCasesLayer.addTo(map);
                     updateLegend();
                 })
                 .catch(error => {
-                    console.log('Cases file not found - layer will not be available');
+                    console.log('Outbreaks file not found - layer will not be available');
                 });
         }
 
@@ -739,6 +738,11 @@
                 if (show) { nipahCasesLayer.addTo(map); } else { map.removeLayer(nipahCasesLayer); }
             }
         }
+
+        // =====================================================================
+        // BAT SURVEY DATA (survey.json — loaded via speciesSurveyConfigs)
+        // Custom popup for survey features with rich metadata
+        // =====================================================================
 
         // =====================================================================
         // ADMIN BOUNDARIES (placeholder — swap in your boundary file)
@@ -881,17 +885,41 @@
                         },
                         pane: 'speciesVectorPane',
                         onEachFeature: function(feature, layer) {
-                            var popupContent = '<h3>' + config.name + '</h3><table>';
-                            for (var key in feature.properties) {
-                                if (feature.properties.hasOwnProperty(key)) {
-                                    var value = feature.properties[key];
-                                    if (value === null || value === undefined || value === '') continue;
-                                    var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
-                                    popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
+                            var p = feature.properties;
+                            var popupContent;
+                            
+                            // Custom popup for survey data
+                            if (layerId === 'nipah_survey') {
+                                var locName = (p.Location_Name || '').replace(/_/g, ' ');
+                                popupContent = '<h3>' + locName + '</h3><table>';
+                                if (p.Data_Type) popupContent += '<tr><td>Data Type</td><td>' + p.Data_Type.replace(/_/g, ' ') + '</td></tr>';
+                                if (p.Country) popupContent += '<tr><td>Country</td><td>' + p.Country + '</td></tr>';
+                                if (p.District) popupContent += '<tr><td>District</td><td>' + p.District + '</td></tr>';
+                                if (p.Primary_Species) popupContent += '<tr><td>Species</td><td><em>' + p.Primary_Species + '</em></td></tr>';
+                                if (p.Study_Period) popupContent += '<tr><td>Study Period</td><td>' + p.Study_Period + '</td></tr>';
+                                if (p.Sample_Size && p.Sample_Size !== 'None') popupContent += '<tr><td>Sample Size</td><td>' + p.Sample_Size + '</td></tr>';
+                                if (p.Seroprevalence && p.Seroprevalence !== 'None') popupContent += '<tr><td>Seroprevalence (%)</td><td>' + p.Seroprevalence + '</td></tr>';
+                                if (p.PCR_Results && p.PCR_Results !== 'None') popupContent += '<tr><td>PCR Results</td><td>' + p.PCR_Results + '</td></tr>';
+                                if (p.RNA_Detection && p.RNA_Detection !== 'None') popupContent += '<tr><td>RNA Detection</td><td>' + p.RNA_Detection + '</td></tr>';
+                                if (p.Risk_Classification && p.Risk_Classification !== 'None') popupContent += '<tr><td>Risk Zone</td><td>' + p.Risk_Classification.replace(/_/g, ' ') + '</td></tr>';
+                                if (p.Study_Notes && p.Study_Notes !== 'None') popupContent += '<tr><td>Notes</td><td style="font-size:10px; max-width:200px; word-wrap:break-word;">' + p.Study_Notes + '</td></tr>';
+                                if (p.Source_Study) popupContent += '<tr><td>Source</td><td style="font-size:10px;">' + p.Source_Study + '</td></tr>';
+                                if (p.Publication_DOI && p.Publication_DOI !== 'None') popupContent += '<tr><td>DOI</td><td style="font-size:10px;"><a href="https://doi.org/' + p.Publication_DOI + '" target="_blank">' + p.Publication_DOI + '</a></td></tr>';
+                                popupContent += '</table>';
+                            } else {
+                                // Generic popup for other layers
+                                popupContent = '<h3>' + config.name + '</h3><table>';
+                                for (var key in p) {
+                                    if (p.hasOwnProperty(key)) {
+                                        var value = p[key];
+                                        if (value === null || value === undefined || value === '' || value === 'None') continue;
+                                        var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
+                                        popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
+                                    }
                                 }
+                                popupContent += '</table>';
                             }
-                            popupContent += '</table>';
-                            layer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
+                            layer.bindPopup(popupContent, { maxWidth: 350, maxHeight: 450 });
                         }
                     });
                     
@@ -1207,14 +1235,23 @@
                 });
             }
             
-            // Cases legend
+            // Outbreak locations legend
             if (nipahCasesLayer) {
-                legendDiv.innerHTML += '<div class="plague-cases-section"><div class="item">' +
+                legendDiv.innerHTML += '<div class="plague-cases-section">';
+                legendDiv.innerHTML += '<h4>Nipah Outbreak Locations (2001–2026)</h4>';
+                legendDiv.innerHTML += '<div class="item">' +
                     '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
-                    '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="1.5"/>' +
-                    '<circle cx="12" cy="12" r="7" fill="white" stroke="#000000" stroke-width="1.5"/>' +
-                    '<circle cx="12" cy="12" r="3" fill="white" stroke="#000000" stroke-width="1.5"/>' +
-                    '</svg><span style="font-size:11px;">Nipah Cases</span></div></div>';
+                    '<circle cx="12" cy="12" r="11" fill="white" fill-opacity="0.8" stroke="#e31a1c" stroke-width="2"/>' +
+                    '<circle cx="12" cy="12" r="7" fill="none" stroke="#e31a1c" stroke-width="1.5"/>' +
+                    '<circle cx="12" cy="12" r="3" fill="#e31a1c"/>' +
+                    '</svg><span style="font-size:11px;">Bangladesh</span></div>';
+                legendDiv.innerHTML += '<div class="item">' +
+                    '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
+                    '<circle cx="12" cy="12" r="11" fill="white" fill-opacity="0.8" stroke="#1f78b4" stroke-width="2"/>' +
+                    '<circle cx="12" cy="12" r="7" fill="none" stroke="#1f78b4" stroke-width="1.5"/>' +
+                    '<circle cx="12" cy="12" r="3" fill="#1f78b4"/>' +
+                    '</svg><span style="font-size:11px;">India</span></div>';
+                legendDiv.innerHTML += '</div>';
             }
         }
 
@@ -1251,7 +1288,7 @@
             
             div.innerHTML += '<div class="overlay-section">';
             div.innerHTML += '<h5>Overlays</h5>';
-            div.innerHTML += '<label><input type="checkbox" id="nipah-cases-toggle" checked onchange="toggleNipahCases(this.checked)">Nipah Cases</label>';
+            div.innerHTML += '<label><input type="checkbox" id="nipah-cases-toggle" checked onchange="toggleNipahCases(this.checked)">Nipah Outbreak Locations</label>';
             div.innerHTML += '<label><input type="checkbox" id="admin-toggle" checked onchange="toggleAdminBoundaries(this.checked)">Admin Boundaries</label>';
             div.innerHTML += '</div>';
             
