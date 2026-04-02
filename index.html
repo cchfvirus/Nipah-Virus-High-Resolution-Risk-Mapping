@@ -254,10 +254,6 @@
     </style>
 </head>
 <body>
-    <div id="loading" class="loading">
-        <div>Loading map layers...</div>
-        <div id="load-status" style="margin-top: 10px; font-size: 12px;"></div>
-    </div>
     <div id="map"></div>
     <div id="copy-notification" class="copy-notification"></div>
 
@@ -318,7 +314,7 @@
         var nipahCasesLayer = null;
         var adminBoundariesLayer = null;
 
-        var DEFAULT_OPACITY = 0.8;
+        var DEFAULT_OPACITY = 1.0;
         
         var hiddenClasses = {
             'enm': {},
@@ -633,12 +629,6 @@
         // UTILITY FUNCTIONS
         // =====================================================================
         function updateStatus(message, isError) {
-            var statusDiv = document.getElementById('load-status');
-            if (isError) {
-                statusDiv.innerHTML += '<div class="error">' + message + '</div>';
-            } else {
-                statusDiv.innerHTML += '<div>' + message + '</div>';
-            }
             console.log(message);
         }
 
@@ -1058,17 +1048,17 @@
                     loadedCount++;
                     updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
                     
-                    // Default: blend_risk shown on load
-                    if (layerId === 'blend_risk') {
+                    // Default: ENM shown on load
+                    if (layerId === 'enm') {
                         layer.addTo(map);
                         activeLayers[layerId] = true;
-                        currentLayer = 'blend_risk';
+                        currentLayer = 'enm';
                         updateLegend();
                         updateAdminBoundaryStyle();
                     }
                     
                     if (loadedCount === totalLayers) {
-                        setTimeout(function() { document.getElementById('loading').style.display = 'none'; }, 1000);
+                        // loading complete
                     }
                 })
                 .catch(error => {
@@ -1081,7 +1071,7 @@
                     }
                     loadedCount++;
                     if (loadedCount === totalLayers) {
-                        setTimeout(function() { document.getElementById('loading').style.display = 'none'; }, 1000);
+                        // loading complete
                     }
                 });
         }
@@ -1246,10 +1236,10 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Analysis Layers</h4>';
             
-            // Raster layer checkboxes — blend_risk on by default
+            // Raster layer checkboxes — enm on by default
             var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
             rasterKeys.forEach(function(key) {
-                var checked = (key === 'blend_risk') ? 'checked' : '';
+                var checked = (key === 'enm') ? 'checked' : '';
                 div.innerHTML += '<label><input type="checkbox" name="layer" value="' + key + '" ' + checked + 
                     ' onchange="toggleLayer(\'' + key + '\', this.checked)">' + layerConfigs[key].name + '</label>';
             });
@@ -1274,13 +1264,6 @@
                     '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">' + Math.round(DEFAULT_OPACITY * 100) + '%</span></label>' +
                     '<input type="range" id="opacity-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY * 100) + '" ' +
                     'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'"></div>';
-            });
-            Object.keys(speciesSurveyConfigs).forEach(function(key) {
-                var cfg = speciesSurveyConfigs[key];
-                div.innerHTML += '<div class="opacity-control">' +
-                    '<label>' + cfg.name + ' <span class="opacity-value" id="opacity-value-species-' + key + '">' + Math.round(DEFAULT_OPACITY * 100) + '%</span></label>' +
-                    '<input type="range" id="opacity-species-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY * 100) + '" ' +
-                    'oninput="updateSpeciesSurveyOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-species-' + key + '\').textContent = this.value + \'%\'"></div>';
             });
             div.innerHTML += '</div>';
             
