@@ -462,14 +462,13 @@
                 name: 'Risk Blend CV (100m)',
                 discreteColors: {
                     0: '#2166ac',
-                    1: '#4393c3',
                     2: '#92c5de',
                     3: '#d1e5f0',
+                    4: '#f7f7f7',
                     5: '#fddbc7',
                     6: '#f4a582',
                     7: '#d6604d',
-                    8: '#b2182b',
-                    9: '#7f0000'
+                    8: '#b2182b'
                 },
                 noDataValue: 255,
                 labels: ['Low Variability', 'High Variability'],
@@ -477,15 +476,14 @@
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
-                    { value: 0, color: '#2166ac', label: '0 – Very Low CV' },
-                    { value: 1, color: '#4393c3', label: '1 – Low CV' },
-                    { value: 2, color: '#92c5de', label: '2 – Low-Moderate CV' },
-                    { value: 3, color: '#d1e5f0', label: '3 – Moderate CV' },
+                    { value: 0, color: '#2166ac', label: '0 – No Variability' },
+                    { value: 2, color: '#92c5de', label: '2 – Low CV' },
+                    { value: 3, color: '#d1e5f0', label: '3 – Low-Moderate CV' },
+                    { value: 4, color: '#f7f7f7', label: '4 – Moderate CV' },
                     { value: 5, color: '#fddbc7', label: '5 – Moderate-High CV' },
                     { value: 6, color: '#f4a582', label: '6 – High CV' },
                     { value: 7, color: '#d6604d', label: '7 – Very High CV' },
-                    { value: 8, color: '#b2182b', label: '8 – Extreme CV' },
-                    { value: 9, color: '#7f0000', label: '9 – Extreme+ CV' }
+                    { value: 8, color: '#b2182b', label: '8 – Extreme CV' }
                 ]
             },
             'diff_blend_minus_basic': {
