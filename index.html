@@ -741,74 +741,32 @@
         // ADMIN BOUNDARIES (placeholder — swap in your boundary file)
         // =====================================================================
         function updateAdminBoundaryStyle() {
-            if (adminBoundariesLayer) {
-                var boundaryColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
-                adminBoundariesLayer.setStyle(function(feature) {
-                    return {
-                        fillColor: 'transparent',
-                        fillOpacity: 0,
-                        color: boundaryColor,
-                        weight: 1,
-                        opacity: 1
-                    };
-                });
-            }
+            // M-Region boundary is always black, no dynamic color switching needed
         }
 
         function loadAdminBoundaries() {
-            fetch('admin.json')
+            fetch('m_region.json')
                 .then(response => {
-                    if (!response.ok) throw new Error('Admin boundaries file not found');
+                    if (!response.ok) throw new Error('M-Region boundary file not found');
                     return response.json();
                 })
                 .then(data => {
-                    updateStatus('Loaded ' + data.features.length + ' admin boundaries');
-                    var initialColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
+                    updateStatus('Loaded M-Region boundary');
                     adminBoundariesLayer = L.geoJSON(data, {
-                        style: function(feature) {
-                            return {
-                                fillColor: 'transparent',
-                                fillOpacity: 0,
-                                color: initialColor,
-                                weight: 1,
-                                opacity: 1
-                            };
+                        style: {
+                            fillColor: 'transparent',
+                            fillOpacity: 0,
+                            color: '#000000',
+                            weight: 2,
+                            opacity: 1
                         },
                         pane: 'boundariesPane',
-                        onEachFeature: function(feature, layer) {
-                            var p = feature.properties;
-                            var countryName = (p.Country === 'BGD') ? 'Bangladesh' : (p.Country === 'IND') ? 'India' : (p.Country || '');
-                            var popupContent = '<h3>' + (p.Name || '') + '</h3><table>';
-                            popupContent += '<tr><td>District</td><td>' + (p.Name || '') + '</td></tr>';
-                            popupContent += '<tr><td>Country</td><td>' + countryName + '</td></tr>';
-                            if (p.FID !== null && p.FID !== undefined && p.FID !== '') {
-                                popupContent += '<tr><td>FID</td><td>' + p.FID + '</td></tr>';
-                            }
-                            popupContent += '</table>';
-                            layer.bindPopup(popupContent, { maxWidth: 300 });
-
-                            // Highlight on hover
-                            layer.on('mouseover', function(e) {
-                                var hoverColor = (currentLayer === 'basic_risk' || currentLayer === 'blend_risk') ? '#FFFFFF' : '#000000';
-                                this.setStyle({
-                                    weight: 3,
-                                    color: hoverColor,
-                                    fillColor: hoverColor,
-                                    fillOpacity: 0.1
-                                });
-                                if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-                                    this.bringToFront();
-                                }
-                            });
-                            layer.on('mouseout', function(e) {
-                                adminBoundariesLayer.resetStyle(this);
-                            });
-                        }
+                        interactive: false
                     });
                     adminBoundariesLayer.addTo(map);
                 })
                 .catch(error => {
-                    console.log('Admin boundaries file not found - layer will not be available');
+                    console.log('M-Region boundary file not found - layer will not be available');
                 });
         }
 
@@ -1307,7 +1265,7 @@
             div.innerHTML += '<div class="overlay-section">';
             div.innerHTML += '<h4 style="margin:0 0 8px; font-size:13px;">Overlays</h4>';
             div.innerHTML += '<label><input type="checkbox" id="nipah-cases-toggle" checked onchange="toggleNipahCases(this.checked)">Nipah Outbreak Locations</label>';
-            div.innerHTML += '<label><input type="checkbox" id="admin-toggle" checked onchange="toggleAdminBoundaries(this.checked)">Admin Boundaries</label>';
+            div.innerHTML += '<label><input type="checkbox" id="admin-toggle" checked onchange="toggleAdminBoundaries(this.checked)">M-Region Boundary</label>';
             div.innerHTML += '</div>';
             
             div.innerHTML += '<div class="opacity-section"><h5>Layer Opacity</h5>';
