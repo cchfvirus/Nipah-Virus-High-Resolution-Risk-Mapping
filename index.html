@@ -325,48 +325,22 @@
             'diff_blend_minus_basic': {}
         };
 
-        // =====================================================================
-        // GBIF Role-based coloring (placeholder — kept from original)
-        // =====================================================================
-        var gbifRoleColorPalette = {
-            'Reservoir':       '#e31a1c',
-            'Host':            '#ff7f00',
-            'Vector':          '#6a3d9a',
-            'Predator':        '#1f78b4',
-            'Prey':            '#b2df8a',
-            'Carrier':         '#fb9a99',
-            'Sentinel':        '#33a02c',
-            'Commensal':       '#fdbf6f',
-            'Unknown':         '#999999',
-            'Incidental Host': '#cab2d6'
-        };
-        var gbifRoleFallbackColors = [
-            '#a6cee3', '#b15928', '#ffff99', '#66c2a5', '#fc8d62',
-            '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f', '#e5c494'
-        ];
-        var gbifRoleFallbackIndex = 0;
-        var gbifRoleColors = {};
-        var gbifRoleList = [];
-        var gbifRoleCounts = {};
-        var hiddenGbifRoles = {};
-        
-        function getGbifRoleColor(role) {
-            if (!role || role === '' || role === null) role = 'Unknown';
-            if (gbifRoleColors[role]) return gbifRoleColors[role];
-            if (gbifRoleColorPalette[role]) {
-                gbifRoleColors[role] = gbifRoleColorPalette[role];
-            } else {
-                gbifRoleColors[role] = gbifRoleFallbackColors[gbifRoleFallbackIndex % gbifRoleFallbackColors.length];
-                gbifRoleFallbackIndex++;
-            }
-            return gbifRoleColors[role];
-        }
 
         // =====================================================================
         // VECTOR OVERLAY CONFIGS — Outbreaks & Survey Data
         // =====================================================================
         var speciesSurveyLayers = {};
         var speciesSurveyConfigs = {
+            'gbif_bats': {
+                file: 'gbif_bats.geojson',
+                name: 'GBIF Bat Species Occurrences',
+                color: '#8B5CF6',
+                fillColor: '#8B5CF6',
+                radius: 5,
+                weight: 1.5,
+                icon: 'circle',
+                colorBySpecies: true
+            },
             'nipah_survey': {
                 file: 'survey.json',
                 name: 'Bat Survey & Phylogeographic Data',
@@ -375,9 +349,27 @@
                 radius: 7,
                 weight: 2,
                 icon: 'diamond',
-                colorByRole: false
+                colorBySpecies: false
             }
         };
+
+        // Species color palette for GBIF bat data
+        var gbifSpeciesColors = {
+            'Pteropus medius':           '#e31a1c',
+            'Pteropus giganteus':        '#ff7f00',
+            'Rousettus leschenaultii':   '#6a3d9a',
+            'Hipposideros larvatus':     '#1f78b4',
+            'Pteropus vampyrus':        '#33a02c',
+            'Rousettus amplexicaudatus': '#fb9a99'
+        };
+        var gbifSpeciesList = [];
+        var gbifSpeciesCounts = {};
+        var hiddenGbifSpecies = {};
+
+        function getGbifSpeciesColor(species) {
+            if (!species || species === '') return '#999999';
+            return gbifSpeciesColors[species] || '#999999';
+        }
 
         // =====================================================================
         // LAYER CONFIGURATIONS — all 6 raster layers loaded via georaster
@@ -800,39 +792,33 @@
                     var featureCount = data.features ? data.features.length : 0;
                     updateStatus('Loaded ' + config.name + ' (' + featureCount + ' features)');
                     
-                    if (layerId === 'gbif_species' && config.colorByRole) {
-                        gbifRoleList = [];
-                        gbifRoleCounts = {};
-                        gbifRoleColors = {};
-                        gbifRoleFallbackIndex = 0;
+                    // Build species list for GBIF bats
+                    if (layerId === 'gbif_bats' && config.colorBySpecies) {
+                        gbifSpeciesList = [];
+                        gbifSpeciesCounts = {};
                         data.features.forEach(function(f) {
-                            var role = (f.properties && f.properties.Role) ? f.properties.Role.trim() : 'Unknown';
-                            if (!role || role === '') role = 'Unknown';
-                            if (!gbifRoleCounts[role]) { gbifRoleCounts[role] = 0; gbifRoleList.push(role); }
-                            gbifRoleCounts[role]++;
+                            var sp = (f.properties && f.properties.Binomial) ? f.properties.Binomial.trim() : 'Unknown';
+                            if (!sp || sp === '') sp = 'Unknown';
+                            if (!gbifSpeciesCounts[sp]) { gbifSpeciesCounts[sp] = 0; gbifSpeciesList.push(sp); }
+                            gbifSpeciesCounts[sp]++;
                         });
-                        var roleOrder = ['Reservoir', 'Host', 'Vector', 'Carrier', 'Predator', 'Prey', 'Sentinel', 'Commensal', 'Incidental Host'];
-                        gbifRoleList.sort(function(a, b) {
-                            var ia = roleOrder.indexOf(a), ib = roleOrder.indexOf(b);
-                            if (ia === -1 && ib === -1) return a.localeCompare(b);
-                            if (ia === -1) return 1;
-                            if (ib === -1) return -1;
-                            return ia - ib;
+                        gbifSpeciesList.sort(function(a, b) {
+                            return (gbifSpeciesCounts[b] || 0) - (gbifSpeciesCounts[a] || 0);
                         });
-                        gbifRoleList.forEach(function(role) { getGbifRoleColor(role); });
                     }
                     
                     var geojsonLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
-                            if (layerId === 'gbif_species' && config.colorByRole) {
-                                var role = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
-                                if (!role || role === '') role = 'Unknown';
-                                var roleColor = getGbifRoleColor(role);
+                            // Species-colored circles for GBIF bats
+                            if (layerId === 'gbif_bats' && config.colorBySpecies) {
+                                var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
+                                var spColor = getGbifSpeciesColor(sp);
                                 return L.circleMarker(latlng, {
-                                    color: '#000000', fillColor: roleColor, fillOpacity: 0.9,
-                                    radius: config.radius, weight: config.weight || 2, pane: 'speciesVectorPane'
+                                    color: '#000000', fillColor: spColor, fillOpacity: 0.9,
+                                    radius: config.radius, weight: config.weight || 1.5, pane: 'speciesVectorPane'
                                 });
                             }
+                            // Diamond icon for survey data
                             if (config.icon && config.icon !== 'circle') {
                                 var icon = createSvgIcon(config.icon, config.fillColor, 14);
                                 if (icon) return L.marker(latlng, { icon: icon, pane: 'speciesVectorPane' });
@@ -847,10 +833,9 @@
                             return { color: config.color, fillColor: config.fillColor, fillOpacity: 0.4, weight: 2, opacity: 0.8 };
                         },
                         filter: function(feature) {
-                            if (layerId === 'gbif_species' && config.colorByRole) {
-                                var role = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
-                                if (!role || role === '') role = 'Unknown';
-                                if (hiddenGbifRoles[role]) return false;
+                            if (layerId === 'gbif_bats' && config.colorBySpecies) {
+                                var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
+                                if (hiddenGbifSpecies[sp]) return false;
                             }
                             return true;
                         },
@@ -859,8 +844,19 @@
                             var p = feature.properties;
                             var popupContent;
                             
-                            // Custom popup for survey data
-                            if (layerId === 'nipah_survey') {
+                            // GBIF bat popup
+                            if (layerId === 'gbif_bats') {
+                                popupContent = '<h3><em>' + (p.Binomial || '') + '</em></h3><table>';
+                                if (p.Scientific_Name_Full) popupContent += '<tr><td>Full Name</td><td><em>' + p.Scientific_Name_Full + '</em></td></tr>';
+                                if (p.Country) popupContent += '<tr><td>Country</td><td>' + p.Country + '</td></tr>';
+                                if (p.Year_Collected && p.Year_Collected !== 'None' && p.Year_Collected !== null) popupContent += '<tr><td>Year Collected</td><td>' + Math.round(p.Year_Collected) + '</td></tr>';
+                                popupContent += '<tr><td>Coordinates</td><td>' + (p.Latitude ? parseFloat(p.Latitude).toFixed(4) : '') + ', ' + (p.Longitude ? parseFloat(p.Longitude).toFixed(4) : '') + '</td></tr>';
+                                if (p.Record_Completeness) popupContent += '<tr><td>Record Quality</td><td>' + p.Record_Completeness + '</td></tr>';
+                                if (p.GBIF_Species_URL) popupContent += '<tr><td>GBIF Link</td><td><a href="' + p.GBIF_Species_URL + '" target="_blank">View on GBIF</a></td></tr>';
+                                popupContent += '</table>';
+                            }
+                            // Survey popup
+                            else if (layerId === 'nipah_survey') {
                                 var locName = (p.Location_Name || '').replace(/_/g, ' ');
                                 popupContent = '<h3>' + locName + '</h3><table>';
                                 if (p.Data_Type) popupContent += '<tr><td>Data Type</td><td>' + p.Data_Type.replace(/_/g, ' ') + '</td></tr>';
@@ -877,8 +873,9 @@
                                 if (p.Source_Study) popupContent += '<tr><td>Source</td><td style="font-size:10px;">' + p.Source_Study + '</td></tr>';
                                 if (p.Publication_DOI && p.Publication_DOI !== 'None') popupContent += '<tr><td>DOI</td><td style="font-size:10px;"><a href="https://doi.org/' + p.Publication_DOI + '" target="_blank">' + p.Publication_DOI + '</a></td></tr>';
                                 popupContent += '</table>';
-                            } else {
-                                // Generic popup for other layers
+                            }
+                            // Generic fallback
+                            else {
                                 popupContent = '<h3>' + config.name + '</h3><table>';
                                 for (var key in p) {
                                     if (p.hasOwnProperty(key)) {
@@ -895,7 +892,7 @@
                     });
                     
                     speciesSurveyLayers[layerId] = geojsonLayer;
-                    if (layerId === 'gbif_species') speciesSurveyLayers['gbif_species_data'] = data;
+                    if (layerId === 'gbif_bats') speciesSurveyLayers['gbif_bats_data'] = data;
 
                     geojsonLayer.addTo(map);
                     activeLayers['species_' + layerId] = true;
@@ -906,43 +903,40 @@
                 });
         }
         
-        function toggleGbifRole(role, show) {
-            if (show) { delete hiddenGbifRoles[role]; } else { hiddenGbifRoles[role] = true; }
-            if (activeLayers['species_gbif_species'] && speciesSurveyLayers['gbif_species_data']) {
-                if (speciesSurveyLayers['gbif_species']) map.removeLayer(speciesSurveyLayers['gbif_species']);
-                var config = speciesSurveyConfigs['gbif_species'];
-                var data = speciesSurveyLayers['gbif_species_data'];
+        function toggleGbifSpecies(species, show) {
+            if (show) { delete hiddenGbifSpecies[species]; } else { hiddenGbifSpecies[species] = true; }
+            if (activeLayers['species_gbif_bats'] && speciesSurveyLayers['gbif_bats_data']) {
+                if (speciesSurveyLayers['gbif_bats']) map.removeLayer(speciesSurveyLayers['gbif_bats']);
+                var config = speciesSurveyConfigs['gbif_bats'];
+                var data = speciesSurveyLayers['gbif_bats_data'];
                 var geojsonLayer = L.geoJSON(data, {
                     pointToLayer: function(feature, latlng) {
-                        var r = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
-                        if (!r || r === '') r = 'Unknown';
-                        var roleColor = getGbifRoleColor(r);
+                        var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
+                        var spColor = getGbifSpeciesColor(sp);
                         return L.circleMarker(latlng, {
-                            color: '#000000', fillColor: roleColor, fillOpacity: 0.9,
-                            radius: config.radius, weight: config.weight || 2, pane: 'speciesVectorPane'
+                            color: '#000000', fillColor: spColor, fillOpacity: 0.9,
+                            radius: config.radius, weight: config.weight || 1.5, pane: 'speciesVectorPane'
                         });
                     },
                     filter: function(feature) {
-                        var r = (feature.properties && feature.properties.Role) ? feature.properties.Role.trim() : 'Unknown';
-                        if (!r || r === '') r = 'Unknown';
-                        return !hiddenGbifRoles[r];
+                        var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
+                        return !hiddenGbifSpecies[sp];
                     },
                     pane: 'speciesVectorPane',
                     onEachFeature: function(feature, layer) {
-                        var popupContent = '<h3>' + config.name + '</h3><table>';
-                        for (var key in feature.properties) {
-                            if (feature.properties.hasOwnProperty(key)) {
-                                var value = feature.properties[key];
-                                if (value === null || value === undefined || value === '') continue;
-                                var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
-                                popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
-                            }
-                        }
+                        var p = feature.properties;
+                        var popupContent = '<h3><em>' + (p.Binomial || '') + '</em></h3><table>';
+                        if (p.Scientific_Name_Full) popupContent += '<tr><td>Full Name</td><td><em>' + p.Scientific_Name_Full + '</em></td></tr>';
+                        if (p.Country) popupContent += '<tr><td>Country</td><td>' + p.Country + '</td></tr>';
+                        if (p.Year_Collected && p.Year_Collected !== 'None' && p.Year_Collected !== null) popupContent += '<tr><td>Year Collected</td><td>' + Math.round(p.Year_Collected) + '</td></tr>';
+                        popupContent += '<tr><td>Coordinates</td><td>' + (p.Latitude ? parseFloat(p.Latitude).toFixed(4) : '') + ', ' + (p.Longitude ? parseFloat(p.Longitude).toFixed(4) : '') + '</td></tr>';
+                        if (p.Record_Completeness) popupContent += '<tr><td>Record Quality</td><td>' + p.Record_Completeness + '</td></tr>';
+                        if (p.GBIF_Species_URL) popupContent += '<tr><td>GBIF Link</td><td><a href="' + p.GBIF_Species_URL + '" target="_blank">View on GBIF</a></td></tr>';
                         popupContent += '</table>';
-                        layer.bindPopup(popupContent, { maxWidth: 300, maxHeight: 400 });
+                        layer.bindPopup(popupContent, { maxWidth: 350, maxHeight: 450 });
                     }
                 });
-                speciesSurveyLayers['gbif_species'] = geojsonLayer;
+                speciesSurveyLayers['gbif_bats'] = geojsonLayer;
                 geojsonLayer.addTo(map);
             }
             updateLegend();
@@ -1184,20 +1178,34 @@
                 legendDiv.innerHTML += '<h4>Species & Survey Data</h4>';
                 activeSpeciesVectors.forEach(function(key) {
                     var cfg = speciesSurveyConfigs[key];
-                    if (key === 'gbif_species' && cfg.colorByRole && gbifRoleList.length > 0) {
-                        legendDiv.innerHTML += '<div style="font-size:11px; font-weight:bold; margin-bottom:4px;">GBIF Species by Ecology Role</div>';
-                        gbifRoleList.forEach(function(role) {
-                            var color = getGbifRoleColor(role);
-                            var count = gbifRoleCounts[role] || 0;
-                            var isHidden = hiddenGbifRoles[role];
+                    if (key === 'gbif_bats' && cfg.colorBySpecies && gbifSpeciesList.length > 0) {
+                        legendDiv.innerHTML += '<div style="font-size:11px; font-weight:bold; margin-bottom:4px;">GBIF Bat Occurrences by Species</div>';
+                        gbifSpeciesList.forEach(function(species) {
+                            var color = getGbifSpeciesColor(species);
+                            var count = gbifSpeciesCounts[species] || 0;
+                            var isHidden = hiddenGbifSpecies[species];
                             var checkedAttr = isHidden ? '' : 'checked';
                             var hiddenClass = isHidden ? ' hidden-class' : '';
-                            var escapedRole = role.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            var escapedSpecies = species.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                             legendDiv.innerHTML += '<div class="item toggleable' + hiddenClass + '">' +
-                                '<input type="checkbox" ' + checkedAttr + ' onchange="toggleGbifRole(\'' + escapedRole + '\', this.checked)">' +
+                                '<input type="checkbox" ' + checkedAttr + ' onchange="toggleGbifSpecies(\'' + escapedSpecies + '\', this.checked)">' +
                                 '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + color + 
-                                ';border:2px solid #000000;margin-right:6px;vertical-align:middle;"></span>' +
-                                '<span style="font-size:11px;">' + role + ' <span style="color:#999;">(' + count + ')</span></span></div>';
+                                ';border:1.5px solid #000000;margin-right:6px;vertical-align:middle;"></span>' +
+                                '<span style="font-size:11px;"><em>' + species + '</em> <span style="color:#999;">(' + count + ')</span></span></div>';
+                        });
+                        return;
+                    }
+                    // Survey layer - diamond symbol
+                    if (key === 'nipah_survey') {
+                        legendDiv.innerHTML += '<div class="item">' +
+                            '<svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:8px;"><polygon points="7,0 14,7 7,14 0,7" fill="' + cfg.fillColor + '" stroke="#000" stroke-width="1"/></svg>' +
+                            '<span style="font-size:11px;">' + cfg.name + '</span></div>';
+                        return;
+                    }
+                    var symbolHtml = '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + cfg.fillColor + ';border:1px solid #000;margin-right:8px;vertical-align:middle;"></span>';
+                    legendDiv.innerHTML += '<div class="item">' + symbolHtml + '<span style="font-size:11px;">' + cfg.name + '</span></div>';
+                });
+            }
                         });
                         return;
                     }
