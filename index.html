@@ -251,10 +251,47 @@
         .copy-notification.show {
             opacity: 1;
         }
+        
+        .layer-description {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 14px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 800;
+            max-width: 420px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #333;
+            resize: both;
+            overflow: auto;
+            min-width: 200px;
+            min-height: 30px;
+            max-height: 200px;
+            cursor: default;
+        }
+        
+        .layer-description h4 {
+            margin: 0 0 4px;
+            font-size: 12px;
+            color: #222;
+        }
+        
+        .layer-description p {
+            margin: 0;
+        }
+        
+        .layer-description.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="layer-description" class="layer-description hidden"></div>
     <div id="copy-notification" class="copy-notification"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -388,16 +425,16 @@
             'enm_cv': {
                 file: 'enm_cv.tif',
                 name: 'ENM Coefficient of Variation (1km)',
-                colors: ['#f7fcf5', '#c7e9c0', '#74c476', '#31a354', '#006d2c'],
+                colors: ['#edf8e9', '#74c476', '#31a354', '#006d2c', '#00441b'],
                 domain: [0, 297],
                 labels: ['Low Uncertainty', 'High Uncertainty'],
-                description: 'Model uncertainty (CV across replicates)',
+                description: '',
                 mode: 'lch',
                 continuousLegend: true
             },
             'basic_risk': {
                 file: 'risk_basic.tif',
-                name: 'Basic Exposure Risk Index (100m)',
+                name: 'Baseline Risk (ENM + Pop)',
                 discreteColors: {
                     0: '#000000',
                     1: '#FFFFBE',
@@ -409,7 +446,8 @@
                 },
                 noDataValue: 15,
                 labels: ['No Risk', 'Very High Risk'],
-                description: 'Nipah Transmission Risk – Basic Model (ENM×Pop)',
+                description: '',
+                infoDescription: 'Product of ENM suitability (0–3) and population count (0–3) classes. Values range 0–9, where 0 = ecologically unsuitable or uninhabited and 9 = highest suitability co-occurring with highest population. Provides a baseline exposure risk before any land cover adjustment.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -424,7 +462,7 @@
             },
             'blend_risk': {
                 file: 'risk_blend.tif',
-                name: 'Blended Exposure Risk Index (100m)',
+                name: 'Landcover Weighted Risk (ENM + Pop + LC)',
                 discreteColors: {
                     0: '#000000',
                     1: '#FFFFBE',
@@ -436,7 +474,8 @@
                 },
                 noDataValue: 15,
                 labels: ['No Risk', 'Very High Risk'],
-                description: 'Nipah Transmission Risk – Blended Model (ENM×Pop×LC)',
+                description: '',
+                infoDescription: 'Ensemble mean of 9 scenarios (3 α × 3 blend steepness) where baseline risk is modified by region-specific land cover weights. Outbreak-associated land cover types (Built, Crops, Flooded vegetation) boost risk; underrepresented types (Water, Grass, Bare ground) dampen it. Integrates ecology, population, and landscape context into a single composite index.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -451,56 +490,58 @@
             },
             'risk_blend_cv': {
                 file: 'risk_blend_cv.tif',
-                name: 'Risk Blend CV (100m)',
+                name: 'Ensemble CV',
                 discreteColors: {
                     0: '#000000',
-                    2: '#92c5de',
-                    3: '#d1e5f0',
-                    4: '#f7f7f7',
-                    5: '#fddbc7',
-                    6: '#f4a582',
-                    7: '#d6604d',
-                    8: '#b2182b'
+                    2: '#edf8e9',
+                    3: '#a1d99b',
+                    4: '#74c476',
+                    5: '#31a354',
+                    6: '#006d2c',
+                    7: '#00441b',
+                    8: '#002d12'
                 },
                 noDataValue: 255,
-                labels: ['Low Variability', 'High Variability'],
-                description: 'Coefficient of variation across blended risk ensemble',
+                labels: ['Low CV', 'High CV'],
+                description: '',
+                infoDescription: 'Coefficient of variation (SD/mean × 100) across 9 ensemble members. Low values indicate stable risk estimates regardless of parameter choice. Higher values identify cells sensitive to α and blend steepness parameters, providing a spatially explicit measure of methodological uncertainty.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
                     { value: 0, color: '#000000', label: '0 – No Variability' },
-                    { value: 2, color: '#92c5de', label: '2 – Low CV' },
-                    { value: 3, color: '#d1e5f0', label: '3 – Low-Moderate CV' },
-                    { value: 4, color: '#f7f7f7', label: '4 – Moderate CV' },
-                    { value: 5, color: '#fddbc7', label: '5 – Moderate-High CV' },
-                    { value: 6, color: '#f4a582', label: '6 – High CV' },
-                    { value: 7, color: '#d6604d', label: '7 – Very High CV' },
-                    { value: 8, color: '#b2182b', label: '8 – Extreme CV' }
+                    { value: 2, color: '#edf8e9', label: '2 – Low CV' },
+                    { value: 3, color: '#a1d99b', label: '3 – Low-Moderate CV' },
+                    { value: 4, color: '#74c476', label: '4 – Moderate CV' },
+                    { value: 5, color: '#31a354', label: '5 – Moderate-High CV' },
+                    { value: 6, color: '#006d2c', label: '6 – High CV' },
+                    { value: 7, color: '#00441b', label: '7 – Very High CV' },
+                    { value: 8, color: '#002d12', label: '8 – Extreme CV' }
                 ]
             },
             'diff_blend_minus_basic': {
                 file: 'diff_blend_minus_basic.tif',
-                name: 'Difference: Blend − Basic (100m)',
+                name: 'Normalized Difference Surface',
                 discreteColors: {
                     1: '#2166ac',
                     2: '#67a9cf',
-                    3: '#d1e5f0',
-                    4: '#f7f7f7',
-                    5: '#fddbc7',
+                    3: '#92c5de',
+                    4: '#333333',
+                    5: '#f4a582',
                     6: '#ef8a62',
                     7: '#b2182b'
                 },
                 noDataValue: 15,
                 labels: ['Decrease', 'Increase'],
-                description: 'Change in normalized risk: blended vs basic model',
+                description: '',
+                infoDescription: 'Difference between normalized (0–1) land-cover-weighted ensemble mean and normalized baseline. Positive values = land cover increased risk (Built, Crops, Flooded vegetation). Negative values = land cover reduced risk (forested areas). Near zero = minimal land cover effect. Isolates the specific contribution of landscape context beyond ecology and population.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
                     { value: 1, color: '#2166ac', label: '1 – Large Decrease' },
                     { value: 2, color: '#67a9cf', label: '2 – Moderate Decrease' },
-                    { value: 3, color: '#d1e5f0', label: '3 – Small Decrease' },
-                    { value: 4, color: '#f7f7f7', label: '4 – No Change' },
-                    { value: 5, color: '#fddbc7', label: '5 – Small Increase' },
+                    { value: 3, color: '#92c5de', label: '3 – Small Decrease' },
+                    { value: 4, color: '#333333', label: '4 – No Change' },
+                    { value: 5, color: '#f4a582', label: '5 – Small Increase' },
                     { value: 6, color: '#ef8a62', label: '6 – Moderate Increase' },
                     { value: 7, color: '#b2182b', label: '7 – Large Increase' }
                 ]
@@ -1083,6 +1124,22 @@
             }
             updateLegend();
             updateAdminBoundaryStyle();
+            updateDescriptionBox();
+        }
+
+        function updateDescriptionBox() {
+            var descDiv = document.getElementById('layer-description');
+            if (!currentLayer || !layerConfigs[currentLayer]) {
+                descDiv.classList.add('hidden');
+                return;
+            }
+            var config = layerConfigs[currentLayer];
+            if (config.infoDescription) {
+                descDiv.innerHTML = '<h4>' + config.name + '</h4><p>' + config.infoDescription + '</p>';
+                descDiv.classList.remove('hidden');
+            } else {
+                descDiv.classList.add('hidden');
+            }
         }
         
         function toggleClass(layerId, classValue, show) {
@@ -1294,8 +1351,21 @@
             var config = layerConfigs[currentLayer];
             var displayValue;
             if (value !== null) {
-                if (config.discreteDisplay) { displayValue = Math.round(value).toString(); }
-                else { displayValue = value.toFixed(4); }
+                if (config.discreteDisplay) {
+                    var intVal = Math.round(value);
+                    displayValue = intVal.toString();
+                    // Look up matching legend label
+                    if (config.legendItems) {
+                        for (var i = 0; i < config.legendItems.length; i++) {
+                            if (config.legendItems[i].value === intVal) {
+                                displayValue = config.legendItems[i].label;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    displayValue = value.toFixed(4);
+                }
             } else {
                 displayValue = 'No Data';
             }
