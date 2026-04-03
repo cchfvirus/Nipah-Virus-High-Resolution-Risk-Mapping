@@ -288,83 +288,10 @@
             display: none;
         }
         
-        /* Swipe comparison slider */
-        .swipe-slider {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: #fff;
-            cursor: ew-resize;
-            z-index: 499;
-            box-shadow: 0 0 8px rgba(0,0,0,0.5);
-        }
-        
-        .swipe-slider::after {
-            content: '⟨⟩';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            color: #333;
-            box-shadow: 0 0 6px rgba(0,0,0,0.4);
-            letter-spacing: 2px;
-            z-index: 499;
-        }
-        
-        .swipe-label {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 3px;
-            font-size: 11px;
-            z-index: 499;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-        
-        .swipe-label-left {
-            right: 20px;
-        }
-        
-        .swipe-label-right {
-            left: 20px;
-        }
-        
-        .swipe-notice {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.75);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 499;
-            pointer-events: none;
-        }
-        
-        .swipe-notice.hidden {
-            display: none;
-        }
-    </style>
+        </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="swipe-slider" class="swipe-slider" style="display:none;"></div>
-    <div id="swipe-notice" class="swipe-notice hidden">Swipe to compare layers</div>
     <div id="layer-description" class="layer-description hidden"></div>
     <div id="copy-notification" class="copy-notification"></div>
 
@@ -387,7 +314,7 @@
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 300;
         
-        // Individual panes for each raster layer (needed for swipe comparison)
+        // Individual panes for each raster layer
         var rasterPaneIds = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
         rasterPaneIds.forEach(function(id, i) {
             map.createPane('raster_' + id);
@@ -1203,7 +1130,6 @@
             updateLegend();
             updateAdminBoundaryStyle();
             updateDescriptionBox();
-            updateSwipe();
         }
 
         function updateDescriptionBox() {
@@ -1221,151 +1147,7 @@
             }
         }
 
-        // =====================================================================
-        // SWIPE COMPARISON (activates when exactly 2 raster layers are checked)
-        // Left side = first checked layer, Right side = second checked layer
-        // =====================================================================
-        var swipeActive = false;
-        var swipeSlider = null;
-        var swipeLeftLayer = null;
-        var swipeRightLayer = null;
-        var swipePosition = 0.5; // 0-1, fraction from left
 
-        function getActiveRasterLayers() {
-            var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
-            var active = [];
-            for (var i = 0; i < rasterKeys.length; i++) {
-                if (activeLayers[rasterKeys[i]] && layers[rasterKeys[i]]) {
-                    active.push(rasterKeys[i]);
-                }
-            }
-            return active;
-        }
-
-        function updateSwipe() {
-            var activeRasters = getActiveRasterLayers();
-            var slider = document.getElementById('swipe-slider');
-            var notice = document.getElementById('swipe-notice');
-            
-            if (activeRasters.length === 2) {
-                // Activate swipe mode
-                swipeLeftLayer = activeRasters[0];
-                swipeRightLayer = activeRasters[1];
-                swipeActive = true;
-                
-                slider.style.display = 'block';
-                slider.style.left = (swipePosition * 100) + '%';
-                notice.classList.remove('hidden');
-                notice.innerHTML = '<span style="color:#aaa;">◀</span> ' + 
-                    layerConfigs[swipeLeftLayer].name + 
-                    ' <span style="color:#aaa;">|</span> ' + 
-                    layerConfigs[swipeRightLayer].name + 
-                    ' <span style="color:#aaa;">▶</span>';
-                
-                // Delay clip application to allow georaster canvas to render
-                setTimeout(applySwipeClip, 200);
-                setTimeout(applySwipeClip, 500);
-                setTimeout(applySwipeClip, 1000);
-                setTimeout(applySwipeClip, 2000);
-                
-                // Fade notice after 4 seconds
-                setTimeout(function() { notice.classList.add('hidden'); }, 4000);
-            } else {
-                // Deactivate swipe mode — remove all clips
-                if (swipeActive) {
-                    clearAllSwipeClips();
-                }
-                swipeActive = false;
-                swipeLeftLayer = null;
-                swipeRightLayer = null;
-                slider.style.display = 'none';
-                notice.classList.add('hidden');
-            }
-        }
-
-        function clearAllSwipeClips() {
-            var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
-            rasterKeys.forEach(function(id) {
-                var pane = map.getPane('raster_' + id);
-                if (pane) {
-                    pane.style.clip = '';
-                    pane.style.clipPath = '';
-                    pane.style.webkitClipPath = '';
-                }
-            });
-        }
-
-        function applySwipeClip() {
-            if (!swipeActive || !swipeLeftLayer || !swipeRightLayer) return;
-            
-            var container = map.getContainer();
-            var rect = container.getBoundingClientRect();
-            var w = rect.width;
-            var h = rect.height;
-            var clipX = Math.round(swipePosition * w);
-            
-            // Clear all clips first
-            clearAllSwipeClips();
-            
-            // Use clip-path with pixel values relative to pane
-            var leftPane = map.getPane('raster_' + swipeLeftLayer);
-            if (leftPane) {
-                leftPane.style.clipPath = 'polygon(0 0, ' + clipX + 'px 0, ' + clipX + 'px ' + h + 'px, 0 ' + h + 'px)';
-            }
-            
-            var rightPane = map.getPane('raster_' + swipeRightLayer);
-            if (rightPane) {
-                rightPane.style.clipPath = 'polygon(' + clipX + 'px 0, ' + w + 'px 0, ' + w + 'px ' + h + 'px, ' + clipX + 'px ' + h + 'px)';
-            }
-        }
-
-        // Drag handler for the swipe slider
-        (function() {
-            var slider = document.getElementById('swipe-slider');
-            var dragging = false;
-            
-            slider.addEventListener('mousedown', function(e) {
-                dragging = true;
-                e.preventDefault();
-            });
-            
-            slider.addEventListener('touchstart', function(e) {
-                dragging = true;
-                e.preventDefault();
-            });
-            
-            document.addEventListener('mousemove', function(e) {
-                if (!dragging || !swipeActive) return;
-                var mapRect = document.getElementById('map').getBoundingClientRect();
-                var x = e.clientX - mapRect.left;
-                swipePosition = Math.max(0.05, Math.min(0.95, x / mapRect.width));
-                slider.style.left = (swipePosition * 100) + '%';
-                applySwipeClip();
-            });
-            
-            document.addEventListener('touchmove', function(e) {
-                if (!dragging || !swipeActive) return;
-                var mapRect = document.getElementById('map').getBoundingClientRect();
-                var x = e.touches[0].clientX - mapRect.left;
-                swipePosition = Math.max(0.05, Math.min(0.95, x / mapRect.width));
-                slider.style.left = (swipePosition * 100) + '%';
-                applySwipeClip();
-            });
-            
-            document.addEventListener('mouseup', function() { dragging = false; });
-            document.addEventListener('touchend', function() { dragging = false; });
-        })();
-
-        // Re-apply clip on map move/zoom with staggered delays for canvas re-render
-        map.on('move zoom resize moveend zoomend', function() {
-            if (swipeActive) {
-                applySwipeClip();
-                setTimeout(applySwipeClip, 100);
-                setTimeout(applySwipeClip, 300);
-                setTimeout(applySwipeClip, 600);
-            }
-        });
-        
         function toggleClass(layerId, classValue, show) {
             if (!hiddenClasses[layerId]) return;
             if (show) { delete hiddenClasses[layerId][classValue]; } else { hiddenClasses[layerId][classValue] = true; }
