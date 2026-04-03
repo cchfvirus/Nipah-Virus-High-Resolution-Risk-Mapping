@@ -386,11 +386,15 @@
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 300;
         
-        map.createPane('analysisPane');
-        map.getPane('analysisPane').style.zIndex = 310;
+        // Individual panes for each raster layer (needed for swipe comparison)
+        var rasterPaneIds = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
+        rasterPaneIds.forEach(function(id, i) {
+            map.createPane('raster_' + id);
+            map.getPane('raster_' + id).style.zIndex = 310 + i;
+        });
         
         map.createPane('speciesRasterPane');
-        map.getPane('speciesRasterPane').style.zIndex = 315;
+        map.getPane('speciesRasterPane').style.zIndex = 320;
         
         map.createPane('speciesVectorPane');
         map.getPane('speciesVectorPane').style.zIndex = 360;
@@ -1140,7 +1144,7 @@
                         };
                     }
                     
-                    var layerPane = 'analysisPane';
+                    var layerPane = 'raster_' + layerId;
                     
                     var layer = new GeoRasterLayer({
                         georaster: georaster,
@@ -1257,67 +1261,51 @@
                     layerConfigs[swipeRightLayer].name + 
                     ' <span style="color:#aaa;">▶</span>';
                 
-                // Apply clip to right layer
+                // Apply clip
                 applySwipeClip();
                 
                 // Fade notice after 4 seconds
                 setTimeout(function() { notice.classList.add('hidden'); }, 4000);
             } else {
-                // Deactivate swipe mode
-                if (swipeActive && swipeRightLayer && layers[swipeRightLayer]) {
-                    // Remove clip from previously clipped layer
-                    var container = layers[swipeRightLayer].getContainer ? layers[swipeRightLayer].getContainer() : null;
-                    if (container) container.style.clip = '';
-                    // Also check the pane
-                    var pane = map.getPane('analysisPane');
-                    if (pane) {
-                        var canvases = pane.querySelectorAll('canvas');
-                        canvases.forEach(function(c) { c.style.clip = ''; });
-                    }
+                // Deactivate swipe mode — remove all clips
+                if (swipeActive) {
+                    clearAllSwipeClips();
                 }
                 swipeActive = false;
                 swipeLeftLayer = null;
                 swipeRightLayer = null;
                 slider.style.display = 'none';
                 notice.classList.add('hidden');
-                
-                // Clear all clips on analysis pane canvases
-                var pane = map.getPane('analysisPane');
-                if (pane) {
-                    var canvases = pane.querySelectorAll('canvas');
-                    canvases.forEach(function(c) { c.style.clip = ''; });
-                }
             }
         }
 
+        function clearAllSwipeClips() {
+            var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
+            rasterKeys.forEach(function(id) {
+                var pane = map.getPane('raster_' + id);
+                if (pane) pane.style.clip = '';
+            });
+        }
+
         function applySwipeClip() {
-            if (!swipeActive || !swipeRightLayer) return;
+            if (!swipeActive || !swipeLeftLayer || !swipeRightLayer) return;
             
             var mapSize = map.getSize();
             var clipX = Math.round(swipePosition * mapSize.x);
             
-            // Find all canvases in the analysis pane
-            var pane = map.getPane('analysisPane');
-            if (!pane) return;
+            // Clear all clips first
+            clearAllSwipeClips();
             
-            var canvases = pane.querySelectorAll('canvas');
-            if (canvases.length < 2) return;
+            // Left layer pane: clip to left portion
+            var leftPane = map.getPane('raster_' + swipeLeftLayer);
+            if (leftPane) {
+                leftPane.style.clip = 'rect(0px, ' + clipX + 'px, ' + mapSize.y + 'px, 0px)';
+            }
             
-            // The second canvas (right layer) gets clipped to right side
-            // First canvas (left layer) gets clipped to left side
-            var leftIdx = -1, rightIdx = -1;
-            
-            // Match canvases to layers by checking their data-layer or order
-            // georaster layers render as canvases in the order they were added
-            var canvasArr = Array.from(canvases);
-            
-            // Simple approach: first canvas = left layer (full left side), 
-            // last canvas = right layer (clipped to right side)
-            if (canvasArr.length >= 2) {
-                // Left layer: clip to left portion
-                canvasArr[0].style.clip = 'rect(0px, ' + clipX + 'px, ' + mapSize.y + 'px, 0px)';
-                // Right layer: clip to right portion
-                canvasArr[canvasArr.length - 1].style.clip = 'rect(0px, ' + mapSize.x + 'px, ' + mapSize.y + 'px, ' + clipX + 'px)';
+            // Right layer pane: clip to right portion
+            var rightPane = map.getPane('raster_' + swipeRightLayer);
+            if (rightPane) {
+                rightPane.style.clip = 'rect(0px, ' + mapSize.x + 'px, ' + mapSize.y + 'px, ' + clipX + 'px)';
             }
         }
 
@@ -1407,7 +1395,7 @@
                 opacity: layerOpacity,
                 pixelValuesToColorFn: pixelValuesToColorFn,
                 resolution: 256,
-                pane: 'analysisPane'
+                pane: 'raster_' + layerId
             });
             layers[layerId] = newLayer;
             newLayer.addTo(map);
