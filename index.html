@@ -287,62 +287,10 @@
         .layer-description.hidden {
             display: none;
         }
-        
-        /* Swipe comparison slider — only visible at zoom 7+ */
-        .swipe-slider {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: #fff;
-            cursor: ew-resize;
-            z-index: 499;
-            box-shadow: 0 0 8px rgba(0,0,0,0.5);
-        }
-        
-        .swipe-slider::after {
-            content: '⟨⟩';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            color: #333;
-            box-shadow: 0 0 6px rgba(0,0,0,0.4);
-            letter-spacing: 2px;
-        }
-        
-        .swipe-notice {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.75);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 499;
-            pointer-events: none;
-        }
-        
-        .swipe-notice.hidden {
-            display: none;
-        }
-        
         </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="swipe-slider" class="swipe-slider" style="display:none;"></div>
-    <div id="swipe-notice" class="swipe-notice hidden"></div>
     <div id="layer-description" class="layer-description hidden"></div>
     <div id="copy-notification" class="copy-notification"></div>
 
@@ -1181,7 +1129,6 @@
             updateLegend();
             updateAdminBoundaryStyle();
             updateDescriptionBox();
-            updateSwipe();
         }
 
         function updateDescriptionBox() {
@@ -1199,149 +1146,7 @@
             }
         }
 
-        // =====================================================================
-        // SWIPE COMPARISON — only active at zoom 7+ with exactly 2 raster layers
-        // Automatically hides when zoomed out, reappears when zoomed back in
-        // =====================================================================
-        var SWIPE_MIN_ZOOM = 7;
-        var swipeActive = false;
-        var swipeLeftLayer = null;
-        var swipeRightLayer = null;
-        var swipePosition = 0.5;
-
-        function getActiveRasterLayers() {
-            var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
-            var active = [];
-            for (var i = 0; i < rasterKeys.length; i++) {
-                if (activeLayers[rasterKeys[i]] && layers[rasterKeys[i]]) {
-                    active.push(rasterKeys[i]);
-                }
-            }
-            return active;
-        }
-
-        function updateSwipe() {
-            var activeRasters = getActiveRasterLayers();
-            var slider = document.getElementById('swipe-slider');
-            var notice = document.getElementById('swipe-notice');
-            var zoom = map.getZoom();
-
-            if (activeRasters.length === 2 && zoom >= SWIPE_MIN_ZOOM) {
-                swipeLeftLayer = activeRasters[0];
-                swipeRightLayer = activeRasters[1];
-                swipeActive = true;
-
-                slider.style.display = 'block';
-                slider.style.left = (swipePosition * 100) + '%';
-                notice.classList.remove('hidden');
-                notice.innerHTML = '<span style="color:#aaa;">◀</span> ' +
-                    layerConfigs[swipeLeftLayer].name +
-                    ' <span style="color:#aaa;">|</span> ' +
-                    layerConfigs[swipeRightLayer].name +
-                    ' <span style="color:#aaa;">▶</span>';
-
-                // Staggered clip application for canvas render timing
-                setTimeout(applySwipeClip, 300);
-                setTimeout(applySwipeClip, 800);
-                setTimeout(applySwipeClip, 1500);
-
-                setTimeout(function() { notice.classList.add('hidden'); }, 4000);
-            } else {
-                // Deactivate
-                if (swipeActive) clearAllSwipeClips();
-                swipeActive = false;
-                swipeLeftLayer = null;
-                swipeRightLayer = null;
-                slider.style.display = 'none';
-                notice.classList.add('hidden');
-
-                // Show zoom hint if 2 layers but zoomed out
-                if (activeRasters.length === 2 && zoom < SWIPE_MIN_ZOOM) {
-                    notice.innerHTML = 'Zoom in to compare layers (zoom ' + SWIPE_MIN_ZOOM + '+)';
-                    notice.classList.remove('hidden');
-                    setTimeout(function() { notice.classList.add('hidden'); }, 3000);
-                }
-            }
-        }
-
-        function clearAllSwipeClips() {
-            var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
-            rasterKeys.forEach(function(id) {
-                var pane = map.getPane('raster_' + id);
-                if (pane) {
-                    pane.style.clipPath = '';
-                }
-            });
-        }
-
-        function applySwipeClip() {
-            if (!swipeActive || !swipeLeftLayer || !swipeRightLayer) return;
-            if (map.getZoom() < SWIPE_MIN_ZOOM) return;
-
-            var container = map.getContainer();
-            var w = container.offsetWidth;
-            var h = container.offsetHeight;
-            var clipX = Math.round(swipePosition * w);
-
-            clearAllSwipeClips();
-
-            var leftPane = map.getPane('raster_' + swipeLeftLayer);
-            if (leftPane) {
-                leftPane.style.clipPath = 'polygon(0 0, ' + clipX + 'px 0, ' + clipX + 'px ' + h + 'px, 0 ' + h + 'px)';
-            }
-
-            var rightPane = map.getPane('raster_' + swipeRightLayer);
-            if (rightPane) {
-                rightPane.style.clipPath = 'polygon(' + clipX + 'px 0, ' + w + 'px 0, ' + w + 'px ' + h + 'px, ' + clipX + 'px ' + h + 'px)';
-            }
-        }
-
-        // Drag handler
-        (function() {
-            var slider = document.getElementById('swipe-slider');
-            var dragging = false;
-
-            slider.addEventListener('mousedown', function(e) { dragging = true; e.preventDefault(); });
-            slider.addEventListener('touchstart', function(e) { dragging = true; e.preventDefault(); });
-
-            document.addEventListener('mousemove', function(e) {
-                if (!dragging || !swipeActive) return;
-                var mapRect = document.getElementById('map').getBoundingClientRect();
-                swipePosition = Math.max(0.05, Math.min(0.95, (e.clientX - mapRect.left) / mapRect.width));
-                slider.style.left = (swipePosition * 100) + '%';
-                applySwipeClip();
-            });
-
-            document.addEventListener('touchmove', function(e) {
-                if (!dragging || !swipeActive) return;
-                var mapRect = document.getElementById('map').getBoundingClientRect();
-                swipePosition = Math.max(0.05, Math.min(0.95, (e.touches[0].clientX - mapRect.left) / mapRect.width));
-                slider.style.left = (swipePosition * 100) + '%';
-                applySwipeClip();
-            });
-
-            document.addEventListener('mouseup', function() { dragging = false; });
-            document.addEventListener('touchend', function() { dragging = false; });
-        })();
-
-        // Re-apply on map events; also toggle swipe on zoom change
-        map.on('moveend zoomend resize', function() {
-            if (swipeActive) {
-                applySwipeClip();
-                setTimeout(applySwipeClip, 200);
-                setTimeout(applySwipeClip, 500);
-            }
-            // Check if zoom crossed the threshold
-            var activeRasters = getActiveRasterLayers();
-            if (activeRasters.length === 2) {
-                var zoom = map.getZoom();
-                if (zoom >= SWIPE_MIN_ZOOM && !swipeActive) {
-                    updateSwipe();
-                } else if (zoom < SWIPE_MIN_ZOOM && swipeActive) {
-                    updateSwipe();
-                }
-            }
-        });
+        
 
         function toggleClass(layerId, classValue, show) {
             if (!hiddenClasses[layerId]) return;
