@@ -287,10 +287,83 @@
         .layer-description.hidden {
             display: none;
         }
+        
+        /* Swipe comparison slider */
+        .swipe-slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #fff;
+            cursor: ew-resize;
+            z-index: 900;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
+        
+        .swipe-slider::after {
+            content: '⟨⟩';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #333;
+            box-shadow: 0 0 6px rgba(0,0,0,0.4);
+            letter-spacing: 2px;
+        }
+        
+        .swipe-label {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            z-index: 901;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        .swipe-label-left {
+            right: 20px;
+        }
+        
+        .swipe-label-right {
+            left: 20px;
+        }
+        
+        .swipe-notice {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 800;
+            pointer-events: none;
+        }
+        
+        .swipe-notice.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="swipe-slider" class="swipe-slider" style="display:none;"></div>
+    <div id="swipe-notice" class="swipe-notice hidden">Swipe to compare layers</div>
     <div id="layer-description" class="layer-description hidden"></div>
     <div id="copy-notification" class="copy-notification"></div>
 
@@ -1125,6 +1198,7 @@
             updateLegend();
             updateAdminBoundaryStyle();
             updateDescriptionBox();
+            updateSwipe();
         }
 
         function updateDescriptionBox() {
@@ -1141,6 +1215,155 @@
                 descDiv.classList.add('hidden');
             }
         }
+
+        // =====================================================================
+        // SWIPE COMPARISON (activates when exactly 2 raster layers are checked)
+        // Left side = first checked layer, Right side = second checked layer
+        // =====================================================================
+        var swipeActive = false;
+        var swipeSlider = null;
+        var swipeLeftLayer = null;
+        var swipeRightLayer = null;
+        var swipePosition = 0.5; // 0-1, fraction from left
+
+        function getActiveRasterLayers() {
+            var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
+            var active = [];
+            for (var i = 0; i < rasterKeys.length; i++) {
+                if (activeLayers[rasterKeys[i]] && layers[rasterKeys[i]]) {
+                    active.push(rasterKeys[i]);
+                }
+            }
+            return active;
+        }
+
+        function updateSwipe() {
+            var activeRasters = getActiveRasterLayers();
+            var slider = document.getElementById('swipe-slider');
+            var notice = document.getElementById('swipe-notice');
+            
+            if (activeRasters.length === 2) {
+                // Activate swipe mode
+                swipeLeftLayer = activeRasters[0];
+                swipeRightLayer = activeRasters[1];
+                swipeActive = true;
+                
+                slider.style.display = 'block';
+                slider.style.left = (swipePosition * 100) + '%';
+                notice.classList.remove('hidden');
+                notice.innerHTML = '<span style="color:#aaa;">◀</span> ' + 
+                    layerConfigs[swipeLeftLayer].name + 
+                    ' <span style="color:#aaa;">|</span> ' + 
+                    layerConfigs[swipeRightLayer].name + 
+                    ' <span style="color:#aaa;">▶</span>';
+                
+                // Apply clip to right layer
+                applySwipeClip();
+                
+                // Fade notice after 4 seconds
+                setTimeout(function() { notice.classList.add('hidden'); }, 4000);
+            } else {
+                // Deactivate swipe mode
+                if (swipeActive && swipeRightLayer && layers[swipeRightLayer]) {
+                    // Remove clip from previously clipped layer
+                    var container = layers[swipeRightLayer].getContainer ? layers[swipeRightLayer].getContainer() : null;
+                    if (container) container.style.clip = '';
+                    // Also check the pane
+                    var pane = map.getPane('analysisPane');
+                    if (pane) {
+                        var canvases = pane.querySelectorAll('canvas');
+                        canvases.forEach(function(c) { c.style.clip = ''; });
+                    }
+                }
+                swipeActive = false;
+                swipeLeftLayer = null;
+                swipeRightLayer = null;
+                slider.style.display = 'none';
+                notice.classList.add('hidden');
+                
+                // Clear all clips on analysis pane canvases
+                var pane = map.getPane('analysisPane');
+                if (pane) {
+                    var canvases = pane.querySelectorAll('canvas');
+                    canvases.forEach(function(c) { c.style.clip = ''; });
+                }
+            }
+        }
+
+        function applySwipeClip() {
+            if (!swipeActive || !swipeRightLayer) return;
+            
+            var mapSize = map.getSize();
+            var clipX = Math.round(swipePosition * mapSize.x);
+            
+            // Find all canvases in the analysis pane
+            var pane = map.getPane('analysisPane');
+            if (!pane) return;
+            
+            var canvases = pane.querySelectorAll('canvas');
+            if (canvases.length < 2) return;
+            
+            // The second canvas (right layer) gets clipped to right side
+            // First canvas (left layer) gets clipped to left side
+            var leftIdx = -1, rightIdx = -1;
+            
+            // Match canvases to layers by checking their data-layer or order
+            // georaster layers render as canvases in the order they were added
+            var canvasArr = Array.from(canvases);
+            
+            // Simple approach: first canvas = left layer (full left side), 
+            // last canvas = right layer (clipped to right side)
+            if (canvasArr.length >= 2) {
+                // Left layer: clip to left portion
+                canvasArr[0].style.clip = 'rect(0px, ' + clipX + 'px, ' + mapSize.y + 'px, 0px)';
+                // Right layer: clip to right portion
+                canvasArr[canvasArr.length - 1].style.clip = 'rect(0px, ' + mapSize.x + 'px, ' + mapSize.y + 'px, ' + clipX + 'px)';
+            }
+        }
+
+        // Drag handler for the swipe slider
+        (function() {
+            var slider = document.getElementById('swipe-slider');
+            var dragging = false;
+            
+            slider.addEventListener('mousedown', function(e) {
+                dragging = true;
+                e.preventDefault();
+            });
+            
+            slider.addEventListener('touchstart', function(e) {
+                dragging = true;
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!dragging || !swipeActive) return;
+                var mapRect = document.getElementById('map').getBoundingClientRect();
+                var x = e.clientX - mapRect.left;
+                swipePosition = Math.max(0.05, Math.min(0.95, x / mapRect.width));
+                slider.style.left = (swipePosition * 100) + '%';
+                applySwipeClip();
+            });
+            
+            document.addEventListener('touchmove', function(e) {
+                if (!dragging || !swipeActive) return;
+                var mapRect = document.getElementById('map').getBoundingClientRect();
+                var x = e.touches[0].clientX - mapRect.left;
+                swipePosition = Math.max(0.05, Math.min(0.95, x / mapRect.width));
+                slider.style.left = (swipePosition * 100) + '%';
+                applySwipeClip();
+            });
+            
+            document.addEventListener('mouseup', function() { dragging = false; });
+            document.addEventListener('touchend', function() { dragging = false; });
+        })();
+
+        // Re-apply clip on map move/zoom
+        map.on('move zoom resize', function() {
+            if (swipeActive) {
+                setTimeout(applySwipeClip, 50);
+            }
+        });
         
         function toggleClass(layerId, classValue, show) {
             if (!hiddenClasses[layerId]) return;
