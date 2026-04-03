@@ -1262,8 +1262,11 @@
                     layerConfigs[swipeRightLayer].name + 
                     ' <span style="color:#aaa;">▶</span>';
                 
-                // Apply clip
-                applySwipeClip();
+                // Delay clip application to allow georaster canvas to render
+                setTimeout(applySwipeClip, 200);
+                setTimeout(applySwipeClip, 500);
+                setTimeout(applySwipeClip, 1000);
+                setTimeout(applySwipeClip, 2000);
                 
                 // Fade notice after 4 seconds
                 setTimeout(function() { notice.classList.add('hidden'); }, 4000);
@@ -1287,6 +1290,7 @@
                 if (pane) {
                     pane.style.clip = '';
                     pane.style.clipPath = '';
+                    pane.style.webkitClipPath = '';
                 }
             });
         }
@@ -1294,22 +1298,24 @@
         function applySwipeClip() {
             if (!swipeActive || !swipeLeftLayer || !swipeRightLayer) return;
             
-            var mapSize = map.getSize();
-            var clipPct = swipePosition * 100;
+            var container = map.getContainer();
+            var rect = container.getBoundingClientRect();
+            var w = rect.width;
+            var h = rect.height;
+            var clipX = Math.round(swipePosition * w);
             
             // Clear all clips first
             clearAllSwipeClips();
             
-            // Left layer pane: show only left portion
+            // Use clip-path with pixel values relative to pane
             var leftPane = map.getPane('raster_' + swipeLeftLayer);
             if (leftPane) {
-                leftPane.style.clipPath = 'inset(0 ' + (100 - clipPct) + '% 0 0)';
+                leftPane.style.clipPath = 'polygon(0 0, ' + clipX + 'px 0, ' + clipX + 'px ' + h + 'px, 0 ' + h + 'px)';
             }
             
-            // Right layer pane: show only right portion
             var rightPane = map.getPane('raster_' + swipeRightLayer);
             if (rightPane) {
-                rightPane.style.clipPath = 'inset(0 0 0 ' + clipPct + '%)';
+                rightPane.style.clipPath = 'polygon(' + clipX + 'px 0, ' + w + 'px 0, ' + w + 'px ' + h + 'px, ' + clipX + 'px ' + h + 'px)';
             }
         }
 
