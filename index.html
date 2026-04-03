@@ -1284,7 +1284,10 @@
             var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
             rasterKeys.forEach(function(id) {
                 var pane = map.getPane('raster_' + id);
-                if (pane) pane.style.clip = '';
+                if (pane) {
+                    pane.style.clip = '';
+                    pane.style.clipPath = '';
+                }
             });
         }
 
@@ -1292,21 +1295,21 @@
             if (!swipeActive || !swipeLeftLayer || !swipeRightLayer) return;
             
             var mapSize = map.getSize();
-            var clipX = Math.round(swipePosition * mapSize.x);
+            var clipPct = swipePosition * 100;
             
             // Clear all clips first
             clearAllSwipeClips();
             
-            // Left layer pane: clip to left portion
+            // Left layer pane: show only left portion
             var leftPane = map.getPane('raster_' + swipeLeftLayer);
             if (leftPane) {
-                leftPane.style.clip = 'rect(0px, ' + clipX + 'px, ' + mapSize.y + 'px, 0px)';
+                leftPane.style.clipPath = 'inset(0 ' + (100 - clipPct) + '% 0 0)';
             }
             
-            // Right layer pane: clip to right portion
+            // Right layer pane: show only right portion
             var rightPane = map.getPane('raster_' + swipeRightLayer);
             if (rightPane) {
-                rightPane.style.clip = 'rect(0px, ' + mapSize.x + 'px, ' + mapSize.y + 'px, ' + clipX + 'px)';
+                rightPane.style.clipPath = 'inset(0 0 0 ' + clipPct + '%)';
             }
         }
 
@@ -1347,10 +1350,13 @@
             document.addEventListener('touchend', function() { dragging = false; });
         })();
 
-        // Re-apply clip on map move/zoom
-        map.on('move zoom resize', function() {
+        // Re-apply clip on map move/zoom with staggered delays for canvas re-render
+        map.on('move zoom resize moveend zoomend', function() {
             if (swipeActive) {
-                setTimeout(applySwipeClip, 50);
+                applySwipeClip();
+                setTimeout(applySwipeClip, 100);
+                setTimeout(applySwipeClip, 300);
+                setTimeout(applySwipeClip, 600);
             }
         });
         
