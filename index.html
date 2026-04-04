@@ -330,19 +330,19 @@
         map.getPane('boundariesPane').style.zIndex = 350;
 
         // Define basemaps
+        var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 19
+        });
+
         var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri',
             maxZoom: 19
         });
 
-        var darkGrayMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        var topoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri',
-            maxZoom: 16
-        });
-
-        var terrainMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 13
+            maxZoom: 19
         });
 
         // Add default basemap
@@ -1013,12 +1013,12 @@
         // BASEMAP SWITCH
         // =====================================================================
         function switchBasemap(basemapType) {
+            map.removeLayer(streetMap);
             map.removeLayer(satelliteMap);
-            map.removeLayer(darkGrayMap);
-            map.removeLayer(terrainMap);
-            if (basemapType === 'satellite') { satelliteMap.addTo(map); }
-            else if (basemapType === 'darkgray') { darkGrayMap.addTo(map); }
-            else if (basemapType === 'terrain') { terrainMap.addTo(map); }
+            map.removeLayer(topoMap);
+            if (basemapType === 'street') { streetMap.addTo(map); }
+            else if (basemapType === 'satellite') { satelliteMap.addTo(map); }
+            else if (basemapType === 'topo') { topoMap.addTo(map); }
         }
 
         // =====================================================================
@@ -1300,9 +1300,9 @@
             L.DomEvent.disableScrollPropagation(div);
             
             div.innerHTML = '<h4>Basemaps</h4>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="satellite" checked onchange="switchBasemap(\'satellite\')">Satellite Imagery</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="darkgray" onchange="switchBasemap(\'darkgray\')">Dark Gray Canvas</label>';
-            div.innerHTML += '<label><input type="radio" name="basemap" value="terrain" onchange="switchBasemap(\'terrain\')">Terrain</label>';
+            div.innerHTML += '<label><input type="radio" name="basemap" value="topo" onchange="switchBasemap(\'topo\')">Topographic</label>';
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Analysis Layers</h4>';
             
