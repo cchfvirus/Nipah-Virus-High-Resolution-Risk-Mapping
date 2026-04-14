@@ -763,7 +763,7 @@
         }
 
         // =====================================================================
-        // BAT SURVEY DATA (survey.geojson — loaded via speciesSurveyConfigs)
+        // BAT SURVEY DATA (survey.json — loaded via speciesSurveyConfigs)
         // Custom popup for survey features with rich metadata
         // =====================================================================
 
@@ -944,8 +944,8 @@
                     speciesSurveyLayers[layerId] = geojsonLayer;
                     if (layerId === 'gbif_bats') speciesSurveyLayers['gbif_bats_data'] = data;
 
-                    geojsonLayer.addTo(map);
-                    activeLayers['species_' + layerId] = true;
+                    // Data is loaded and ready but NOT added to map by default
+                    // User must toggle on via checkbox in layer control
                     updateLegend();
                 })
                 .catch(error => {
@@ -1316,9 +1316,10 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Species &amp; Survey Data</h4>';
             
+            // Species/survey checkboxes — OFF by default (no "checked" attribute)
             Object.keys(speciesSurveyConfigs).forEach(function(key) {
                 var cfg = speciesSurveyConfigs[key];
-                div.innerHTML += '<label><input type="checkbox" name="species-layer" value="' + key + '" checked ' + 
+                div.innerHTML += '<label><input type="checkbox" name="species-layer" value="' + key + '" ' + 
                     'onchange="toggleSpeciesSurveyLayer(\'' + key + '\', this.checked)">' + cfg.name + '</label>';
             });
             
