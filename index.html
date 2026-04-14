@@ -427,7 +427,7 @@
                 colors: ['#969696', '#fed976', '#feb24c', '#fd8d3c', '#fc4e2a', '#e31a1c', '#b10026'],
                 domain: [0, 912],
                 labels: ['Low Suitability', 'High Suitability'],
-                description: 'Nipah ENM habitat suitability',
+                description: 'Ecological Niche Model (biomod2)',
                 mode: 'lch',
                 continuousLegend: true
             },
@@ -484,7 +484,7 @@
                 noDataValue: 15,
                 labels: ['No Risk', 'Very High Risk'],
                 description: '',
-                infoDescription: 'Ensemble mean of 9 scenarios (3 α × 3 blend steepness) where baseline risk is modified by region-specific land cover weights. Outbreak-associated land cover types (Built, Crops, Flooded vegetation) boost risk; underrepresented types (Water, Grass, Bare ground) dampen it. Integrates ecology, population, and landscape context into a single composite index.',
+                infoDescription: 'Ensemble mean of 9 scenarios (3 α × 3 blend steepness) where baseline risk is modified by region-specific land cover weights. Outbreak-associated land cover types boost risk; underrepresented types dampen it. Integrates ecology, population, and landscape context into a single composite index.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -542,7 +542,7 @@
                 noDataValue: 15,
                 labels: ['Decrease', 'Increase'],
                 description: '',
-                infoDescription: 'Difference between normalized (0–1) land-cover-weighted ensemble mean and normalized baseline. Positive values = land cover increased risk (Built, Crops, Flooded vegetation). Negative values = land cover reduced risk (forested areas). Near zero = minimal land cover effect. Isolates the specific contribution of landscape context beyond ecology and population.',
+                infoDescription: 'Difference between normalized (0–1) land-cover-weighted ensemble mean and normalized baseline. Positive values = land cover increased risk. Negative values = land cover reduced risk. Near zero = minimal land cover effect. Isolates the specific contribution of landscape context beyond ecology and population.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
