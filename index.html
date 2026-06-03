@@ -1294,16 +1294,7 @@
                     }
                     legendDiv.innerHTML += '<div class="gradient-bar" style="background: linear-gradient(to right, ' + gradientStops.join(', ') + ');"></div>';
 
-                    // Show SD-derived min/max values if available, otherwise fall back to config labels
-                    if (config.useSdStretch && computedDomains[layerId]) {
-                        var domain = computedDomains[layerId];
-                        legendDiv.innerHTML += '<div class="gradient-labels">' +
-                            '<span>' + domain[0].toFixed(1) + ' (mean−1SD)</span>' +
-                            '<span>' + domain[1].toFixed(1) + ' (mean+1SD)</span>' +
-                            '</div>';
-                    } else {
-                        legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
-                    }
+                    legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
                 }
                 if (config.description) legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' + config.description + '</p>';
             });
