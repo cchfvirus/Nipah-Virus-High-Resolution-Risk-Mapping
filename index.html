@@ -287,7 +287,7 @@
         .layer-description.hidden {
             display: none;
         }
-        </style>
+    </style>
 </head>
 <body>
     <div id="map"></div>
@@ -371,6 +371,9 @@
             'diff_blend_minus_basic': {}
         };
 
+        // Store computed SD domains for legend display
+        var computedDomains = {};
+
 
         // =====================================================================
         // VECTOR OVERLAY CONFIGS — Outbreaks & Survey Data
@@ -429,7 +432,8 @@
                 labels: ['Low Suitability', 'High Suitability'],
                 description: 'Ecological Niche Model (biomod2)',
                 mode: 'lch',
-                continuousLegend: true
+                continuousLegend: true,
+                useSdStretch: true   // <-- SD stretch enabled
             },
             'enm_cv': {
                 file: 'enm_cv.tif',
@@ -439,7 +443,8 @@
                 labels: ['Low Uncertainty', 'High Uncertainty'],
                 description: '',
                 mode: 'lch',
-                continuousLegend: true
+                continuousLegend: true,
+                useSdStretch: true   // <-- SD stretch enabled
             },
             'basic_risk': {
                 file: 'risk_basic.tif',
@@ -713,8 +718,67 @@
         }
 
         // =====================================================================
+        // SD STRETCH HELPER
+        // Computes mean and SD from all valid pixels, returns [mean-1SD, mean+1SD].
+        // Falls back to config.domain if not enough valid values are found.
+        // =====================================================================
+        function computeSdDomain(georaster, config) {
+            var noDataVal = georaster.noDataValue;
+            var rawValues = georaster.values[0];
+            var sum = 0;
+            var count = 0;
+
+            // Single-pass mean (Welford-style accumulation for large rasters)
+            for (var row = 0; row < rawValues.length; row++) {
+                var rowData = rawValues[row];
+                for (var col = 0; col < rowData.length; col++) {
+                    var v = rowData[col];
+                    if (v === null || v === undefined || isNaN(v)) continue;
+                    if (v === 255 || v === -9999 || v === -32768 || v === -3.4e38 || Math.abs(v) > 1e10) continue;
+                    if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal)) {
+                        if (Math.abs(v - noDataVal) < 0.0001) continue;
+                    }
+                    sum += v;
+                    count++;
+                }
+            }
+
+            if (count < 2) {
+                console.warn(config.name + ': too few valid pixels for SD stretch, using config domain');
+                return config.domain;
+            }
+
+            var mean = sum / count;
+
+            // Second pass: variance
+            var sumSq = 0;
+            for (var row2 = 0; row2 < rawValues.length; row2++) {
+                var rowData2 = rawValues[row2];
+                for (var col2 = 0; col2 < rowData2.length; col2++) {
+                    var v2 = rowData2[col2];
+                    if (v2 === null || v2 === undefined || isNaN(v2)) continue;
+                    if (v2 === 255 || v2 === -9999 || v2 === -32768 || v2 === -3.4e38 || Math.abs(v2) > 1e10) continue;
+                    if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal)) {
+                        if (Math.abs(v2 - noDataVal) < 0.0001) continue;
+                    }
+                    var diff = v2 - mean;
+                    sumSq += diff * diff;
+                }
+            }
+
+            var sd = Math.sqrt(sumSq / count);
+            var sdMin = mean - sd;
+            var sdMax = mean + sd;
+
+            console.log(config.name + ' — mean: ' + mean.toFixed(2) +
+                        ', SD: ' + sd.toFixed(2) +
+                        ', stretch domain: [' + sdMin.toFixed(2) + ', ' + sdMax.toFixed(2) + ']');
+
+            return [sdMin, sdMax];
+        }
+
+        // =====================================================================
         // NIPAH OUTBREAK LOCATIONS (outbreaks.json — 137 documented locations)
-        // Colored by country: Bangladesh = red target, India = blue target
         // =====================================================================
         function loadNipahCases() {
             fetch('outbreaks.json')
@@ -763,15 +827,10 @@
         }
 
         // =====================================================================
-        // BAT SURVEY DATA (survey.json — loaded via speciesSurveyConfigs)
-        // Custom popup for survey features with rich metadata
-        // =====================================================================
-
-        // =====================================================================
-        // ADMIN BOUNDARIES (placeholder — swap in your boundary file)
+        // ADMIN BOUNDARIES
         // =====================================================================
         function updateAdminBoundaryStyle() {
-            // M-Region boundary is always black, no dynamic color switching needed
+            // M-Region boundary is always black
         }
 
         function loadAdminBoundaries() {
@@ -807,7 +866,7 @@
         }
 
         // =====================================================================
-        // SPECIES / SURVEY GEOJSON LAYER LOADING (placeholder)
+        // SPECIES / SURVEY GEOJSON LAYER LOADING
         // =====================================================================
         function createSvgIcon(shape, color, size) {
             var s = size || 12;
@@ -842,7 +901,6 @@
                     var featureCount = data.features ? data.features.length : 0;
                     updateStatus('Loaded ' + config.name + ' (' + featureCount + ' features)');
                     
-                    // Build species list for GBIF bats
                     if (layerId === 'gbif_bats' && config.colorBySpecies) {
                         gbifSpeciesList = [];
                         gbifSpeciesCounts = {};
@@ -859,7 +917,6 @@
                     
                     var geojsonLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
-                            // Species-colored circles for GBIF bats
                             if (layerId === 'gbif_bats' && config.colorBySpecies) {
                                 var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
                                 var spColor = getGbifSpeciesColor(sp);
@@ -868,7 +925,6 @@
                                     radius: config.radius, weight: config.weight || 1.5, pane: 'speciesVectorPane'
                                 });
                             }
-                            // Diamond icon for survey data
                             if (config.icon && config.icon !== 'circle') {
                                 var icon = createSvgIcon(config.icon, config.fillColor, 14);
                                 if (icon) return L.marker(latlng, { icon: icon, pane: 'speciesVectorPane' });
@@ -894,7 +950,6 @@
                             var p = feature.properties;
                             var popupContent;
                             
-                            // GBIF bat popup
                             if (layerId === 'gbif_bats') {
                                 popupContent = '<h3><em>' + (p.Binomial || '') + '</em></h3><table>';
                                 if (p.Scientific_Name_Full) popupContent += '<tr><td>Full Name</td><td><em>' + p.Scientific_Name_Full + '</em></td></tr>';
@@ -905,7 +960,6 @@
                                 if (p.GBIF_Species_URL) popupContent += '<tr><td>GBIF Link</td><td><a href="' + p.GBIF_Species_URL + '" target="_blank">View on GBIF</a></td></tr>';
                                 popupContent += '</table>';
                             }
-                            // Survey popup
                             else if (layerId === 'nipah_survey') {
                                 var locName = (p.Location_Name || '').replace(/_/g, ' ');
                                 popupContent = '<h3>' + locName + '</h3><table>';
@@ -924,7 +978,6 @@
                                 if (p.Publication_DOI && p.Publication_DOI !== 'None') popupContent += '<tr><td>DOI</td><td style="font-size:10px;"><a href="https://doi.org/' + p.Publication_DOI + '" target="_blank">' + p.Publication_DOI + '</a></td></tr>';
                                 popupContent += '</table>';
                             }
-                            // Generic fallback
                             else {
                                 popupContent = '<h3>' + config.name + '</h3><table>';
                                 for (var key in p) {
@@ -943,9 +996,6 @@
                     
                     speciesSurveyLayers[layerId] = geojsonLayer;
                     if (layerId === 'gbif_bats') speciesSurveyLayers['gbif_bats_data'] = data;
-
-                    // Data is loaded and ready but NOT added to map by default
-                    // User must toggle on via checkbox in layer control
                     updateLegend();
                 })
                 .catch(error => {
@@ -1047,6 +1097,7 @@
                     var configNoData = config.noDataValue || null;
                     
                     if (config.discreteColors) {
+                        // ---- Discrete colour mapping (unchanged) ----
                         var discreteColors = config.discreteColors;
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
@@ -1062,11 +1113,24 @@
                             return null;
                         };
                     } else {
-                        // Continuous color scale (ENM, ENM CV)
-                        var scale = config.mode 
-                            ? chroma.scale(config.colors).mode(config.mode).domain(config.domain)
-                            : chroma.scale(config.colors).domain(config.domain);
+                        // ---- Continuous colour scale — SD stretch for enm & enm_cv ----
                         var noDataVal = georaster.noDataValue;
+
+                        // Compute domain: mean ± 1 SD when useSdStretch is set, otherwise use config.domain
+                        var stretchDomain;
+                        if (config.useSdStretch) {
+                            stretchDomain = computeSdDomain(georaster, config);
+                        } else {
+                            stretchDomain = config.domain;
+                        }
+
+                        // Store for legend display
+                        computedDomains[layerId] = stretchDomain;
+
+                        var scale = config.mode
+                            ? chroma.scale(config.colors).mode(config.mode).domain(stretchDomain)
+                            : chroma.scale(config.colors).domain(stretchDomain);
+
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
@@ -1074,7 +1138,9 @@
                             if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal)) {
                                 if (Math.abs(value - noDataVal) < 0.0001) return null;
                             }
-                            return scale(value).hex();
+                            // Clip to domain endpoints; out-of-range pixels render as the end colour
+                            var clipped = Math.min(Math.max(value, stretchDomain[0]), stretchDomain[1]);
+                            return scale(clipped).hex();
                         };
                     }
                     
@@ -1114,9 +1180,6 @@
                         updateStatus('Try using: R servr::httd() or Python http.server', true);
                     }
                     loadedCount++;
-                    if (loadedCount === totalLayers) {
-                        // loading complete
-                    }
                 });
         }
 
@@ -1127,7 +1190,6 @@
             if (!layers[layerId]) return;
             if (show) { layers[layerId].addTo(map); activeLayers[layerId] = true; }
             else { map.removeLayer(layers[layerId]); delete activeLayers[layerId]; }
-            // Determine which is the "top" active analysis layer for click queries
             var analysisLayers = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
             currentLayer = null;
             for (var i = analysisLayers.length - 1; i >= 0; i--) {
@@ -1152,8 +1214,6 @@
                 descDiv.classList.add('hidden');
             }
         }
-
-        
 
         function toggleClass(layerId, classValue, show) {
             if (!hiddenClasses[layerId]) return;
@@ -1232,8 +1292,18 @@
                     for (var i = 0; i < config.colors.length; i++) {
                         gradientStops.push(config.colors[i] + ' ' + ((i / (config.colors.length - 1)) * 100) + '%');
                     }
-                    legendDiv.innerHTML += '<div class="gradient-bar" style="background: linear-gradient(to right, ' + gradientStops.join(', ') + ');"></div>' +
-                        '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
+                    legendDiv.innerHTML += '<div class="gradient-bar" style="background: linear-gradient(to right, ' + gradientStops.join(', ') + ');"></div>';
+
+                    // Show SD-derived min/max values if available, otherwise fall back to config labels
+                    if (config.useSdStretch && computedDomains[layerId]) {
+                        var domain = computedDomains[layerId];
+                        legendDiv.innerHTML += '<div class="gradient-labels">' +
+                            '<span>' + domain[0].toFixed(1) + ' (mean−1SD)</span>' +
+                            '<span>' + domain[1].toFixed(1) + ' (mean+1SD)</span>' +
+                            '</div>';
+                    } else {
+                        legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
+                    }
                 }
                 if (config.description) legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' + config.description + '</p>';
             });
@@ -1265,7 +1335,6 @@
                         });
                         return;
                     }
-                    // Survey layer - diamond symbol
                     if (key === 'nipah_survey') {
                         legendDiv.innerHTML += '<div class="item">' +
                             '<svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:8px;"><polygon points="7,0 14,7 7,14 0,7" fill="' + cfg.fillColor + '" stroke="#000" stroke-width="1"/></svg>' +
@@ -1306,7 +1375,6 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Analysis Layers</h4>';
             
-            // Raster layer checkboxes — enm on by default
             var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
             rasterKeys.forEach(function(key) {
                 var checked = (key === 'enm') ? 'checked' : '';
@@ -1316,7 +1384,6 @@
             
             div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Species &amp; Survey Data</h4>';
             
-            // Species/survey checkboxes — OFF by default (no "checked" attribute)
             Object.keys(speciesSurveyConfigs).forEach(function(key) {
                 var cfg = speciesSurveyConfigs[key];
                 div.innerHTML += '<label><input type="checkbox" name="species-layer" value="' + key + '" ' + 
@@ -1369,7 +1436,6 @@
                 if (config.discreteDisplay) {
                     var intVal = Math.round(value);
                     displayValue = intVal.toString();
-                    // Look up matching legend label
                     if (config.legendItems) {
                         for (var i = 0; i < config.legendItems.length; i++) {
                             if (config.legendItems[i].value === intVal) {
