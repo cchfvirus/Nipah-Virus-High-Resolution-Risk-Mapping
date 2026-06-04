@@ -365,8 +365,8 @@
         // Date palm layer state
         var datePalmLayer       = null;
         var datePalmVisible     = false;
-        var datePalmOpacity     = 0.5;
-        var hiddenDatePalmCats  = {};
+        var datePalmOpacity     = 1.0;
+        var hiddenDatePalmCats  = { 'supplier': true, 'recipient': true, 'both': true };
         var datePalmData        = null;
 
         // Category definitions — colors chosen to contrast with warm/cool raster palettes
@@ -835,10 +835,10 @@
                     var cfg  = datePalmCats[cat] || { color: '#888', fill: '#ccc' };
                     return {
                         color:       cfg.color,
-                        fillColor:   cfg.fill,
-                        fillOpacity: datePalmOpacity,
-                        weight:      2,
-                        opacity:     1
+                        fillColor:   cfg.color,
+                        fillOpacity: 0,
+                        weight:      2.5,
+                        opacity:     datePalmOpacity
                     };
                 },
                 pane: 'boundariesPane',
@@ -855,12 +855,12 @@
                         '</table>';
                     layer.bindPopup(popup, { maxWidth: 280 });
                     layer.on('mouseover', function() {
-                        layer.setStyle({ fillOpacity: 0.70, weight: 3 });
+                        layer.setStyle({ weight: 4, opacity: 1 });
                     });
                     layer.on('mouseout', function() {
                         var c = getDatePalmCategory(p);
-                        var s = datePalmCats[c] || { color: '#888', fill: '#ccc' };
-                        layer.setStyle({ fillOpacity: datePalmOpacity, weight: 2, color: s.color, fillColor: s.fill });
+                        var s = datePalmCats[c] || { color: '#888' };
+                        layer.setStyle({ weight: 2.5, opacity: datePalmOpacity, color: s.color });
                     });
                 }
             });
@@ -1270,7 +1270,7 @@
                     legendDiv.innerHTML += '<div class="item toggleable' + hiddenCls + '">' +
                         '<input type="checkbox" ' + (isHidden ? '' : 'checked') +
                         ' onchange="toggleDatePalmCategory(\'' + cat + '\', this.checked)">' +
-                        '<i style="background:' + cfg.fill + ';border:2px solid ' + cfg.color + ';"></i> ' +
+                        '<i style="background:transparent;border:3px solid ' + cfg.color + ';"></i> ' +
                         cfg.label + '</div>';
                 });
             }
@@ -1317,8 +1317,8 @@
                     'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent=this.value+\'%\'"></div>';
             });
             div.innerHTML += '<div class="opacity-control">' +
-                '<label>Date Palm Districts <span class="opacity-value" id="opacity-value-datepalm">50%</span></label>' +
-                '<input type="range" id="opacity-datepalm" min="0" max="100" value="50" ' +
+                '<label>Date Palm Borders <span class="opacity-value" id="opacity-value-datepalm">100%</span></label>' +
+                '<input type="range" id="opacity-datepalm" min="0" max="100" value="100" ' +
                 'oninput="' +
                     'datePalmOpacity = this.value/100;' +
                     'document.getElementById(\'opacity-value-datepalm\').textContent = this.value + \'%\';' +
