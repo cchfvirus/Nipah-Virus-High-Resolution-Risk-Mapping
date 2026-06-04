@@ -392,7 +392,7 @@
         var speciesSurveyLayers = {};
         var speciesSurveyConfigs = {
             'gbif_bats': {
-                file: 'gbif_bats.geojson',
+                file: 'gbif_bats.json',
                 name: 'GBIF Bat Species Occurrences',
                 color: '#8B5CF6', fillColor: '#8B5CF6',
                 radius: 5, weight: 1.5, icon: 'circle', colorBySpecies: true
@@ -952,12 +952,6 @@
                                 var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
                                 if (hiddenGbifSpecies[sp]) return false;
                             }
-                            // Clip to M region
-                            if (feature.geometry && feature.geometry.coordinates) {
-                                var coords = feature.geometry.coordinates;
-                                var lng = coords[0], lat = coords[1];
-                                if (!pointInMRegion(lng, lat)) return false;
-                            }
                             return true;
                         },
                         pane: 'speciesVectorPane',
@@ -973,14 +967,25 @@
                                 if (p.GBIF_Species_URL) popupContent += '<tr><td>GBIF</td><td><a href="' + p.GBIF_Species_URL + '" target="_blank">View</a></td></tr>';
                                 popupContent += '</table>';
                             } else if (layerId === 'nipah_survey') {
-                                var locName = (p.Location_Name || '').replace(/_/g, ' ');
+                                var locName = (p.location_name || '').replace(/_/g, ' ');
                                 popupContent = '<h3>' + locName + '</h3><table>';
-                                if (p.Data_Type) popupContent += '<tr><td>Data Type</td><td>' + p.Data_Type.replace(/_/g, ' ') + '</td></tr>';
-                                if (p.Country) popupContent += '<tr><td>Country</td><td>' + p.Country + '</td></tr>';
-                                if (p.Primary_Species) popupContent += '<tr><td>Species</td><td><em>' + p.Primary_Species + '</em></td></tr>';
-                                if (p.Study_Period) popupContent += '<tr><td>Study Period</td><td>' + p.Study_Period + '</td></tr>';
-                                if (p.Seroprevalence && p.Seroprevalence !== 'None') popupContent += '<tr><td>Seroprevalence</td><td>' + p.Seroprevalence + '%</td></tr>';
-                                if (p.Publication_DOI && p.Publication_DOI !== 'None') popupContent += '<tr><td>DOI</td><td><a href="https://doi.org/' + p.Publication_DOI + '" target="_blank">' + p.Publication_DOI + '</a></td></tr>';
+                                if (p.species)              popupContent += '<tr><td>Species</td><td><em>' + p.species + '</em></td></tr>';
+                                if (p.district)             popupContent += '<tr><td>District</td><td>' + p.district + '</td></tr>';
+                                if (p.state)                popupContent += '<tr><td>State</td><td>' + p.state + '</td></tr>';
+                                if (p.country)              popupContent += '<tr><td>Country</td><td>' + p.country + '</td></tr>';
+                                if (p.collection_date)      popupContent += '<tr><td>Collection Date</td><td>' + p.collection_date + '</td></tr>';
+                                if (p.total_bats_sampled)   popupContent += '<tr><td>Bats Sampled</td><td>' + p.total_bats_sampled + '</td></tr>';
+                                if (p.males_sampled)        popupContent += '<tr><td>Males</td><td>' + p.males_sampled + '</td></tr>';
+                                if (p.females_sampled)      popupContent += '<tr><td>Females</td><td>' + p.females_sampled + '</td></tr>';
+                                if (p.nipah_rt_pcr_throat_swab) popupContent += '<tr><td>PCR Throat</td><td>' + p.nipah_rt_pcr_throat_swab + '</td></tr>';
+                                if (p.nipah_rt_pcr_rectal_swab) popupContent += '<tr><td>PCR Rectal</td><td>' + p.nipah_rt_pcr_rectal_swab + '</td></tr>';
+                                if (p.nipah_igg_elisa_results)  popupContent += '<tr><td>IgG ELISA</td><td>' + p.nipah_igg_elisa_results + '</td></tr>';
+                                if (p.sample_types)         popupContent += '<tr><td>Sample Types</td><td style="font-size:10px;">' + p.sample_types + '</td></tr>';
+                                if (p.test_methods)         popupContent += '<tr><td>Test Methods</td><td style="font-size:10px;">' + p.test_methods + '</td></tr>';
+                                if (p.coordinate_precision) popupContent += '<tr><td>Precision</td><td style="font-size:10px;">' + p.coordinate_precision + '</td></tr>';
+                                if (p.notes)                popupContent += '<tr><td>Notes</td><td style="font-size:10px;max-width:200px;word-wrap:break-word;">' + p.notes + '</td></tr>';
+                                if (p.study)                popupContent += '<tr><td>Study</td><td style="font-size:10px;">' + p.study + '</td></tr>';
+                                if (p.data_source)          popupContent += '<tr><td>Source</td><td style="font-size:10px;max-width:200px;word-wrap:break-word;">' + p.data_source + '</td></tr>';
                                 popupContent += '</table>';
                             } else {
                                 popupContent = '<h3>' + config.name + '</h3><table>';
@@ -1016,12 +1021,7 @@
                     },
                     filter: function(feature) {
                         var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
-                        if (hiddenGbifSpecies[sp]) return false;
-                        if (feature.geometry && feature.geometry.coordinates) {
-                            var coords = feature.geometry.coordinates;
-                            if (!pointInMRegion(coords[0], coords[1])) return false;
-                        }
-                        return true;
+                        return !hiddenGbifSpecies[sp];
                     },
                     pane: 'speciesVectorPane'
                 });
