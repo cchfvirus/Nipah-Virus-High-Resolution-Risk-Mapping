@@ -333,14 +333,15 @@
         // Date palm layer state
         var datePalmLayer       = null;
         var datePalmVisible     = false;
-        var hiddenDatePalmCats  = {};   // tracks which categories are toggled off
-        var datePalmData        = null; // raw GeoJSON stored for re-filter
+        var datePalmOpacity     = 0.5;
+        var hiddenDatePalmCats  = {};
+        var datePalmData        = null;
 
-        // Category definitions
+        // Category definitions — colors chosen to contrast with warm/cool raster palettes
         var datePalmCats = {
-            'supplier':  { label: 'Supplier District',          color: '#F97316', fill: '#FED7AA' },
-            'recipient': { label: 'Recipient District',         color: '#2563EB', fill: '#BFDBFE' },
-            'both':      { label: 'Supplier & Recipient',       color: '#7C3AED', fill: '#DDD6FE' }
+            'supplier':  { label: 'Supplier District',    color: '#0891B2', fill: '#CFFAFE' },  // cyan
+            'recipient': { label: 'Recipient District',   color: '#BE185D', fill: '#FCE7F3' },  // magenta/pink
+            'both':      { label: 'Supplier & Recipient', color: '#15803D', fill: '#DCFCE7' }   // green
         };
 
         function getDatePalmCategory(props) {
@@ -753,7 +754,7 @@
                 .then(function(r) { if (!r.ok) throw new Error('Not found'); return r.json(); })
                 .then(function(data) {
                     adminBoundariesLayer = L.geoJSON(data, {
-                        style: { fillColor: 'transparent', fillOpacity: 0, color: '#000000', weight: 2, opacity: 1 },
+                        style: { fillColor: 'transparent', fillOpacity: 0, color: '#000000', weight: 1, opacity: 1 },
                         pane: 'boundariesPane',
                         interactive: false
                     });
@@ -785,7 +786,7 @@
                     return {
                         color:       cfg.color,
                         fillColor:   cfg.fill,
-                        fillOpacity: 0.45,
+                        fillOpacity: datePalmOpacity,
                         weight:      2,
                         opacity:     1
                     };
@@ -809,7 +810,7 @@
                     layer.on('mouseout', function() {
                         var c = getDatePalmCategory(p);
                         var s = datePalmCats[c] || { color: '#888', fill: '#ccc' };
-                        layer.setStyle({ fillOpacity: 0.45, weight: 2, color: s.color, fillColor: s.fill });
+                        layer.setStyle({ fillOpacity: datePalmOpacity, weight: 2, color: s.color, fillColor: s.fill });
                     });
                 }
             });
@@ -1254,6 +1255,14 @@
                     '<input type="range" id="opacity-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY*100) + '" ' +
                     'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent=this.value+\'%\'"></div>';
             });
+            div.innerHTML += '<div class="opacity-control">' +
+                '<label>Date Palm Districts <span class="opacity-value" id="opacity-value-datepalm">50%</span></label>' +
+                '<input type="range" id="opacity-datepalm" min="0" max="100" value="50" ' +
+                'oninput="' +
+                    'datePalmOpacity = this.value/100;' +
+                    'document.getElementById(\'opacity-value-datepalm\').textContent = this.value + \'%\';' +
+                    'buildDatePalmGeoJSON()' +
+                '"></div>';
             div.innerHTML += '</div>';
             return div;
         };
@@ -1276,8 +1285,19 @@
 
         map.on('click', function(e) {
             if (!currentLayer || !georasters[currentLayer]) return;
-            var value  = getRasterValueAtPoint(currentLayer, e.latlng);
             var config = layerConfigs[currentLayer];
+
+            // ENM and ENM CV: show coordinates only — cell values not meaningful to display
+            if (currentLayer === 'enm' || currentLayer === 'enm_cv') {
+                var popupCoord = '<h3>' + config.name + '</h3><table>' +
+                    '<tr><td>Latitude</td><td>'  + e.latlng.lat.toFixed(6) + '</td></tr>' +
+                    '<tr><td>Longitude</td><td>' + e.latlng.lng.toFixed(6) + '</td></tr>' +
+                    '</table>';
+                L.popup().setLatLng(e.latlng).setContent(popupCoord).openOn(map);
+                return;
+            }
+
+            var value = getRasterValueAtPoint(currentLayer, e.latlng);
             var displayValue;
             if (value !== null) {
                 if (config.discreteDisplay) {
