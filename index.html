@@ -59,9 +59,7 @@
             transition: opacity 0.2s;
         }
         
-        .legend .item.toggleable:hover {
-            background: #f0f0f0;
-        }
+        .legend .item.toggleable:hover { background: #f0f0f0; }
         
         .legend .item.toggleable.hidden-class {
             opacity: 0.35;
@@ -113,10 +111,7 @@
             max-width: 220px;
         }
         
-        .layer-control h4 { 
-            margin: 0 0 10px; 
-            font-size: 14px;
-        }
+        .layer-control h4 { margin: 0 0 10px; font-size: 14px; }
         
         .layer-control label {
             display: block;
@@ -125,13 +120,8 @@
             font-size: 13px;
         }
         
-        .layer-control input[type="radio"] {
-            margin-right: 8px;
-        }
-        
-        .layer-control input[type="checkbox"] {
-            margin-right: 8px;
-        }
+        .layer-control input[type="radio"] { margin-right: 8px; }
+        .layer-control input[type="checkbox"] { margin-right: 8px; }
         
         .layer-control .overlay-section {
             margin-top: 15px;
@@ -157,9 +147,7 @@
             font-weight: bold;
         }
         
-        .opacity-control {
-            margin-bottom: 12px;
-        }
+        .opacity-control { margin-bottom: 12px; }
         
         .opacity-control label {
             display: block;
@@ -248,9 +236,7 @@
             transition: opacity 0.3s;
         }
         
-        .copy-notification.show {
-            opacity: 1;
-        }
+        .copy-notification.show { opacity: 1; }
         
         .layer-description {
             position: absolute;
@@ -280,13 +266,8 @@
             color: #222;
         }
         
-        .layer-description p {
-            margin: 0;
-        }
-        
-        .layer-description.hidden {
-            display: none;
-        }
+        .layer-description p { margin: 0; }
+        .layer-description.hidden { display: none; }
     </style>
 </head>
 <body>
@@ -302,50 +283,31 @@
 
     <script>
         // =====================================================================
-        // MAP INITIALIZATION - centered on Bangladesh/India Nipah endemic region
+        // MAP INITIALIZATION
         // =====================================================================
         var map = L.map('map').setView([17.329664, 82.880859], 6);
 
-        // Create custom panes with specific z-index ordering
         map.createPane('backgroundPane');
         map.getPane('backgroundPane').style.zIndex = 250;
-        
         map.createPane('rasterPane');
         map.getPane('rasterPane').style.zIndex = 300;
-        
-        // Individual panes for each raster layer
+
         var rasterPaneIds = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
         rasterPaneIds.forEach(function(id, i) {
             map.createPane('raster_' + id);
             map.getPane('raster_' + id).style.zIndex = 310 + i;
         });
-        
+
         map.createPane('speciesRasterPane');
         map.getPane('speciesRasterPane').style.zIndex = 320;
-        
         map.createPane('speciesVectorPane');
         map.getPane('speciesVectorPane').style.zIndex = 360;
-        
         map.createPane('boundariesPane');
         map.getPane('boundariesPane').style.zIndex = 350;
 
-        // Define basemaps
-        var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 19
-        });
-
-        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 19
-        });
-
-        var topoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 19
-        });
-
-        // Add default basemap
+        var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
+        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
+        var topoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
         satelliteMap.addTo(map);
 
         // =====================================================================
@@ -356,59 +318,66 @@
         var currentLayer = null;
         var activeLayers = {};
         var loadedCount = 0;
-        var totalLayers = 6; // enm, enm_cv, basic_risk, blend_risk, risk_blend_cv, diff_blend_minus_basic
+        var totalLayers = 6;
         var nipahCasesLayer = null;
         var adminBoundariesLayer = null;
-
         var DEFAULT_OPACITY = 1.0;
-        
+
         var hiddenClasses = {
-            'enm': {},
-            'enm_cv': {},
-            'basic_risk': {},
-            'blend_risk': {},
-            'risk_blend_cv': {},
-            'diff_blend_minus_basic': {}
+            'enm': {}, 'enm_cv': {}, 'basic_risk': {}, 'blend_risk': {},
+            'risk_blend_cv': {}, 'diff_blend_minus_basic': {}
         };
 
-        // Store computed SD domains for legend display
         var computedDomains = {};
 
+        // Date palm layer state
+        var datePalmLayer       = null;
+        var datePalmVisible     = false;
+        var hiddenDatePalmCats  = {};   // tracks which categories are toggled off
+        var datePalmData        = null; // raw GeoJSON stored for re-filter
+
+        // Category definitions
+        var datePalmCats = {
+            'supplier':  { label: 'Supplier District',          color: '#F97316', fill: '#FED7AA' },
+            'recipient': { label: 'Recipient District',         color: '#2563EB', fill: '#BFDBFE' },
+            'both':      { label: 'Supplier & Recipient',       color: '#7C3AED', fill: '#DDD6FE' }
+        };
+
+        function getDatePalmCategory(props) {
+            var sup = (props.Supplier || '').trim() === 'Y';
+            var rec = (props.Recipient || '').trim() === 'Y';
+            var bot = (props.Both     || '').trim() === 'Y';
+            if (bot)       return 'both';
+            if (sup)       return 'supplier';
+            if (rec)       return 'recipient';
+            return null;
+        }
 
         // =====================================================================
-        // VECTOR OVERLAY CONFIGS — Outbreaks & Survey Data
+        // VECTOR OVERLAY CONFIGS
         // =====================================================================
         var speciesSurveyLayers = {};
         var speciesSurveyConfigs = {
             'gbif_bats': {
                 file: 'gbif_bats.geojson',
                 name: 'GBIF Bat Species Occurrences',
-                color: '#8B5CF6',
-                fillColor: '#8B5CF6',
-                radius: 5,
-                weight: 1.5,
-                icon: 'circle',
-                colorBySpecies: true
+                color: '#8B5CF6', fillColor: '#8B5CF6',
+                radius: 5, weight: 1.5, icon: 'circle', colorBySpecies: true
             },
             'nipah_survey': {
                 file: 'survey.json',
                 name: 'Bat Survey & Phylogeographic Data',
-                color: '#10B981',
-                fillColor: '#10B981',
-                radius: 7,
-                weight: 2,
-                icon: 'diamond',
-                colorBySpecies: false
+                color: '#10B981', fillColor: '#10B981',
+                radius: 7, weight: 2, icon: 'diamond', colorBySpecies: false
             }
         };
 
-        // Species color palette for GBIF bat data
         var gbifSpeciesColors = {
             'Pteropus medius':           '#1f78b4',
             'Pteropus giganteus':        '#6a3d9a',
             'Rousettus leschenaultii':   '#e377c2',
             'Hipposideros larvatus':     '#17becf',
-            'Pteropus vampyrus':        '#bcbd22',
+            'Pteropus vampyrus':         '#bcbd22',
             'Rousettus amplexicaudatus': '#8c564b'
         };
         var gbifSpeciesList = [];
@@ -421,7 +390,7 @@
         }
 
         // =====================================================================
-        // LAYER CONFIGURATIONS — all 6 raster layers loaded via georaster
+        // LAYER CONFIGURATIONS — UPDATED DESCRIPTIONS
         // =====================================================================
         var layerConfigs = {
             'enm': {
@@ -430,10 +399,18 @@
                 colors: ['#969696', '#fed976', '#feb24c', '#fd8d3c', '#fc4e2a', '#e31a1c', '#b10026'],
                 domain: [0, 993],
                 labels: ['Low Suitability', 'High Suitability'],
-                description: 'Ecological Niche Model (biomod2)',
+                description: 'Ecological Niche Model (biomd2)',
                 mode: 'lch',
                 continuousLegend: true,
-                useSdStretch: true   // <-- SD stretch enabled
+                useSdStretch: true,
+                infoDescription: 'Ensemble median suitability from biomd2 (GLM, MAXNET, MARS) calibrated on 90 ' +
+                    'thinned NiV occurrence records within a mixed accessible area: ~75km buffer for Bangladesh ' +
+                    'and West Bengal; ~50km for Kerala reflecting the Western Ghats barrier. Nine PC predictors ' +
+                    'derived from CHELSA temperature, precipitation, and MODIS EVI were retained after VIF ' +
+                    'screening (range: 1.07–2.42). Temperature PC2 (isothermality/thermal intensity) was the ' +
+                    'single most important predictor (26.5%), with temperature and precipitation collectively ' +
+                    'accounting for 90.1% of variable importance. Validated by partial ROC: pAUC ratio = 1.933 ' +
+                    'at 50% omission and 2.846 at 30% omission (both p<0.001). Values range 0–1000.'
             },
             'enm_cv': {
                 file: 'enm_cv.tif',
@@ -444,24 +421,35 @@
                 description: '',
                 mode: 'lch',
                 continuousLegend: true,
-                useSdStretch: true   // <-- SD stretch enabled
+                useSdStretch: true,
+                infoDescription: 'Ensemble coefficient of variation (EMcv) from biomd2, representing spatial ' +
+                    'uncertainty across individual model predictions before ensemble aggregation. Low CV indicates ' +
+                    'strong agreement among GLM, MAXNET, and MARS; high CV identifies cells where algorithm ' +
+                    'responses to PC predictors diverge. Elevated uncertainty typically occurs in environmental ' +
+                    'transition zones — particularly the geographic gap between the Bangladesh Nipah belt and ' +
+                    'Kerala — where the bimodal training data provides limited calibration information. ' +
+                    'Interpret alongside the ENM suitability layer: high suitability with low CV represents ' +
+                    'the most robust predictions.'
             },
             'basic_risk': {
                 file: 'risk_basic.tif',
                 name: 'Baseline Risk (ENM + Pop)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#000000', 1: '#FFFFBE', 2: '#FFDD00',
+                    3: '#FFAA00', 4: '#FF6600', 6: '#FF0000', 9: '#A80000'
                 },
                 noDataValue: 15,
                 labels: ['No Risk', 'Very High Risk'],
                 description: '',
-                infoDescription: 'Product of ENM suitability (0–3) and population count (0–3) classes. Values range 0–9, where 0 = ecologically unsuitable or uninhabited and 9 = highest suitability co-occurring with highest population. Provides a baseline exposure risk before any land cover adjustment.',
+                infoDescription: 'Product of ENM suitability (0–3) and ambient population (0–3) classes, ' +
+                    'yielding seven risk levels {0,1,2,3,4,6,9}. Both layers classified independently using ' +
+                    'Fisher-Jenks natural breaks; population log-transformed before classification to account ' +
+                    'for skewed density distribution. Ambient population sourced from LandScan Mosaic at 100m — ' +
+                    'a 24-hour ambient model capturing daytime movement and agricultural labour patterns. ' +
+                    'Cells with zero population are assigned No Risk regardless of ENM suitability. ' +
+                    'Represents a population-exposure surface, not biological spillover probability. ' +
+                    '131.2M people in High or Very High risk; Kerala\'s proportional exposure (52.8%) ' +
+                    'exceeds Bangladesh\'s (42.5%) despite its smaller population.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -478,18 +466,21 @@
                 file: 'risk_blend.tif',
                 name: 'Landcover Weighted Risk (ENM + Pop + LC)',
                 discreteColors: {
-                    0: '#000000',
-                    1: '#FFFFBE',
-                    2: '#FFDD00',
-                    3: '#FFAA00',
-                    4: '#FF6600',
-                    6: '#FF0000',
-                    9: '#A80000'
+                    0: '#000000', 1: '#FFFFBE', 2: '#FFDD00',
+                    3: '#FFAA00', 4: '#FF6600', 6: '#FF0000', 9: '#A80000'
                 },
                 noDataValue: 15,
                 labels: ['No Risk', 'Very High Risk'],
                 description: '',
-                infoDescription: 'Ensemble mean of 9 scenarios (3 α × 3 blend steepness) where baseline risk is modified by region-specific land cover weights. Outbreak-associated land cover types boost risk; underrepresented types dampen it. Integrates ecology, population, and landscape context into a single composite index.',
+                infoDescription: 'Ensemble mean across 25 parameter scenarios (5 alpha × 5 blend steepness) ' +
+                    'where baseline risk is adjusted by empirical land cover weights derived from Dynamic World ' +
+                    '2025 at 100m. Weights compare outbreak-location land cover frequency against regional ' +
+                    'background availability, bounded to [0.7, 1.3]. Separate weights for Bangladesh/West ' +
+                    'Bengal and Kerala are blended spatially via a sigmoid function centred at 78°E. ' +
+                    'Primary scenario alpha = 0.2, selected as most stable by bootstrap uncertainty analysis ' +
+                    '(n=1,000). Land cover weights are association-based modifiers, not causal drivers. ' +
+                    'Dominant effect: 34.2M people reclassified from Moderate to Elevated risk in peri-urban ' +
+                    'Bangladesh. High and Very High classes changed by <1M people.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -506,19 +497,20 @@
                 file: 'risk_blend_cv.tif',
                 name: 'Ensemble CV',
                 discreteColors: {
-                    0: '#000000',
-                    2: '#edf8b1',
-                    3: '#c7e9b4',
-                    4: '#7fcdbb',
-                    5: '#41b6c4',
-                    6: '#1d91c0',
-                    7: '#225ea8',
-                    8: '#0c2c84'
+                    0: '#000000', 2: '#edf8b1', 3: '#c7e9b4', 4: '#7fcdbb',
+                    5: '#41b6c4', 6: '#1d91c0', 7: '#225ea8', 8: '#0c2c84'
                 },
                 noDataValue: 255,
                 labels: ['Low CV', 'High CV'],
                 description: '',
-                infoDescription: 'Coefficient of variation (SD/mean × 100) across 9 ensemble members. Low values indicate stable risk estimates regardless of parameter choice. Higher values identify cells sensitive to α and blend steepness parameters, providing a spatially explicit measure of methodological uncertainty.',
+                infoDescription: 'Coefficient of variation (SD / mean × 100) across all 25 ensemble scenarios ' +
+                    '(alpha = 0.1–0.8 × blend steepness k = 0.05–0.80). Study-area mean CV = 5.0%, confirming ' +
+                    'high parameter stability across the full tested range. Blend steepness had negligible ' +
+                    'influence within any alpha level; alpha had a small consistent effect bounded by the ' +
+                    '[0.7, 1.3] weight clamping structure. Higher CV cells — primarily in environmental ' +
+                    'transition zones and areas with small outbreak samples (Bangladesh flooded vegetation ' +
+                    'n=2; Kerala built area n=3) — identify where results are more sensitive to ' +
+                    'parameter selection.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -536,18 +528,20 @@
                 file: 'diff_blend_minus_basic.tif',
                 name: 'Normalized Difference Surface',
                 discreteColors: {
-                    1: '#2166ac',
-                    2: '#67a9cf',
-                    3: '#92c5de',
-                    4: '#333333',
-                    5: '#f4a582',
-                    6: '#ef8a62',
-                    7: '#b2182b'
+                    1: '#2166ac', 2: '#67a9cf', 3: '#92c5de',
+                    4: '#333333', 5: '#f4a582', 6: '#ef8a62', 7: '#b2182b'
                 },
                 noDataValue: 15,
                 labels: ['Decrease', 'Increase'],
                 description: '',
-                infoDescription: 'Difference between normalized (0–1) land-cover-weighted ensemble mean and normalized baseline. Positive values = land cover increased risk. Negative values = land cover reduced risk. Zero = minimal land cover effect. Isolates the specific contribution of landscape context beyond ecology and population.',
+                infoDescription: 'Normalised (0–1) difference between the blended ensemble mean and baseline ' +
+                    'ENM×Population surface. Positive values indicate cells where land cover weighting increased ' +
+                    'risk — primarily built area and flooded vegetation in peri-urban Bangladesh. Negative ' +
+                    'values indicate cells where weighting reduced risk. Zero indicates minimal land cover ' +
+                    'effect. Spearman rank correlation between baseline and blended surfaces = 0.999997, ' +
+                    'confirming global rank order is preserved; this layer isolates the reclassification ' +
+                    'effect concentrated in the Moderate-to-Elevated risk transition zone, corresponding ' +
+                    'to the 34.2M population reclassification in Bangladesh.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -571,54 +565,32 @@
         var drawControl = new L.Control.Draw({
             position: 'topright',
             draw: {
-                polyline: {
-                    shapeOptions: { color: '#f357a1', weight: 3 },
-                    metric: true,
-                    feet: false,
-                    showLength: true
-                },
-                polygon: {
-                    shapeOptions: { color: '#f357a1', weight: 3 },
-                    showArea: true,
-                    metric: true
-                },
-                rectangle: {
-                    shapeOptions: { color: '#4CAF50', weight: 3, fillOpacity: 0.1 }
-                },
-                circle: false,
-                marker: false,
-                circlemarker: false
+                polyline: { shapeOptions: { color: '#f357a1', weight: 3 }, metric: true, feet: false, showLength: true },
+                polygon:  { shapeOptions: { color: '#f357a1', weight: 3 }, showArea: true, metric: true },
+                rectangle: { shapeOptions: { color: '#4CAF50', weight: 3, fillOpacity: 0.1 } },
+                circle: false, marker: false, circlemarker: false
             },
-            edit: {
-                featureGroup: drawnItems,
-                remove: true
-            }
+            edit: { featureGroup: drawnItems, remove: true }
         });
         map.addControl(drawControl);
 
         map.on(L.Draw.Event.CREATED, function (event) {
             var layer = event.layer;
-            var type = event.layerType;
-            
+            var type  = event.layerType;
             if (type === 'polyline') {
                 var length = 0;
                 var latlngs = layer.getLatLngs();
-                for (var i = 0; i < latlngs.length - 1; i++) {
-                    length += latlngs[i].distanceTo(latlngs[i + 1]);
-                }
-                var lengthKm = (length / 1000).toFixed(2);
-                layer.bindPopup('<b>Distance:</b> ' + lengthKm + ' km');
+                for (var i = 0; i < latlngs.length - 1; i++) length += latlngs[i].distanceTo(latlngs[i+1]);
+                layer.bindPopup('<b>Distance:</b> ' + (length/1000).toFixed(2) + ' km');
                 drawnItems.addLayer(layer);
             } else if (type === 'polygon') {
                 var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                var areaKm = (area / 1000000).toFixed(2);
-                layer.bindPopup('<b>Area:</b> ' + areaKm + ' km²');
+                layer.bindPopup('<b>Area:</b> ' + (area/1000000).toFixed(2) + ' km²');
                 drawnItems.addLayer(layer);
             } else if (type === 'rectangle') {
                 var bounds = layer.getBounds();
-                var area = (bounds.getNorth() - bounds.getSouth()) * 
-                           (bounds.getEast() - bounds.getWest()) * 111 * 111;
-                layer.bindPopup('<b>Rectangle Area:</b> ~' + area.toFixed(2) + ' km²');
+                var area2 = (bounds.getNorth()-bounds.getSouth()) * (bounds.getEast()-bounds.getWest()) * 111 * 111;
+                layer.bindPopup('<b>Rectangle Area:</b> ~' + area2.toFixed(2) + ' km²');
                 drawnItems.addLayer(layer);
             }
         });
@@ -631,12 +603,8 @@
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(coordText).then(function() {
                     showCopyNotification('Coordinates copied: ' + coordText);
-                }).catch(function(err) {
-                    fallbackCopyTextToClipboard(coordText);
-                });
-            } else {
-                fallbackCopyTextToClipboard(coordText);
-            }
+                }).catch(function() { fallbackCopyTextToClipboard(coordText); });
+            } else { fallbackCopyTextToClipboard(coordText); }
         }
 
         function fallbackCopyTextToClipboard(text) {
@@ -649,51 +617,38 @@
             textArea.select();
             try {
                 var successful = document.execCommand('copy');
-                if (successful) {
-                    showCopyNotification('Coordinates copied: ' + text);
-                } else {
-                    showCopyNotification('Failed to copy coordinates', true);
-                }
-            } catch (err) {
-                showCopyNotification('Failed to copy coordinates', true);
-            }
+                showCopyNotification(successful ? 'Coordinates copied: ' + text : 'Failed to copy coordinates', !successful);
+            } catch (err) { showCopyNotification('Failed to copy coordinates', true); }
             document.body.removeChild(textArea);
         }
 
         function showCopyNotification(message, isError) {
             var notification = document.getElementById('copy-notification');
             notification.textContent = message;
-            notification.style.background = isError ? 'rgba(198, 40, 40, 0.9)' : 'rgba(0, 0, 0, 0.8)';
+            notification.style.background = isError ? 'rgba(198,40,40,0.9)' : 'rgba(0,0,0,0.8)';
             notification.classList.add('show');
-            setTimeout(function() {
-                notification.classList.remove('show');
-            }, 2000);
+            setTimeout(function() { notification.classList.remove('show'); }, 2000);
         }
 
         // =====================================================================
         // UTILITY FUNCTIONS
         // =====================================================================
-        function updateStatus(message, isError) {
-            console.log(message);
-        }
+        function updateStatus(message) { console.log(message); }
 
         function updateLayerOpacity(layerId, opacity) {
-            if (layers[layerId]) {
-                layers[layerId].setOpacity(opacity);
-            }
+            if (layers[layerId]) layers[layerId].setOpacity(opacity);
         }
 
         function getRasterValueAtPoint(layerId, latlng) {
             if (!georasters[layerId]) return null;
             try {
                 var georaster = georasters[layerId];
-                var x = latlng.lng;
-                var y = latlng.lat;
+                var x = latlng.lng, y = latlng.lat;
                 var xmin = georaster.xmin, xmax = georaster.xmax;
                 var ymin = georaster.ymin, ymax = georaster.ymax;
                 var width = georaster.width, height = georaster.height;
                 if (x < xmin || x > xmax || y < ymin || y > ymax) return null;
-                var pixelWidth = (xmax - xmin) / width;
+                var pixelWidth  = (xmax - xmin) / width;
                 var pixelHeight = (ymax - ymin) / height;
                 var pixelX = Math.floor((x - xmin) / pixelWidth);
                 var pixelY = Math.floor((ymax - y) / pixelHeight);
@@ -701,56 +656,40 @@
                 var values = georaster.values;
                 if (values && values[0] && values[0][pixelY]) {
                     var value = values[0][pixelY][pixelX];
-                    console.log('Layer:', layerId, 'Raw value:', value, 'Type:', typeof value, 'NoDataValue:', georaster.noDataValue);
                     if (value !== null && value !== undefined && !isNaN(value)) {
-                        if (value === 255 || value === 15 || value === -9999 || value === -3.4e38 || 
+                        if (value === 255 || value === 15 || value === -9999 || value === -3.4e38 ||
                             Math.abs(value) > 1e10 || value === -32768) return null;
-                        if (georaster.noDataValue !== null && georaster.noDataValue !== undefined && !isNaN(georaster.noDataValue)) {
-                            if (Math.abs(value - georaster.noDataValue) < 0.0001) return null;
-                        }
+                        if (georaster.noDataValue !== null && georaster.noDataValue !== undefined &&
+                            !isNaN(georaster.noDataValue) &&
+                            Math.abs(value - georaster.noDataValue) < 0.0001) return null;
                         return value;
                     }
                 }
-            } catch (error) {
-                console.log('Error getting value for ' + layerId + ':', error);
-            }
+            } catch (error) { console.log('Error getting value for ' + layerId + ':', error); }
             return null;
         }
 
         // =====================================================================
         // SD STRETCH HELPER
-        // Computes mean and SD from all valid pixels, returns [mean-1SD, mean+1SD].
-        // Falls back to config.domain if not enough valid values are found.
         // =====================================================================
         function computeSdDomain(georaster, config) {
             var noDataVal = georaster.noDataValue;
             var rawValues = georaster.values[0];
-            var sum = 0;
-            var count = 0;
+            var sum = 0, count = 0;
 
-            // Single-pass mean (Welford-style accumulation for large rasters)
             for (var row = 0; row < rawValues.length; row++) {
                 var rowData = rawValues[row];
                 for (var col = 0; col < rowData.length; col++) {
                     var v = rowData[col];
                     if (v === null || v === undefined || isNaN(v)) continue;
                     if (v === 255 || v === -9999 || v === -32768 || v === -3.4e38 || Math.abs(v) > 1e10) continue;
-                    if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal)) {
-                        if (Math.abs(v - noDataVal) < 0.0001) continue;
-                    }
-                    sum += v;
-                    count++;
+                    if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal) && Math.abs(v - noDataVal) < 0.0001) continue;
+                    sum += v; count++;
                 }
             }
-
-            if (count < 2) {
-                console.warn(config.name + ': too few valid pixels for SD stretch, using config domain');
-                return config.domain;
-            }
+            if (count < 2) return config.domain;
 
             var mean = sum / count;
-
-            // Second pass: variance
             var sumSq = 0;
             for (var row2 = 0; row2 < rawValues.length; row2++) {
                 var rowData2 = rawValues[row2];
@@ -758,55 +697,39 @@
                     var v2 = rowData2[col2];
                     if (v2 === null || v2 === undefined || isNaN(v2)) continue;
                     if (v2 === 255 || v2 === -9999 || v2 === -32768 || v2 === -3.4e38 || Math.abs(v2) > 1e10) continue;
-                    if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal)) {
-                        if (Math.abs(v2 - noDataVal) < 0.0001) continue;
-                    }
-                    var diff = v2 - mean;
-                    sumSq += diff * diff;
+                    if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal) && Math.abs(v2 - noDataVal) < 0.0001) continue;
+                    var diff = v2 - mean; sumSq += diff * diff;
                 }
             }
-
             var sd = Math.sqrt(sumSq / count);
-            var sdMin = mean - sd;
-            var sdMax = mean + sd;
-
-            console.log(config.name + ' — mean: ' + mean.toFixed(2) +
-                        ', SD: ' + sd.toFixed(2) +
-                        ', stretch domain: [' + sdMin.toFixed(2) + ', ' + sdMax.toFixed(2) + ']');
-
-            return [sdMin, sdMax];
+            return [mean - sd, mean + sd];
         }
 
         // =====================================================================
-        // NIPAH OUTBREAK LOCATIONS (outbreaks.json — 137 documented locations)
+        // NIPAH OUTBREAK LOCATIONS
         // =====================================================================
         function loadNipahCases() {
             fetch('outbreaks.json')
-                .then(response => {
-                    if (!response.ok) throw new Error('Outbreaks file not found');
-                    return response.json();
-                })
-                .then(data => {
-                    updateStatus('Loaded ' + data.features.length + ' Nipah outbreak locations');
+                .then(function(r) { if (!r.ok) throw new Error('Not found'); return r.json(); })
+                .then(function(data) {
                     nipahCasesLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
                             var size = 14;
                             var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
                                 '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/>' +
                                 '<circle cx="12" cy="12" r="7" fill="none" stroke="#000000" stroke-width="1.5"/>' +
-                                '<circle cx="12" cy="12" r="3" fill="#000000"/>' +
-                                '</svg>';
+                                '<circle cx="12" cy="12" r="3" fill="#000000"/></svg>';
                             var icon = L.divIcon({ html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
                             return L.marker(latlng, { icon: icon });
                         },
                         onEachFeature: function(feature, layer) {
                             var p = feature.properties;
-                            var countryName = (p.Country === 'BGD') ? 'Bangladesh' : (p.Country === 'IND') ? 'India' : p.Country;
+                            var countryName = p.Country === 'BGD' ? 'Bangladesh' : p.Country === 'IND' ? 'India' : p.Country;
                             var popupContent = '<h3>Nipah Outbreak – ' + (p.Admin_Name || '') + '</h3><table>';
                             popupContent += '<tr><td>Location</td><td>' + (p.Admin_Name || '') + '</td></tr>';
                             popupContent += '<tr><td>Country</td><td>' + countryName + '</td></tr>';
                             popupContent += '<tr><td>Year</td><td>' + (p.Year || '') + '</td></tr>';
-                            popupContent += '<tr><td>Reference</td><td style="font-size:10px; max-width:200px; word-wrap:break-word;">' + (p.Reference || '') + '</td></tr>';
+                            popupContent += '<tr><td>Reference</td><td style="font-size:10px;max-width:200px;word-wrap:break-word;">' + (p.Reference || '') + '</td></tr>';
                             popupContent += '<tr><td>Coordinates</td><td>' + (p.Latitude ? parseFloat(p.Latitude).toFixed(4) : '') + ', ' + (p.Longitude ? parseFloat(p.Longitude).toFixed(4) : '') + '</td></tr>';
                             popupContent += '</table>';
                             layer.bindPopup(popupContent, { maxWidth: 350, maxHeight: 400 });
@@ -815,58 +738,114 @@
                     nipahCasesLayer.addTo(map);
                     updateLegend();
                 })
-                .catch(error => {
-                    console.log('Outbreaks file not found - layer will not be available');
-                });
+                .catch(function() { console.log('Outbreaks file not found'); });
         }
 
         function toggleNipahCases(show) {
-            if (nipahCasesLayer) {
-                if (show) { nipahCasesLayer.addTo(map); } else { map.removeLayer(nipahCasesLayer); }
-            }
+            if (nipahCasesLayer) { if (show) nipahCasesLayer.addTo(map); else map.removeLayer(nipahCasesLayer); }
         }
 
         // =====================================================================
         // ADMIN BOUNDARIES
         // =====================================================================
-        function updateAdminBoundaryStyle() {
-            // M-Region boundary is always black
-        }
-
         function loadAdminBoundaries() {
             fetch('m_region.json')
-                .then(response => {
-                    if (!response.ok) throw new Error('M-Region boundary file not found');
-                    return response.json();
-                })
-                .then(data => {
-                    updateStatus('Loaded M-Region boundary');
+                .then(function(r) { if (!r.ok) throw new Error('Not found'); return r.json(); })
+                .then(function(data) {
                     adminBoundariesLayer = L.geoJSON(data, {
-                        style: {
-                            fillColor: 'transparent',
-                            fillOpacity: 0,
-                            color: '#000000',
-                            weight: 2,
-                            opacity: 1
-                        },
+                        style: { fillColor: 'transparent', fillOpacity: 0, color: '#000000', weight: 2, opacity: 1 },
                         pane: 'boundariesPane',
                         interactive: false
                     });
                     adminBoundariesLayer.addTo(map);
                 })
-                .catch(error => {
-                    console.log('M-Region boundary file not found - layer will not be available');
-                });
+                .catch(function() { console.log('M-Region boundary file not found'); });
         }
 
         function toggleAdminBoundaries(show) {
-            if (adminBoundariesLayer) {
-                if (show) { adminBoundariesLayer.addTo(map); } else { map.removeLayer(adminBoundariesLayer); }
-            }
+            if (adminBoundariesLayer) { if (show) adminBoundariesLayer.addTo(map); else map.removeLayer(adminBoundariesLayer); }
         }
 
         // =====================================================================
-        // SPECIES / SURVEY GEOJSON LAYER LOADING
+        // DATE PALM DISTRICTS LAYER
+        // =====================================================================
+        function buildDatePalmGeoJSON() {
+            if (!datePalmData) return;
+            if (datePalmLayer) map.removeLayer(datePalmLayer);
+
+            datePalmLayer = L.geoJSON(datePalmData, {
+                filter: function(feature) {
+                    var cat = getDatePalmCategory(feature.properties);
+                    if (!cat) return false;
+                    return !hiddenDatePalmCats[cat];
+                },
+                style: function(feature) {
+                    var cat  = getDatePalmCategory(feature.properties);
+                    var cfg  = datePalmCats[cat] || { color: '#888', fill: '#ccc' };
+                    return {
+                        color:       cfg.color,
+                        fillColor:   cfg.fill,
+                        fillOpacity: 0.45,
+                        weight:      2,
+                        opacity:     1
+                    };
+                },
+                pane: 'boundariesPane',
+                onEachFeature: function(feature, layer) {
+                    var p    = feature.properties;
+                    var cat  = getDatePalmCategory(p);
+                    var cfg  = cat ? datePalmCats[cat] : null;
+                    var popup = '<h3>' + (p.NAME_2 || '') + '</h3><table>' +
+                        '<tr><td>Division</td><td>' + (p.NAME_1 || '') + '</td></tr>' +
+                        '<tr><td>Category</td><td>' + (cfg ? cfg.label : '—') + '</td></tr>' +
+                        '<tr><td>Supplier</td><td>' + ((p.Supplier || '').trim() === 'Y' ? 'Yes' : 'No') + '</td></tr>' +
+                        '<tr><td>Recipient</td><td>' + ((p.Recipient || '').trim() === 'Y' ? 'Yes' : 'No') + '</td></tr>' +
+                        '<tr><td>Both</td><td>' + ((p.Both || '').trim() === 'Y' ? 'Yes' : 'No') + '</td></tr>' +
+                        '</table>';
+                    layer.bindPopup(popup, { maxWidth: 280 });
+                    layer.on('mouseover', function() {
+                        layer.setStyle({ fillOpacity: 0.70, weight: 3 });
+                    });
+                    layer.on('mouseout', function() {
+                        var c = getDatePalmCategory(p);
+                        var s = datePalmCats[c] || { color: '#888', fill: '#ccc' };
+                        layer.setStyle({ fillOpacity: 0.45, weight: 2, color: s.color, fillColor: s.fill });
+                    });
+                }
+            });
+
+            if (datePalmVisible) datePalmLayer.addTo(map);
+        }
+
+        function loadDatePalmLayer() {
+            fetch('date_palms.json')
+                .then(function(r) { if (!r.ok) throw new Error('Not found'); return r.json(); })
+                .then(function(data) {
+                    datePalmData = data;
+                    buildDatePalmGeoJSON();
+                    updateLegend();
+                })
+                .catch(function() { console.log('date_palms.json not found'); });
+        }
+
+        function toggleDatePalmLayer(show) {
+            datePalmVisible = show;
+            if (datePalmLayer) {
+                if (show) datePalmLayer.addTo(map);
+                else map.removeLayer(datePalmLayer);
+            }
+            updateLegend();
+        }
+
+        function toggleDatePalmCategory(cat, show) {
+            if (show) { delete hiddenDatePalmCats[cat]; }
+            else      { hiddenDatePalmCats[cat] = true; }
+            buildDatePalmGeoJSON();
+            updateLegend();
+        }
+
+        // =====================================================================
+        // SPECIES / SURVEY GEOJSON LAYERS
         // =====================================================================
         function createSvgIcon(shape, color, size) {
             var s = size || 12;
@@ -874,65 +853,44 @@
             if (shape === 'diamond') {
                 var half = s / 2;
                 svg = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" xmlns="http://www.w3.org/2000/svg">' +
-                      '<polygon points="' + half + ',0 ' + s + ',' + half + ' ' + half + ',' + s + ' 0,' + half + '" ' +
-                      'fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
+                      '<polygon points="' + half + ',0 ' + s + ',' + half + ' ' + half + ',' + s + ' 0,' + half + '" fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
             } else if (shape === 'triangle') {
                 svg = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" xmlns="http://www.w3.org/2000/svg">' +
-                      '<polygon points="' + (s/2) + ',0 ' + s + ',' + s + ' 0,' + s + '" ' +
-                      'fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
+                      '<polygon points="' + (s/2) + ',0 ' + s + ',' + s + ' 0,' + s + '" fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
             } else if (shape === 'square') {
                 svg = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" xmlns="http://www.w3.org/2000/svg">' +
-                      '<rect x="1" y="1" width="' + (s-2) + '" height="' + (s-2) + '" ' +
-                      'fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
-            } else {
-                return null;
-            }
+                      '<rect x="1" y="1" width="' + (s-2) + '" height="' + (s-2) + '" fill="' + color + '" stroke="#000" stroke-width="1.5"/></svg>';
+            } else { return null; }
             return L.divIcon({ html: svg, className: '', iconSize: [s, s], iconAnchor: [s/2, s/2] });
         }
-        
+
         function loadSpeciesSurveyLayer(layerId) {
             var config = speciesSurveyConfigs[layerId];
             fetch(config.file)
-                .then(response => {
-                    if (!response.ok) throw new Error(config.name + ' file not found');
-                    return response.json();
-                })
-                .then(data => {
-                    var featureCount = data.features ? data.features.length : 0;
-                    updateStatus('Loaded ' + config.name + ' (' + featureCount + ' features)');
-                    
+                .then(function(r) { if (!r.ok) throw new Error('Not found'); return r.json(); })
+                .then(function(data) {
                     if (layerId === 'gbif_bats' && config.colorBySpecies) {
-                        gbifSpeciesList = [];
-                        gbifSpeciesCounts = {};
+                        gbifSpeciesList = []; gbifSpeciesCounts = {};
                         data.features.forEach(function(f) {
                             var sp = (f.properties && f.properties.Binomial) ? f.properties.Binomial.trim() : 'Unknown';
                             if (!sp || sp === '') sp = 'Unknown';
                             if (!gbifSpeciesCounts[sp]) { gbifSpeciesCounts[sp] = 0; gbifSpeciesList.push(sp); }
                             gbifSpeciesCounts[sp]++;
                         });
-                        gbifSpeciesList.sort(function(a, b) {
-                            return (gbifSpeciesCounts[b] || 0) - (gbifSpeciesCounts[a] || 0);
-                        });
+                        gbifSpeciesList.sort(function(a, b) { return (gbifSpeciesCounts[b]||0) - (gbifSpeciesCounts[a]||0); });
                     }
-                    
+
                     var geojsonLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
                             if (layerId === 'gbif_bats' && config.colorBySpecies) {
                                 var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
-                                var spColor = getGbifSpeciesColor(sp);
-                                return L.circleMarker(latlng, {
-                                    color: '#000000', fillColor: spColor, fillOpacity: 0.9,
-                                    radius: config.radius, weight: config.weight || 1.5, pane: 'speciesVectorPane'
-                                });
+                                return L.circleMarker(latlng, { color: '#000000', fillColor: getGbifSpeciesColor(sp), fillOpacity: 0.9, radius: config.radius, weight: config.weight || 1.5, pane: 'speciesVectorPane' });
                             }
                             if (config.icon && config.icon !== 'circle') {
                                 var icon = createSvgIcon(config.icon, config.fillColor, 14);
                                 if (icon) return L.marker(latlng, { icon: icon, pane: 'speciesVectorPane' });
                             }
-                            return L.circleMarker(latlng, {
-                                color: '#000000', fillColor: config.fillColor, fillOpacity: 0.9,
-                                radius: config.radius, weight: config.weight || 2, pane: 'speciesVectorPane'
-                            });
+                            return L.circleMarker(latlng, { color: '#000000', fillColor: config.fillColor, fillOpacity: 0.9, radius: config.radius, weight: config.weight || 2, pane: 'speciesVectorPane' });
                         },
                         style: function(feature) {
                             if (feature.geometry && feature.geometry.type === 'Point') return {};
@@ -949,43 +907,30 @@
                         onEachFeature: function(feature, layer) {
                             var p = feature.properties;
                             var popupContent;
-                            
                             if (layerId === 'gbif_bats') {
                                 popupContent = '<h3><em>' + (p.Binomial || '') + '</em></h3><table>';
                                 if (p.Scientific_Name_Full) popupContent += '<tr><td>Full Name</td><td><em>' + p.Scientific_Name_Full + '</em></td></tr>';
                                 if (p.Country) popupContent += '<tr><td>Country</td><td>' + p.Country + '</td></tr>';
-                                if (p.Year_Collected && p.Year_Collected !== 'None' && p.Year_Collected !== null) popupContent += '<tr><td>Year Collected</td><td>' + Math.round(p.Year_Collected) + '</td></tr>';
+                                if (p.Year_Collected && p.Year_Collected !== 'None') popupContent += '<tr><td>Year</td><td>' + Math.round(p.Year_Collected) + '</td></tr>';
                                 popupContent += '<tr><td>Coordinates</td><td>' + (p.Latitude ? parseFloat(p.Latitude).toFixed(4) : '') + ', ' + (p.Longitude ? parseFloat(p.Longitude).toFixed(4) : '') + '</td></tr>';
-                                if (p.Record_Completeness) popupContent += '<tr><td>Record Quality</td><td>' + p.Record_Completeness + '</td></tr>';
-                                if (p.GBIF_Species_URL) popupContent += '<tr><td>GBIF Link</td><td><a href="' + p.GBIF_Species_URL + '" target="_blank">View on GBIF</a></td></tr>';
+                                if (p.GBIF_Species_URL) popupContent += '<tr><td>GBIF</td><td><a href="' + p.GBIF_Species_URL + '" target="_blank">View</a></td></tr>';
                                 popupContent += '</table>';
-                            }
-                            else if (layerId === 'nipah_survey') {
+                            } else if (layerId === 'nipah_survey') {
                                 var locName = (p.Location_Name || '').replace(/_/g, ' ');
                                 popupContent = '<h3>' + locName + '</h3><table>';
                                 if (p.Data_Type) popupContent += '<tr><td>Data Type</td><td>' + p.Data_Type.replace(/_/g, ' ') + '</td></tr>';
                                 if (p.Country) popupContent += '<tr><td>Country</td><td>' + p.Country + '</td></tr>';
-                                if (p.District) popupContent += '<tr><td>District</td><td>' + p.District + '</td></tr>';
                                 if (p.Primary_Species) popupContent += '<tr><td>Species</td><td><em>' + p.Primary_Species + '</em></td></tr>';
                                 if (p.Study_Period) popupContent += '<tr><td>Study Period</td><td>' + p.Study_Period + '</td></tr>';
-                                if (p.Sample_Size && p.Sample_Size !== 'None') popupContent += '<tr><td>Sample Size</td><td>' + p.Sample_Size + '</td></tr>';
-                                if (p.Seroprevalence && p.Seroprevalence !== 'None') popupContent += '<tr><td>Seroprevalence (%)</td><td>' + p.Seroprevalence + '</td></tr>';
-                                if (p.PCR_Results && p.PCR_Results !== 'None') popupContent += '<tr><td>PCR Results</td><td>' + p.PCR_Results + '</td></tr>';
-                                if (p.RNA_Detection && p.RNA_Detection !== 'None') popupContent += '<tr><td>RNA Detection</td><td>' + p.RNA_Detection + '</td></tr>';
-                                if (p.Risk_Classification && p.Risk_Classification !== 'None') popupContent += '<tr><td>Risk Zone</td><td>' + p.Risk_Classification.replace(/_/g, ' ') + '</td></tr>';
-                                if (p.Study_Notes && p.Study_Notes !== 'None') popupContent += '<tr><td>Notes</td><td style="font-size:10px; max-width:200px; word-wrap:break-word;">' + p.Study_Notes + '</td></tr>';
-                                if (p.Source_Study) popupContent += '<tr><td>Source</td><td style="font-size:10px;">' + p.Source_Study + '</td></tr>';
-                                if (p.Publication_DOI && p.Publication_DOI !== 'None') popupContent += '<tr><td>DOI</td><td style="font-size:10px;"><a href="https://doi.org/' + p.Publication_DOI + '" target="_blank">' + p.Publication_DOI + '</a></td></tr>';
+                                if (p.Seroprevalence && p.Seroprevalence !== 'None') popupContent += '<tr><td>Seroprevalence</td><td>' + p.Seroprevalence + '%</td></tr>';
+                                if (p.Publication_DOI && p.Publication_DOI !== 'None') popupContent += '<tr><td>DOI</td><td><a href="https://doi.org/' + p.Publication_DOI + '" target="_blank">' + p.Publication_DOI + '</a></td></tr>';
                                 popupContent += '</table>';
-                            }
-                            else {
+                            } else {
                                 popupContent = '<h3>' + config.name + '</h3><table>';
                                 for (var key in p) {
-                                    if (p.hasOwnProperty(key)) {
-                                        var value = p[key];
-                                        if (value === null || value === undefined || value === '' || value === 'None') continue;
-                                        var displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() });
-                                        popupContent += '<tr><td>' + displayKey + '</td><td>' + value + '</td></tr>';
+                                    if (p.hasOwnProperty(key) && p[key] !== null && p[key] !== undefined && p[key] !== '' && p[key] !== 'None') {
+                                        var dk = key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
+                                        popupContent += '<tr><td>' + dk + '</td><td>' + p[key] + '</td></tr>';
                                     }
                                 }
                                 popupContent += '</table>';
@@ -993,55 +938,37 @@
                             layer.bindPopup(popupContent, { maxWidth: 350, maxHeight: 450 });
                         }
                     });
-                    
+
                     speciesSurveyLayers[layerId] = geojsonLayer;
                     if (layerId === 'gbif_bats') speciesSurveyLayers['gbif_bats_data'] = data;
                     updateLegend();
                 })
-                .catch(error => {
-                    console.log(config.name + ' not found - layer will not be available:', error.message);
-                });
+                .catch(function(e) { console.log(config.name + ' not found:', e.message); });
         }
-        
+
         function toggleGbifSpecies(species, show) {
             if (show) { delete hiddenGbifSpecies[species]; } else { hiddenGbifSpecies[species] = true; }
             if (activeLayers['species_gbif_bats'] && speciesSurveyLayers['gbif_bats_data']) {
                 if (speciesSurveyLayers['gbif_bats']) map.removeLayer(speciesSurveyLayers['gbif_bats']);
                 var config = speciesSurveyConfigs['gbif_bats'];
-                var data = speciesSurveyLayers['gbif_bats_data'];
-                var geojsonLayer = L.geoJSON(data, {
+                var data   = speciesSurveyLayers['gbif_bats_data'];
+                var newLayer = L.geoJSON(data, {
                     pointToLayer: function(feature, latlng) {
                         var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
-                        var spColor = getGbifSpeciesColor(sp);
-                        return L.circleMarker(latlng, {
-                            color: '#000000', fillColor: spColor, fillOpacity: 0.9,
-                            radius: config.radius, weight: config.weight || 1.5, pane: 'speciesVectorPane'
-                        });
+                        return L.circleMarker(latlng, { color: '#000000', fillColor: getGbifSpeciesColor(sp), fillOpacity: 0.9, radius: config.radius, weight: config.weight || 1.5, pane: 'speciesVectorPane' });
                     },
                     filter: function(feature) {
                         var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
                         return !hiddenGbifSpecies[sp];
                     },
-                    pane: 'speciesVectorPane',
-                    onEachFeature: function(feature, layer) {
-                        var p = feature.properties;
-                        var popupContent = '<h3><em>' + (p.Binomial || '') + '</em></h3><table>';
-                        if (p.Scientific_Name_Full) popupContent += '<tr><td>Full Name</td><td><em>' + p.Scientific_Name_Full + '</em></td></tr>';
-                        if (p.Country) popupContent += '<tr><td>Country</td><td>' + p.Country + '</td></tr>';
-                        if (p.Year_Collected && p.Year_Collected !== 'None' && p.Year_Collected !== null) popupContent += '<tr><td>Year Collected</td><td>' + Math.round(p.Year_Collected) + '</td></tr>';
-                        popupContent += '<tr><td>Coordinates</td><td>' + (p.Latitude ? parseFloat(p.Latitude).toFixed(4) : '') + ', ' + (p.Longitude ? parseFloat(p.Longitude).toFixed(4) : '') + '</td></tr>';
-                        if (p.Record_Completeness) popupContent += '<tr><td>Record Quality</td><td>' + p.Record_Completeness + '</td></tr>';
-                        if (p.GBIF_Species_URL) popupContent += '<tr><td>GBIF Link</td><td><a href="' + p.GBIF_Species_URL + '" target="_blank">View on GBIF</a></td></tr>';
-                        popupContent += '</table>';
-                        layer.bindPopup(popupContent, { maxWidth: 350, maxHeight: 450 });
-                    }
+                    pane: 'speciesVectorPane'
                 });
-                speciesSurveyLayers['gbif_bats'] = geojsonLayer;
-                geojsonLayer.addTo(map);
+                speciesSurveyLayers['gbif_bats'] = newLayer;
+                newLayer.addTo(map);
             }
             updateLegend();
         }
-        
+
         function toggleSpeciesSurveyLayer(layerId, show) {
             var lyr = speciesSurveyLayers[layerId];
             if (!lyr) return;
@@ -1049,136 +976,89 @@
             else { map.removeLayer(lyr); delete activeLayers['species_' + layerId]; }
             updateLegend();
         }
-        
+
         function updateSpeciesSurveyOpacity(layerId, opacity) {
             var lyr = speciesSurveyLayers[layerId];
             if (!lyr) return;
             lyr.eachLayer(function(layer) {
-                if (layer.setStyle) { layer.setStyle({ fillOpacity: opacity, opacity: opacity }); }
-                else if (layer.setOpacity) { layer.setOpacity(opacity); }
+                if (layer.setStyle) layer.setStyle({ fillOpacity: opacity, opacity: opacity });
+                else if (layer.setOpacity) layer.setOpacity(opacity);
             });
         }
 
         // =====================================================================
         // BASEMAP SWITCH
         // =====================================================================
-        function switchBasemap(basemapType) {
-            map.removeLayer(streetMap);
-            map.removeLayer(satelliteMap);
-            map.removeLayer(topoMap);
-            if (basemapType === 'street') { streetMap.addTo(map); }
-            else if (basemapType === 'satellite') { satelliteMap.addTo(map); }
-            else if (basemapType === 'topo') { topoMap.addTo(map); }
+        function switchBasemap(type) {
+            map.removeLayer(streetMap); map.removeLayer(satelliteMap); map.removeLayer(topoMap);
+            if (type === 'street') streetMap.addTo(map);
+            else if (type === 'satellite') satelliteMap.addTo(map);
+            else if (type === 'topo') topoMap.addTo(map);
         }
 
         // =====================================================================
-        // RASTER LAYER LOADING — all 6 layers via georaster
+        // RASTER LAYER LOADING
         // =====================================================================
         function loadLayer(layerId) {
             var config = layerConfigs[layerId];
-            updateStatus('Loading ' + config.name + '...');
             fetch(config.file)
-                .then(response => {
-                    if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
-                    updateStatus(config.name + ' fetched successfully');
-                    return response.arrayBuffer();
-                })
-                .then(arrayBuffer => {
-                    updateStatus('Parsing ' + config.name + '...');
-                    return parseGeoraster(arrayBuffer);
-                })
-                .then(georaster => {
-                    updateStatus(config.name + ' parsed successfully');
+                .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+                .then(function(ab) { return parseGeoraster(ab); })
+                .then(function(georaster) {
                     georasters[layerId] = georaster;
-                    console.log('Loaded ' + layerId + ' - noDataValue:', georaster.noDataValue);
-                    
-                    var layerOpacity = DEFAULT_OPACITY;
+                    var layerOpacity  = DEFAULT_OPACITY;
+                    var configNoData  = config.noDataValue || null;
                     var pixelValuesToColorFn;
-                    var configNoData = config.noDataValue || null;
-                    
+
                     if (config.discreteColors) {
-                        // ---- Discrete colour mapping (unchanged) ----
-                        var discreteColors = config.discreteColors;
+                        var dc = config.discreteColors;
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
                             if (value === 255 || value === 15) return null;
                             if (configNoData !== null && value === configNoData) return null;
-                            if (georaster.noDataValue !== null && georaster.noDataValue !== undefined && !isNaN(georaster.noDataValue)) {
-                                if (Math.abs(value - georaster.noDataValue) < 0.0001) return null;
-                            }
-                            var intValue = Math.round(value);
-                            if (hiddenClasses[layerId] && hiddenClasses[layerId][intValue]) return null;
-                            if (discreteColors.hasOwnProperty(intValue)) return discreteColors[intValue];
-                            return null;
+                            if (georaster.noDataValue !== null && georaster.noDataValue !== undefined &&
+                                !isNaN(georaster.noDataValue) && Math.abs(value - georaster.noDataValue) < 0.0001) return null;
+                            var iv = Math.round(value);
+                            if (hiddenClasses[layerId] && hiddenClasses[layerId][iv]) return null;
+                            return dc.hasOwnProperty(iv) ? dc[iv] : null;
                         };
                     } else {
-                        // ---- Continuous colour scale — SD stretch for enm & enm_cv ----
-                        var noDataVal = georaster.noDataValue;
-
-                        // Compute domain: mean ± 1 SD when useSdStretch is set, otherwise use config.domain
-                        var stretchDomain;
-                        if (config.useSdStretch) {
-                            stretchDomain = computeSdDomain(georaster, config);
-                        } else {
-                            stretchDomain = config.domain;
-                        }
-
-                        // Store for legend display
+                        var noDataVal    = georaster.noDataValue;
+                        var stretchDomain = config.useSdStretch ? computeSdDomain(georaster, config) : config.domain;
                         computedDomains[layerId] = stretchDomain;
-
                         var scale = config.mode
                             ? chroma.scale(config.colors).mode(config.mode).domain(stretchDomain)
                             : chroma.scale(config.colors).domain(stretchDomain);
-
                         pixelValuesToColorFn = function(values) {
                             var value = values[0];
                             if (value === null || value === undefined || isNaN(value)) return null;
                             if (value === 255 || value === -9999 || value === -32768 || value === -3.4e38 || Math.abs(value) > 1e10) return null;
-                            if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal)) {
-                                if (Math.abs(value - noDataVal) < 0.0001) return null;
-                            }
-                            // Clip to domain endpoints; out-of-range pixels render as the end colour
-                            var clipped = Math.min(Math.max(value, stretchDomain[0]), stretchDomain[1]);
-                            return scale(clipped).hex();
+                            if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal) && Math.abs(value - noDataVal) < 0.0001) return null;
+                            return scale(Math.min(Math.max(value, stretchDomain[0]), stretchDomain[1])).hex();
                         };
                     }
-                    
-                    var layerPane = 'raster_' + layerId;
-                    
+
                     var layer = new GeoRasterLayer({
                         georaster: georaster,
                         opacity: layerOpacity,
                         pixelValuesToColorFn: pixelValuesToColorFn,
                         resolution: 256,
-                        pane: layerPane
+                        pane: 'raster_' + layerId
                     });
-                    
+
                     layers[layerId] = layer;
                     loadedCount++;
-                    updateStatus(config.name + ' ready! (' + loadedCount + '/' + totalLayers + ')');
-                    
-                    // Default: ENM shown on load
+
                     if (layerId === 'enm') {
                         layer.addTo(map);
                         activeLayers[layerId] = true;
                         currentLayer = 'enm';
                         updateLegend();
-                        updateAdminBoundaryStyle();
-                    }
-                    
-                    if (loadedCount === totalLayers) {
-                        // loading complete
                     }
                 })
-                .catch(error => {
-                    var errorMsg = 'Error loading ' + config.name + ': ' + error.message;
-                    updateStatus(errorMsg, true);
-                    console.error(errorMsg, error);
-                    if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-                        updateStatus('⚠️ CORS Error: You must serve files through a web server!', true);
-                        updateStatus('Try using: R servr::httd() or Python http.server', true);
-                    }
+                .catch(function(error) {
+                    console.error('Error loading ' + config.name + ':', error);
                     loadedCount++;
                 });
         }
@@ -1196,23 +1076,17 @@
                 if (activeLayers[analysisLayers[i]]) { currentLayer = analysisLayers[i]; break; }
             }
             updateLegend();
-            updateAdminBoundaryStyle();
             updateDescriptionBox();
         }
 
         function updateDescriptionBox() {
             var descDiv = document.getElementById('layer-description');
-            if (!currentLayer || !layerConfigs[currentLayer]) {
-                descDiv.classList.add('hidden');
-                return;
-            }
+            if (!currentLayer || !layerConfigs[currentLayer]) { descDiv.classList.add('hidden'); return; }
             var config = layerConfigs[currentLayer];
             if (config.infoDescription) {
                 descDiv.innerHTML = '<h4>' + config.name + '</h4><p>' + config.infoDescription + '</p>';
                 descDiv.classList.remove('hidden');
-            } else {
-                descDiv.classList.add('hidden');
-            }
+            } else { descDiv.classList.add('hidden'); }
         }
 
         function toggleClass(layerId, classValue, show) {
@@ -1220,44 +1094,35 @@
             if (show) { delete hiddenClasses[layerId][classValue]; } else { hiddenClasses[layerId][classValue] = true; }
             refreshLayer(layerId);
         }
-        
+
         function refreshLayer(layerId) {
             if (!layers[layerId] || !activeLayers[layerId]) return;
-            var config = layerConfigs[layerId];
+            var config   = layerConfigs[layerId];
             var georaster = georasters[layerId];
             if (!georaster) return;
             map.removeLayer(layers[layerId]);
             var layerOpacity = DEFAULT_OPACITY;
             var opacitySlider = document.getElementById('opacity-' + layerId);
             if (opacitySlider) layerOpacity = opacitySlider.value / 100;
-            var pixelValuesToColorFn;
+            if (!config.discreteColors) return;
+            var dc     = config.discreteColors;
+            var hidden = hiddenClasses[layerId];
             var configNoData = config.noDataValue || null;
-            
-            if (config.discreteColors) {
-                var discreteColors = config.discreteColors;
-                var hidden = hiddenClasses[layerId];
-                pixelValuesToColorFn = function(values) {
-                    var value = values[0];
-                    if (value === null || value === undefined || isNaN(value)) return null;
-                    if (value === 255 || value === 15) return null;
-                    if (configNoData !== null && value === configNoData) return null;
-                    if (georaster.noDataValue !== null && georaster.noDataValue !== undefined && !isNaN(georaster.noDataValue)) {
-                        if (Math.abs(value - georaster.noDataValue) < 0.0001) return null;
-                    }
-                    var intValue = Math.round(value);
-                    if (hidden[intValue]) return null;
-                    if (discreteColors.hasOwnProperty(intValue)) return discreteColors[intValue];
-                    return null;
-                };
-            }
-            if (!pixelValuesToColorFn) return;
-            
+            var pixelValuesToColorFn = function(values) {
+                var value = values[0];
+                if (value === null || value === undefined || isNaN(value)) return null;
+                if (value === 255 || value === 15) return null;
+                if (configNoData !== null && value === configNoData) return null;
+                if (georaster.noDataValue !== null && georaster.noDataValue !== undefined &&
+                    !isNaN(georaster.noDataValue) && Math.abs(value - georaster.noDataValue) < 0.0001) return null;
+                var iv = Math.round(value);
+                if (hidden[iv]) return null;
+                return dc.hasOwnProperty(iv) ? dc[iv] : null;
+            };
             var newLayer = new GeoRasterLayer({
-                georaster: georaster,
-                opacity: layerOpacity,
+                georaster: georaster, opacity: layerOpacity,
                 pixelValuesToColorFn: pixelValuesToColorFn,
-                resolution: 256,
-                pane: 'raster_' + layerId
+                resolution: 256, pane: 'raster_' + layerId
             });
             layers[layerId] = newLayer;
             newLayer.addTo(map);
@@ -1270,17 +1135,17 @@
             var legendDiv = document.getElementById('legend-content');
             legendDiv.innerHTML = '';
             var activeKeys = Object.keys(activeLayers);
-            if (activeKeys.length === 0) legendDiv.innerHTML = '<h4>No layers active</h4>';
-            
+            if (activeKeys.length === 0) { legendDiv.innerHTML = '<h4>No layers active</h4>'; }
+
             activeKeys.forEach(function(layerId, idx) {
                 if (layerId.startsWith('species_')) return;
                 var config = layerConfigs[layerId];
                 if (!config) return;
-                if (idx > 0) legendDiv.innerHTML += '<div style="margin:10px 0; border-top:1px solid #ddd;"></div>';
+                if (idx > 0) legendDiv.innerHTML += '<div style="margin:10px 0;border-top:1px solid #ddd;"></div>';
                 legendDiv.innerHTML += '<h4>' + config.name + '</h4>';
                 if (config.customLegend && config.legendItems) {
                     config.legendItems.forEach(function(item) {
-                        var isHidden = hiddenClasses[layerId] && hiddenClasses[layerId][item.value];
+                        var isHidden    = hiddenClasses[layerId] && hiddenClasses[layerId][item.value];
                         var checkedAttr = isHidden ? '' : 'checked';
                         var hiddenClass = isHidden ? ' hidden-class' : '';
                         legendDiv.innerHTML += '<div class="item toggleable' + hiddenClass + '">' +
@@ -1288,65 +1153,64 @@
                             '<i style="background:' + item.color + '"></i> ' + item.label + '</div>';
                     });
                 } else if (config.continuousLegend) {
-                    var gradientStops = [];
-                    for (var i = 0; i < config.colors.length; i++) {
-                        gradientStops.push(config.colors[i] + ' ' + ((i / (config.colors.length - 1)) * 100) + '%');
-                    }
-                    legendDiv.innerHTML += '<div class="gradient-bar" style="background: linear-gradient(to right, ' + gradientStops.join(', ') + ');"></div>';
-
+                    var stops = config.colors.map(function(c, i) { return c + ' ' + (i/(config.colors.length-1)*100) + '%'; });
+                    legendDiv.innerHTML += '<div class="gradient-bar" style="background:linear-gradient(to right,' + stops.join(',') + ');"></div>';
                     legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
                 }
-                if (config.description) legendDiv.innerHTML += '<p style="margin-top:10px; font-size:11px; color:#777;">' + config.description + '</p>';
+                if (config.description) legendDiv.innerHTML += '<p style="margin-top:10px;font-size:11px;color:#777;">' + config.description + '</p>';
             });
-            
-            // Species/survey legend
-            var activeSpeciesVectors = [];
-            Object.keys(speciesSurveyConfigs).forEach(function(key) {
-                if (activeLayers['species_' + key]) activeSpeciesVectors.push(key);
-            });
-            if (activeSpeciesVectors.length > 0) {
-                legendDiv.innerHTML += '<div style="margin:10px 0; border-top:1px solid #ddd;"></div>';
-                legendDiv.innerHTML += '<h4>Species & Survey Data</h4>';
-                activeSpeciesVectors.forEach(function(key) {
+
+            var activeSpecies = Object.keys(speciesSurveyConfigs).filter(function(k) { return activeLayers['species_' + k]; });
+            if (activeSpecies.length > 0) {
+                legendDiv.innerHTML += '<div style="margin:10px 0;border-top:1px solid #ddd;"></div>';
+                legendDiv.innerHTML += '<h4>Species &amp; Survey Data</h4>';
+                activeSpecies.forEach(function(key) {
                     var cfg = speciesSurveyConfigs[key];
                     if (key === 'gbif_bats' && cfg.colorBySpecies && gbifSpeciesList.length > 0) {
-                        legendDiv.innerHTML += '<div style="font-size:11px; font-weight:bold; margin-bottom:4px;">GBIF Bat Occurrences by Species</div>';
+                        legendDiv.innerHTML += '<div style="font-size:11px;font-weight:bold;margin-bottom:4px;">GBIF Bat Occurrences by Species</div>';
                         gbifSpeciesList.forEach(function(species) {
                             var color = getGbifSpeciesColor(species);
                             var count = gbifSpeciesCounts[species] || 0;
                             var isHidden = hiddenGbifSpecies[species];
-                            var checkedAttr = isHidden ? '' : 'checked';
-                            var hiddenClass = isHidden ? ' hidden-class' : '';
-                            var escapedSpecies = species.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                            legendDiv.innerHTML += '<div class="item toggleable' + hiddenClass + '">' +
-                                '<input type="checkbox" ' + checkedAttr + ' onchange="toggleGbifSpecies(\'' + escapedSpecies + '\', this.checked)">' +
-                                '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + color + 
-                                ';border:1.5px solid #000000;margin-right:6px;vertical-align:middle;"></span>' +
+                            var esc = species.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            legendDiv.innerHTML += '<div class="item toggleable' + (isHidden ? ' hidden-class' : '') + '">' +
+                                '<input type="checkbox" ' + (isHidden ? '' : 'checked') + ' onchange="toggleGbifSpecies(\'' + esc + '\', this.checked)">' +
+                                '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + color + ';border:1.5px solid #000;margin-right:6px;vertical-align:middle;"></span>' +
                                 '<span style="font-size:11px;"><em>' + species + '</em> <span style="color:#999;">(' + count + ')</span></span></div>';
                         });
                         return;
                     }
                     if (key === 'nipah_survey') {
-                        legendDiv.innerHTML += '<div class="item">' +
-                            '<svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:8px;"><polygon points="7,0 14,7 7,14 0,7" fill="' + cfg.fillColor + '" stroke="#000" stroke-width="1"/></svg>' +
-                            '<span style="font-size:11px;">' + cfg.name + '</span></div>';
+                        legendDiv.innerHTML += '<div class="item"><svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:8px;"><polygon points="7,0 14,7 7,14 0,7" fill="' + cfg.fillColor + '" stroke="#000" stroke-width="1"/></svg><span style="font-size:11px;">' + cfg.name + '</span></div>';
                         return;
                     }
-                    var symbolHtml = '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + cfg.fillColor + ';border:1px solid #000;margin-right:8px;vertical-align:middle;"></span>';
-                    legendDiv.innerHTML += '<div class="item">' + symbolHtml + '<span style="font-size:11px;">' + cfg.name + '</span></div>';
+                    legendDiv.innerHTML += '<div class="item"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + cfg.fillColor + ';border:1px solid #000;margin-right:8px;vertical-align:middle;"></span><span style="font-size:11px;">' + cfg.name + '</span></div>';
                 });
             }
-            
-            // Outbreak locations legend
+
             if (nipahCasesLayer) {
-                legendDiv.innerHTML += '<div class="plague-cases-section">';
-                legendDiv.innerHTML += '<div class="item">' +
+                legendDiv.innerHTML += '<div class="plague-cases-section"><div class="item">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
                     '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/>' +
                     '<circle cx="12" cy="12" r="7" fill="none" stroke="#000000" stroke-width="1.5"/>' +
-                    '<circle cx="12" cy="12" r="3" fill="#000000"/>' +
-                    '</svg><span style="font-size:11px;">Nipah Outbreak Locations (2001–2026)</span></div>';
-                legendDiv.innerHTML += '</div>';
+                    '<circle cx="12" cy="12" r="3" fill="#000000"/></svg>' +
+                    '<span style="font-size:11px;">Nipah Outbreak Locations (2001–2026)</span></div></div>';
+            }
+
+            // Date palm legend
+            if (datePalmVisible && datePalmData) {
+                legendDiv.innerHTML += '<div style="margin:10px 0;border-top:1px solid #ddd;"></div>';
+                legendDiv.innerHTML += '<h4>Date Palm Districts</h4>';
+                Object.keys(datePalmCats).forEach(function(cat) {
+                    var cfg      = datePalmCats[cat];
+                    var isHidden = hiddenDatePalmCats[cat];
+                    var hiddenCls = isHidden ? ' hidden-class' : '';
+                    legendDiv.innerHTML += '<div class="item toggleable' + hiddenCls + '">' +
+                        '<input type="checkbox" ' + (isHidden ? '' : 'checked') +
+                        ' onchange="toggleDatePalmCategory(\'' + cat + '\', this.checked)">' +
+                        '<i style="background:' + cfg.fill + ';border:2px solid ' + cfg.color + ';"></i> ' +
+                        cfg.label + '</div>';
+                });
             }
         }
 
@@ -1354,55 +1218,49 @@
         // LAYER CONTROL PANEL
         // =====================================================================
         var layerControl = L.control({position: 'topleft'});
-        layerControl.onAdd = function (map) {
+        layerControl.onAdd = function(map) {
             var div = L.DomUtil.create('div', 'layer-control');
             L.DomEvent.disableClickPropagation(div);
             L.DomEvent.disableScrollPropagation(div);
-            
+
             div.innerHTML = '<h4>Basemaps</h4>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="street" onchange="switchBasemap(\'street\')">Street Map</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="satellite" checked onchange="switchBasemap(\'satellite\')">Satellite Imagery</label>';
             div.innerHTML += '<label><input type="radio" name="basemap" value="topo" onchange="switchBasemap(\'topo\')">Topographic</label>';
-            
-            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Analysis Layers</h4>';
-            
+
+            div.innerHTML += '<h4 style="margin-top:15px;padding-top:10px;border-top:1px solid #ddd;">Analysis Layers</h4>';
             var rasterKeys = ['enm', 'enm_cv', 'basic_risk', 'blend_risk', 'risk_blend_cv', 'diff_blend_minus_basic'];
             rasterKeys.forEach(function(key) {
-                var checked = (key === 'enm') ? 'checked' : '';
-                div.innerHTML += '<label><input type="checkbox" name="layer" value="' + key + '" ' + checked + 
+                var checked = key === 'enm' ? 'checked' : '';
+                div.innerHTML += '<label><input type="checkbox" name="layer" value="' + key + '" ' + checked +
                     ' onchange="toggleLayer(\'' + key + '\', this.checked)">' + layerConfigs[key].name + '</label>';
             });
-            
-            div.innerHTML += '<h4 style="margin-top:15px; padding-top:10px; border-top: 1px solid #ddd;">Species &amp; Survey Data</h4>';
-            
+
+            div.innerHTML += '<h4 style="margin-top:15px;padding-top:10px;border-top:1px solid #ddd;">Species &amp; Survey Data</h4>';
             Object.keys(speciesSurveyConfigs).forEach(function(key) {
-                var cfg = speciesSurveyConfigs[key];
-                div.innerHTML += '<label><input type="checkbox" name="species-layer" value="' + key + '" ' + 
-                    'onchange="toggleSpeciesSurveyLayer(\'' + key + '\', this.checked)">' + cfg.name + '</label>';
+                div.innerHTML += '<label><input type="checkbox" name="species-layer" value="' + key + '" onchange="toggleSpeciesSurveyLayer(\'' + key + '\', this.checked)">' + speciesSurveyConfigs[key].name + '</label>';
             });
-            
-            div.innerHTML += '<div class="overlay-section">';
-            div.innerHTML += '<h4 style="margin:0 0 8px; font-size:13px;">Overlays</h4>';
+
+            div.innerHTML += '<div class="overlay-section"><h4 style="margin:0 0 8px;font-size:13px;">Overlays</h4>';
             div.innerHTML += '<label><input type="checkbox" id="nipah-cases-toggle" checked onchange="toggleNipahCases(this.checked)">Nipah Outbreak Locations</label>';
             div.innerHTML += '<label><input type="checkbox" id="admin-toggle" checked onchange="toggleAdminBoundaries(this.checked)">M-Region Boundary</label>';
+            div.innerHTML += '<label><input type="checkbox" id="datepalm-toggle" onchange="toggleDatePalmLayer(this.checked)">Date Palm Districts</label>';
             div.innerHTML += '</div>';
-            
+
             div.innerHTML += '<div class="opacity-section"><h5>Layer Opacity</h5>';
             rasterKeys.forEach(function(key) {
                 div.innerHTML += '<div class="opacity-control">' +
-                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">' + Math.round(DEFAULT_OPACITY * 100) + '%</span></label>' +
-                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY * 100) + '" ' +
-                    'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent = this.value + \'%\'"></div>';
+                    '<label>' + layerConfigs[key].name + ' <span class="opacity-value" id="opacity-value-' + key + '">' + Math.round(DEFAULT_OPACITY*100) + '%</span></label>' +
+                    '<input type="range" id="opacity-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY*100) + '" ' +
+                    'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent=this.value+\'%\'"></div>';
             });
             div.innerHTML += '</div>';
-            
             return div;
         };
         layerControl.addTo(map);
 
-        // Create legend
         var legend = L.control({position: 'bottomright'});
-        legend.onAdd = function (map) {
+        legend.onAdd = function(map) {
             var div = L.DomUtil.create('div', 'legend');
             div.id = 'legend-content';
             L.DomEvent.disableClickPropagation(div);
@@ -1414,33 +1272,24 @@
         // =====================================================================
         // MAP CLICK & CONTEXT MENU
         // =====================================================================
-        map.on('contextmenu', function(e) {
-            copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng);
-        });
+        map.on('contextmenu', function(e) { copyCoordinatesToClipboard(e.latlng.lat, e.latlng.lng); });
 
         map.on('click', function(e) {
             if (!currentLayer || !georasters[currentLayer]) return;
-            var value = getRasterValueAtPoint(currentLayer, e.latlng);
+            var value  = getRasterValueAtPoint(currentLayer, e.latlng);
             var config = layerConfigs[currentLayer];
             var displayValue;
             if (value !== null) {
                 if (config.discreteDisplay) {
-                    var intVal = Math.round(value);
-                    displayValue = intVal.toString();
+                    var iv = Math.round(value);
+                    displayValue = iv.toString();
                     if (config.legendItems) {
                         for (var i = 0; i < config.legendItems.length; i++) {
-                            if (config.legendItems[i].value === intVal) {
-                                displayValue = config.legendItems[i].label;
-                                break;
-                            }
+                            if (config.legendItems[i].value === iv) { displayValue = config.legendItems[i].label; break; }
                         }
                     }
-                } else {
-                    displayValue = value.toFixed(4);
-                }
-            } else {
-                displayValue = 'No Data';
-            }
+                } else { displayValue = value.toFixed(4); }
+            } else { displayValue = 'No Data'; }
             var popupContent = '<h3>' + config.name + '</h3><table>';
             popupContent += '<tr><td>Coordinates</td><td>' + e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6) + '</td></tr>';
             popupContent += '<tr><td>Cell Value</td><td>' + displayValue + '</td></tr>';
@@ -1449,13 +1298,14 @@
         });
 
         // =====================================================================
-        // LOAD EVERYTHING
+        // LOAD ALL LAYERS
         // =====================================================================
-        updateStatus('Starting to load layers...');
         Object.keys(layerConfigs).forEach(function(key) { loadLayer(key); });
         loadNipahCases();
         loadAdminBoundaries();
+        loadDatePalmLayer();
         Object.keys(speciesSurveyConfigs).forEach(function(key) { loadSpeciesSurveyLayer(key); });
+
     </script>
 </body>
 </html>
