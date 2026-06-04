@@ -371,9 +371,9 @@
 
         // Category definitions — colors chosen to contrast with warm/cool raster palettes
         var datePalmCats = {
-            'supplier':  { label: 'Supplier District',    color: '#0891B2', fill: '#CFFAFE' },  // cyan
-            'recipient': { label: 'Recipient District',   color: '#BE185D', fill: '#FCE7F3' },  // magenta/pink
-            'both':      { label: 'Supplier & Recipient', color: '#15803D', fill: '#DCFCE7' }   // green
+            'supplier':  { label: 'Supplier District',    color: '#FFFFFF', fill: '#FFFFFF' },
+            'recipient': { label: 'Recipient District',   color: '#FFFFFF', fill: '#FFFFFF' },
+            'both':      { label: 'Supplier & Recipient', color: '#FFFFFF', fill: '#FFFFFF' }
         };
 
         function getDatePalmCategory(props) {
@@ -889,8 +889,20 @@
         }
 
         function toggleDatePalmCategory(cat, show) {
-            if (show) { delete hiddenDatePalmCats[cat]; }
-            else      { hiddenDatePalmCats[cat] = true; }
+            if (show) {
+                // Hide all other categories first — only one active at a time
+                Object.keys(datePalmCats).forEach(function(k) {
+                    hiddenDatePalmCats[k] = true;
+                });
+                delete hiddenDatePalmCats[cat];
+            } else {
+                hiddenDatePalmCats[cat] = true;
+            }
+            // Sync all radio buttons in the legend to reflect current state
+            Object.keys(datePalmCats).forEach(function(k) {
+                var rb = document.getElementById('datepalm-radio-' + k);
+                if (rb) rb.checked = !hiddenDatePalmCats[k];
+            });
             buildDatePalmGeoJSON();
             updateLegend();
         }
@@ -1263,15 +1275,30 @@
             if (datePalmVisible && datePalmData) {
                 legendDiv.innerHTML += '<div style="margin:10px 0;border-top:1px solid #ddd;"></div>';
                 legendDiv.innerHTML += '<h4>Date Palm Districts</h4>';
+                legendDiv.innerHTML += '<p style="font-size:10px;color:#888;margin:0 0 6px;">Select one category</p>';
+
+                // Add a "None" option to deselect all
+                var noneSelected = Object.keys(datePalmCats).every(function(k) { return hiddenDatePalmCats[k]; });
+                legendDiv.innerHTML += '<div class="item" style="margin-bottom:6px;">' +
+                    '<input type="radio" name="datepalm-cat" id="datepalm-radio-none" ' +
+                    (noneSelected ? 'checked' : '') +
+                    ' onchange="' +
+                        'Object.keys(datePalmCats).forEach(function(k){hiddenDatePalmCats[k]=true;});' +
+                        'buildDatePalmGeoJSON();updateLegend();">' +
+                    '<label for="datepalm-radio-none" style="font-size:11px;margin-left:4px;cursor:pointer;">None</label>' +
+                    '</div>';
+
                 Object.keys(datePalmCats).forEach(function(cat) {
                     var cfg      = datePalmCats[cat];
-                    var isHidden = hiddenDatePalmCats[cat];
-                    var hiddenCls = isHidden ? ' hidden-class' : '';
-                    legendDiv.innerHTML += '<div class="item toggleable' + hiddenCls + '">' +
-                        '<input type="checkbox" ' + (isHidden ? '' : 'checked') +
-                        ' onchange="toggleDatePalmCategory(\'' + cat + '\', this.checked)">' +
-                        '<i style="background:transparent;border:3px solid ' + cfg.color + ';"></i> ' +
-                        cfg.label + '</div>';
+                    var isActive = !hiddenDatePalmCats[cat];
+                    legendDiv.innerHTML += '<div class="item" style="margin-bottom:6px;">' +
+                        '<input type="radio" name="datepalm-cat" id="datepalm-radio-' + cat + '" ' +
+                        (isActive ? 'checked' : '') +
+                        ' onchange="toggleDatePalmCategory(\'' + cat + '\', true)">' +
+                        '<label for="datepalm-radio-' + cat + '" style="cursor:pointer;">' +
+                        '<i style="background:transparent;border:3px solid #fff;box-shadow:0 0 0 1px #999;margin-left:4px;"></i>' +
+                        '<span style="font-size:11px;margin-left:4px;">' + cfg.label + '</span>' +
+                        '</label></div>';
                 });
             }
         }
