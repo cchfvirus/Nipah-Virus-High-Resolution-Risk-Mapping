@@ -330,6 +330,38 @@
 
         var computedDomains = {};
 
+        // M region geometry — stored on load for species clipping
+        var mRegionGeometry = null;
+
+        // Ray-casting point-in-polygon for a single ring (array of [lng, lat])
+        function pointInRing(lng, lat, ring) {
+            var inside = false;
+            for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                var xi = ring[i][0], yi = ring[i][1];
+                var xj = ring[j][0], yj = ring[j][1];
+                var intersect = ((yi > lat) !== (yj > lat)) &&
+                    (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // Test a [lng, lat] point against a GeoJSON geometry (Polygon or MultiPolygon)
+        function pointInMRegion(lng, lat) {
+            if (!mRegionGeometry) return true;  // no M region loaded = show all
+            var geom = mRegionGeometry;
+            if (geom.type === 'Polygon') {
+                return pointInRing(lng, lat, geom.coordinates[0]);
+            }
+            if (geom.type === 'MultiPolygon') {
+                for (var p = 0; p < geom.coordinates.length; p++) {
+                    if (pointInRing(lng, lat, geom.coordinates[p][0])) return true;
+                }
+                return false;
+            }
+            return true;
+        }
+
         // Date palm layer state
         var datePalmLayer       = null;
         var datePalmVisible     = false;
@@ -753,6 +785,24 @@
             fetch('m_region.json')
                 .then(function(r) { if (!r.ok) throw new Error('Not found'); return r.json(); })
                 .then(function(data) {
+                    // Dissolve all features into a single geometry for point-in-polygon clipping
+                    if (data.features && data.features.length > 0) {
+                        if (data.features.length === 1) {
+                            mRegionGeometry = data.features[0].geometry;
+                        } else {
+                            // Collect all polygons into a MultiPolygon
+                            var allCoords = [];
+                            data.features.forEach(function(f) {
+                                var g = f.geometry;
+                                if (g.type === 'Polygon') {
+                                    allCoords.push(g.coordinates);
+                                } else if (g.type === 'MultiPolygon') {
+                                    g.coordinates.forEach(function(c) { allCoords.push(c); });
+                                }
+                            });
+                            mRegionGeometry = { type: 'MultiPolygon', coordinates: allCoords };
+                        }
+                    }
                     adminBoundariesLayer = L.geoJSON(data, {
                         style: { fillColor: 'transparent', fillOpacity: 0, color: '#000000', weight: 1, opacity: 1 },
                         pane: 'boundariesPane',
@@ -902,6 +952,12 @@
                                 var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
                                 if (hiddenGbifSpecies[sp]) return false;
                             }
+                            // Clip to M region
+                            if (feature.geometry && feature.geometry.coordinates) {
+                                var coords = feature.geometry.coordinates;
+                                var lng = coords[0], lat = coords[1];
+                                if (!pointInMRegion(lng, lat)) return false;
+                            }
                             return true;
                         },
                         pane: 'speciesVectorPane',
@@ -960,7 +1016,12 @@
                     },
                     filter: function(feature) {
                         var sp = (feature.properties && feature.properties.Binomial) ? feature.properties.Binomial.trim() : 'Unknown';
-                        return !hiddenGbifSpecies[sp];
+                        if (hiddenGbifSpecies[sp]) return false;
+                        if (feature.geometry && feature.geometry.coordinates) {
+                            var coords = feature.geometry.coordinates;
+                            if (!pointInMRegion(coords[0], coords[1])) return false;
+                        }
+                        return true;
                     },
                     pane: 'speciesVectorPane'
                 });
