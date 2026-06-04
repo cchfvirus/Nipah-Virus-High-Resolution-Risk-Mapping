@@ -436,14 +436,10 @@
                 mode: 'lch',
                 continuousLegend: true,
                 useSdStretch: true,
-                infoDescription: 'Ensemble median suitability from biomd2 (GLM, MAXNET, MARS) calibrated on 90 ' +
-                    'thinned NiV occurrence records within a mixed accessible area: ~75km buffer for Bangladesh ' +
-                    'and West Bengal; ~50km for Kerala reflecting the Western Ghats barrier. Nine PC predictors ' +
-                    'derived from CHELSA temperature, precipitation, and MODIS EVI were retained after VIF ' +
-                    'screening (range: 1.07–2.42). Temperature PC2 (isothermality/thermal intensity) was the ' +
-                    'single most important predictor (26.5%), with temperature and precipitation collectively ' +
-                    'accounting for 90.1% of variable importance. Validated by partial ROC: pAUC ratio = 1.933 ' +
-                    'at 50% omission and 2.846 at 30% omission (both p<0.001). Values range 0–1000.'
+                infoDescription: 'Ensemble median suitability from biomd2 (GLM, MAXNET, MARS). ' +
+                    'Temperature PC2 (isothermality) was the single most important predictor (26.5%), ' +
+                    'with temperature and precipitation collectively accounting for 90.1% of variable importance. ' +
+                    'Validated by partial ROC: pAUC ratio = 1.933 at 50% omission and 2.846 at 30% omission (both p<0.001).'
             },
             'enm_cv': {
                 file: 'enm_cv.tif',
@@ -458,11 +454,7 @@
                 infoDescription: 'Ensemble coefficient of variation (EMcv) from biomd2, representing spatial ' +
                     'uncertainty across individual model predictions before ensemble aggregation. Low CV indicates ' +
                     'strong agreement among GLM, MAXNET, and MARS; high CV identifies cells where algorithm ' +
-                    'responses to PC predictors diverge. Elevated uncertainty typically occurs in environmental ' +
-                    'transition zones — particularly the geographic gap between the Bangladesh Nipah belt and ' +
-                    'Kerala — where the bimodal training data provides limited calibration information. ' +
-                    'Interpret alongside the ENM suitability layer: high suitability with low CV represents ' +
-                    'the most robust predictions.'
+                    'responses to PC predictors diverge.'
             },
             'basic_risk': {
                 file: 'risk_basic.tif',
@@ -477,12 +469,9 @@
                 infoDescription: 'Product of ENM suitability (0–3) and ambient population (0–3) classes, ' +
                     'yielding seven risk levels {0,1,2,3,4,6,9}. Both layers classified independently using ' +
                     'Fisher-Jenks natural breaks; population log-transformed before classification to account ' +
-                    'for skewed density distribution. Ambient population sourced from LandScan Mosaic at 100m — ' +
-                    'a 24-hour ambient model capturing daytime movement and agricultural labour patterns. ' +
-                    'Cells with zero population are assigned No Risk regardless of ENM suitability. ' +
-                    'Represents a population-exposure surface, not biological spillover probability. ' +
-                    '131.2M people in High or Very High risk; Kerala\'s proportional exposure (52.8%) ' +
-                    'exceeds Bangladesh\'s (42.5%) despite its smaller population.',
+                    'for skewed density distribution. This layer represents a population-exposure surface, ' +
+                    'not biological spillover probability. 131.2M people in High or Very High risk; ' +
+                    'Kerala\'s proportional exposure (52.8%) exceeds Bangladesh\'s (42.5%) despite its smaller population.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -506,14 +495,14 @@
                 labels: ['No Risk', 'Very High Risk'],
                 description: '',
                 infoDescription: 'Ensemble mean across 25 parameter scenarios (5 alpha × 5 blend steepness) ' +
-                    'where baseline risk is adjusted by empirical land cover weights derived from Dynamic World ' +
-                    '2025 at 100m. Weights compare outbreak-location land cover frequency against regional ' +
-                    'background availability, bounded to [0.7, 1.3]. Separate weights for Bangladesh/West ' +
-                    'Bengal and Kerala are blended spatially via a sigmoid function centred at 78°E. ' +
-                    'Primary scenario alpha = 0.2, selected as most stable by bootstrap uncertainty analysis ' +
-                    '(n=1,000). Land cover weights are association-based modifiers, not causal drivers. ' +
-                    'Dominant effect: 34.2M people reclassified from Moderate to Elevated risk in peri-urban ' +
-                    'Bangladesh. High and Very High classes changed by <1M people.',
+                    'where baseline risk is adjusted by empirical land cover weights. Weights compare ' +
+                    'outbreak-location land cover frequency against regional background availability, bounded ' +
+                    'to [0.7, 1.3]. Separate weights for Bangladesh/West Bengal and Kerala are blended ' +
+                    'spatially via a sigmoid function centered at 78°E. Primary scenario alpha = 0.2, ' +
+                    'selected as most stable by bootstrap uncertainty analysis (n=1,000). Land cover weights ' +
+                    'are association-based modifiers, not causal drivers. Dominant effect: 34.2M people ' +
+                    'reclassified from Moderate to Elevated risk in peri-urban Bangladesh. High and Very ' +
+                    'High classes changed by <1M people.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -542,8 +531,7 @@
                     'influence within any alpha level; alpha had a small consistent effect bounded by the ' +
                     '[0.7, 1.3] weight clamping structure. Higher CV cells — primarily in environmental ' +
                     'transition zones and areas with small outbreak samples (Bangladesh flooded vegetation ' +
-                    'n=2; Kerala built area n=3) — identify where results are more sensitive to ' +
-                    'parameter selection.',
+                    'n=2; Kerala built area n=3) — identify where results are more sensitive to parameter selection.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -567,14 +555,13 @@
                 noDataValue: 15,
                 labels: ['Decrease', 'Increase'],
                 description: '',
-                infoDescription: 'Normalised (0–1) difference between the blended ensemble mean and baseline ' +
-                    'ENM×Population surface. Positive values indicate cells where land cover weighting increased ' +
-                    'risk — primarily built area and flooded vegetation in peri-urban Bangladesh. Negative ' +
-                    'values indicate cells where weighting reduced risk. Zero indicates minimal land cover ' +
-                    'effect. Spearman rank correlation between baseline and blended surfaces = 0.999997, ' +
-                    'confirming global rank order is preserved; this layer isolates the reclassification ' +
-                    'effect concentrated in the Moderate-to-Elevated risk transition zone, corresponding ' +
-                    'to the 34.2M population reclassification in Bangladesh.',
+                infoDescription: 'Normalized (0–1) difference between the blended ensemble mean and baseline ' +
+                    'ENM+Population surface. Positive values indicate cells where land cover weighting increased ' +
+                    'risk. Negative values indicate cells where weighting reduced risk. Zero indicates minimal ' +
+                    'land cover effect. Spearman rank correlation between baseline and blended surfaces = 0.999997, ' +
+                    'confirming global rank order is preserved; this layer isolates the reclassification effect ' +
+                    'concentrated in the Moderate-to-Elevated risk transition zone, corresponding to the 34.2M ' +
+                    'population reclassification in Bangladesh.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
