@@ -305,6 +305,11 @@
         map.createPane('boundariesPane');
         map.getPane('boundariesPane').style.zIndex = 350;
 
+        // Date palm pane sits above rasters but passes all pointer events through
+        map.createPane('datePalmPane');
+        map.getPane('datePalmPane').style.zIndex   = 355;
+        map.getPane('datePalmPane').style.pointerEvents = 'none';
+
         var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
         var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
         var topoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
@@ -436,7 +441,7 @@
                 mode: 'lch',
                 continuousLegend: true,
                 useSdStretch: true,
-                infoDescription: 'Ensemble median suitability from biomod2 (GLM, MAXNET, MARS). ' +
+                infoDescription: 'Ensemble median suitability from biomd2 (GLM, MAXNET, MARS). ' +
                     'Temperature PC2 (isothermality) was the single most important predictor (26.5%), ' +
                     'with temperature and precipitation collectively accounting for 90.1% of variable importance. ' +
                     'Validated by partial ROC: pAUC ratio = 1.933 at 50% omission and 2.846 at 30% omission (both p<0.001).'
@@ -451,7 +456,7 @@
                 mode: 'lch',
                 continuousLegend: true,
                 useSdStretch: true,
-                infoDescription: 'Ensemble coefficient of variation (EMcv) from biomod2, representing spatial ' +
+                infoDescription: 'Ensemble coefficient of variation (EMcv) from biomd2, representing spatial ' +
                     'uncertainty across individual model predictions before ensemble aggregation. Low CV indicates ' +
                     'strong agreement among GLM, MAXNET, and MARS; high CV identifies cells where algorithm ' +
                     'responses to PC predictors diverge.'
@@ -828,28 +833,8 @@
                         opacity:     datePalmOpacity
                     };
                 },
-                pane: 'boundariesPane',
-                onEachFeature: function(feature, layer) {
-                    var p    = feature.properties;
-                    var cat  = getDatePalmCategory(p);
-                    var cfg  = cat ? datePalmCats[cat] : null;
-                    var popup = '<h3>' + (p.NAME_2 || '') + '</h3><table>' +
-                        '<tr><td>Division</td><td>' + (p.NAME_1 || '') + '</td></tr>' +
-                        '<tr><td>Category</td><td>' + (cfg ? cfg.label : '—') + '</td></tr>' +
-                        '<tr><td>Supplier</td><td>' + ((p.Supplier || '').trim() === 'Y' ? 'Yes' : 'No') + '</td></tr>' +
-                        '<tr><td>Recipient</td><td>' + ((p.Recipient || '').trim() === 'Y' ? 'Yes' : 'No') + '</td></tr>' +
-                        '<tr><td>Both</td><td>' + ((p.Both || '').trim() === 'Y' ? 'Yes' : 'No') + '</td></tr>' +
-                        '</table>';
-                    layer.bindPopup(popup, { maxWidth: 280 });
-                    layer.on('mouseover', function() {
-                        layer.setStyle({ weight: 4, opacity: 1 });
-                    });
-                    layer.on('mouseout', function() {
-                        var c = getDatePalmCategory(p);
-                        var s = datePalmCats[c] || { color: '#888' };
-                        layer.setStyle({ weight: 2.5, opacity: datePalmOpacity, color: s.color });
-                    });
-                }
+                pane: 'datePalmPane',
+                interactive: false
             });
 
             if (datePalmVisible) datePalmLayer.addTo(map);
