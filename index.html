@@ -305,10 +305,9 @@
         map.createPane('boundariesPane');
         map.getPane('boundariesPane').style.zIndex = 350;
 
-        // Date palm pane sits above rasters but passes all pointer events through
+        // Date palm pane sits above rasters
         map.createPane('datePalmPane');
-        map.getPane('datePalmPane').style.zIndex   = 355;
-        map.getPane('datePalmPane').style.pointerEvents = 'none';
+        map.getPane('datePalmPane').style.zIndex = 355;
 
         var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
         var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
@@ -834,7 +833,29 @@
                     };
                 },
                 pane: 'datePalmPane',
-                interactive: false
+                interactive: true,
+                onEachFeature: function(feature, layer) {
+                    var p   = feature.properties;
+                    var cat = getDatePalmCategory(p);
+                    var cfg = cat ? datePalmCats[cat] : null;
+                    layer.bindPopup(
+                        '<h3 style="margin:0;">' + (p.NAME_2 || 'Unknown District') + '</h3>' +
+                        '<p style="margin:4px 0 0;font-size:11px;color:#666;">' +
+                            (cfg ? cfg.label : '') +
+                        '</p>',
+                        { maxWidth: 200 }
+                    );
+                    // pointer-events: visibleStroke — only the border line is clickable,
+                    // transparent fill passes events through to raster layers below
+                    layer.on('add', function() {
+                        if (layer._path) {
+                            layer._path.style.pointerEvents = 'visibleStroke';
+                        }
+                    });
+                    if (layer._path) {
+                        layer._path.style.pointerEvents = 'visibleStroke';
+                    }
+                }
             });
 
             if (datePalmVisible) datePalmLayer.addTo(map);
