@@ -305,10 +305,6 @@
         map.createPane('boundariesPane');
         map.getPane('boundariesPane').style.zIndex = 350;
 
-        // Date palm pane sits above rasters
-        map.createPane('datePalmPane');
-        map.getPane('datePalmPane').style.zIndex = 355;
-
         var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
         var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
         var topoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
@@ -364,30 +360,6 @@
                 return false;
             }
             return true;
-        }
-
-        // Date palm layer state
-        var datePalmLayer       = null;
-        var datePalmVisible     = false;
-        var datePalmOpacity     = 1.0;
-        var hiddenDatePalmCats  = { 'supplier': true, 'recipient': true, 'both': true };
-        var datePalmData        = null;
-
-        // Category definitions — colors chosen to contrast with warm/cool raster palettes
-        var datePalmCats = {
-            'supplier':  { label: 'Supplier District',    color: '#FFFFFF', fill: '#FFFFFF' },
-            'recipient': { label: 'Recipient District',   color: '#FFFFFF', fill: '#FFFFFF' },
-            'both':      { label: 'Supplier & Recipient', color: '#FFFFFF', fill: '#FFFFFF' }
-        };
-
-        function getDatePalmCategory(props) {
-            var sup = (props.Supplier || '').trim() === 'Y';
-            var rec = (props.Recipient || '').trim() === 'Y';
-            var bot = (props.Both     || '').trim() === 'Y';
-            if (bot)       return 'both';
-            if (sup)       return 'supplier';
-            if (rec)       return 'recipient';
-            return null;
         }
 
         // =====================================================================
@@ -809,98 +781,6 @@
         }
 
         // =====================================================================
-        // DATE PALM DISTRICTS LAYER
-        // =====================================================================
-        function buildDatePalmGeoJSON() {
-            if (!datePalmData) return;
-            if (datePalmLayer) map.removeLayer(datePalmLayer);
-
-            datePalmLayer = L.geoJSON(datePalmData, {
-                filter: function(feature) {
-                    var cat = getDatePalmCategory(feature.properties);
-                    if (!cat) return false;
-                    return !hiddenDatePalmCats[cat];
-                },
-                style: function(feature) {
-                    var cat  = getDatePalmCategory(feature.properties);
-                    var cfg  = datePalmCats[cat] || { color: '#888', fill: '#ccc' };
-                    return {
-                        color:       cfg.color,
-                        fillColor:   cfg.color,
-                        fillOpacity: 0,
-                        weight:      2.5,
-                        opacity:     datePalmOpacity
-                    };
-                },
-                pane: 'datePalmPane',
-                interactive: true,
-                onEachFeature: function(feature, layer) {
-                    var p   = feature.properties;
-                    var cat = getDatePalmCategory(p);
-                    var cfg = cat ? datePalmCats[cat] : null;
-                    layer.bindPopup(
-                        '<h3 style="margin:0;">' + (p.NAME_2 || 'Unknown District') + '</h3>' +
-                        '<p style="margin:4px 0 0;font-size:11px;color:#666;">' +
-                            (cfg ? cfg.label : '') +
-                        '</p>',
-                        { maxWidth: 200 }
-                    );
-                    // pointer-events: visibleStroke — only the border line is clickable,
-                    // transparent fill passes events through to raster layers below
-                    layer.on('add', function() {
-                        if (layer._path) {
-                            layer._path.style.pointerEvents = 'visibleStroke';
-                        }
-                    });
-                    if (layer._path) {
-                        layer._path.style.pointerEvents = 'visibleStroke';
-                    }
-                }
-            });
-
-            if (datePalmVisible) datePalmLayer.addTo(map);
-        }
-
-        function loadDatePalmLayer() {
-            fetch('date_palms.json')
-                .then(function(r) { if (!r.ok) throw new Error('Not found'); return r.json(); })
-                .then(function(data) {
-                    datePalmData = data;
-                    buildDatePalmGeoJSON();
-                    updateLegend();
-                })
-                .catch(function() { console.log('date_palms.json not found'); });
-        }
-
-        function toggleDatePalmLayer(show) {
-            datePalmVisible = show;
-            if (datePalmLayer) {
-                if (show) datePalmLayer.addTo(map);
-                else map.removeLayer(datePalmLayer);
-            }
-            updateLegend();
-        }
-
-        function toggleDatePalmCategory(cat, show) {
-            if (show) {
-                // Hide all other categories first — only one active at a time
-                Object.keys(datePalmCats).forEach(function(k) {
-                    hiddenDatePalmCats[k] = true;
-                });
-                delete hiddenDatePalmCats[cat];
-            } else {
-                hiddenDatePalmCats[cat] = true;
-            }
-            // Sync all radio buttons in the legend to reflect current state
-            Object.keys(datePalmCats).forEach(function(k) {
-                var rb = document.getElementById('datepalm-radio-' + k);
-                if (rb) rb.checked = !hiddenDatePalmCats[k];
-            });
-            buildDatePalmGeoJSON();
-            updateLegend();
-        }
-
-        // =====================================================================
         // SPECIES / SURVEY GEOJSON LAYERS
         // =====================================================================
         function createSvgIcon(shape, color, size) {
@@ -1263,37 +1143,6 @@
                     '<circle cx="12" cy="12" r="3" fill="#000000"/></svg>' +
                     '<span style="font-size:11px;">Nipah Outbreak Locations (2001–2026)</span></div></div>';
             }
-
-            // Date palm legend
-            if (datePalmVisible && datePalmData) {
-                legendDiv.innerHTML += '<div style="margin:10px 0;border-top:1px solid #ddd;"></div>';
-                legendDiv.innerHTML += '<h4>Date Palm Districts</h4>';
-                legendDiv.innerHTML += '<p style="font-size:10px;color:#888;margin:0 0 6px;">Select one category</p>';
-
-                // Add a "None" option to deselect all
-                var noneSelected = Object.keys(datePalmCats).every(function(k) { return hiddenDatePalmCats[k]; });
-                legendDiv.innerHTML += '<div class="item" style="margin-bottom:6px;">' +
-                    '<input type="radio" name="datepalm-cat" id="datepalm-radio-none" ' +
-                    (noneSelected ? 'checked' : '') +
-                    ' onchange="' +
-                        'Object.keys(datePalmCats).forEach(function(k){hiddenDatePalmCats[k]=true;});' +
-                        'buildDatePalmGeoJSON();updateLegend();">' +
-                    '<label for="datepalm-radio-none" style="font-size:11px;margin-left:4px;cursor:pointer;">None</label>' +
-                    '</div>';
-
-                Object.keys(datePalmCats).forEach(function(cat) {
-                    var cfg      = datePalmCats[cat];
-                    var isActive = !hiddenDatePalmCats[cat];
-                    legendDiv.innerHTML += '<div class="item" style="margin-bottom:6px;">' +
-                        '<input type="radio" name="datepalm-cat" id="datepalm-radio-' + cat + '" ' +
-                        (isActive ? 'checked' : '') +
-                        ' onchange="toggleDatePalmCategory(\'' + cat + '\', true)">' +
-                        '<label for="datepalm-radio-' + cat + '" style="cursor:pointer;">' +
-                        '<i style="background:transparent;border:3px solid #fff;box-shadow:0 0 0 1px #999;margin-left:4px;"></i>' +
-                        '<span style="font-size:11px;margin-left:4px;">' + cfg.label + '</span>' +
-                        '</label></div>';
-                });
-            }
         }
 
         // =====================================================================
@@ -1326,7 +1175,6 @@
             div.innerHTML += '<div class="overlay-section"><h4 style="margin:0 0 8px;font-size:13px;">Overlays</h4>';
             div.innerHTML += '<label><input type="checkbox" id="nipah-cases-toggle" checked onchange="toggleNipahCases(this.checked)">Nipah Outbreak Locations</label>';
             div.innerHTML += '<label><input type="checkbox" id="admin-toggle" checked onchange="toggleAdminBoundaries(this.checked)">M-Region Boundary</label>';
-            div.innerHTML += '<label><input type="checkbox" id="datepalm-toggle" onchange="toggleDatePalmLayer(this.checked)">Date Palm Districts</label>';
             div.innerHTML += '</div>';
 
             div.innerHTML += '<div class="opacity-section"><h5>Layer Opacity</h5>';
@@ -1336,14 +1184,6 @@
                     '<input type="range" id="opacity-' + key + '" min="0" max="100" value="' + (DEFAULT_OPACITY*100) + '" ' +
                     'oninput="updateLayerOpacity(\'' + key + '\', this.value/100); document.getElementById(\'opacity-value-' + key + '\').textContent=this.value+\'%\'"></div>';
             });
-            div.innerHTML += '<div class="opacity-control">' +
-                '<label>Date Palm Borders <span class="opacity-value" id="opacity-value-datepalm">100%</span></label>' +
-                '<input type="range" id="opacity-datepalm" min="0" max="100" value="100" ' +
-                'oninput="' +
-                    'datePalmOpacity = this.value/100;' +
-                    'document.getElementById(\'opacity-value-datepalm\').textContent = this.value + \'%\';' +
-                    'buildDatePalmGeoJSON()' +
-                '"></div>';
             div.innerHTML += '</div>';
             return div;
         };
@@ -1404,7 +1244,6 @@
         Object.keys(layerConfigs).forEach(function(key) { loadLayer(key); });
         loadNipahCases();
         loadAdminBoundaries();
-        loadDatePalmLayer();
         Object.keys(speciesSurveyConfigs).forEach(function(key) { loadSpeciesSurveyLayer(key); });
 
     </script>
