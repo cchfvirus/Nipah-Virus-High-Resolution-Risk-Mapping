@@ -399,38 +399,47 @@
         }
 
         // =====================================================================
-        // LAYER CONFIGURATIONS — UPDATED DESCRIPTIONS
+        // LAYER CONFIGURATIONS — DESCRIPTIONS UPDATED TO REVISED RESULTS
         // =====================================================================
         var layerConfigs = {
             'enm': {
                 file: 'enm_cog.tif',
                 name: 'Ecological Niche Model (1km)',
                 colors: ['#969696', '#fed976', '#feb24c', '#fd8d3c', '#fc4e2a', '#e31a1c', '#b10026'],
-                domain: [0, 993],
+                domain: [0, 0.976],
                 labels: ['Low Suitability', 'High Suitability'],
                 description: 'Ecological Niche Model (biomod2)',
                 mode: 'lch',
                 continuousLegend: true,
                 useSdStretch: true,
-                infoDescription: 'Ensemble median suitability from biomod2 (GLM, MAXNET, MARS). ' +
-                    'Temperature PC2 (isothermality) was the single most important predictor (26.5%), ' +
-                    'with temperature and precipitation collectively accounting for 90.1% of variable importance. ' +
-                    'Validated by partial ROC: pAUC ratio = 1.933 at 50% omission and 2.846 at 30% omission (both p<0.001).'
+                infoDescription: 'Ensemble median suitability from biomod2 (GLM, MAXNET, MARS; 120 candidate models). ' +
+                    'Ensemble median calibration AUC = 0.831, with 77.8% sensitivity and 73.6% specificity. ' +
+                    'Temperature PC2 was the single most important predictor (25.7%), and temperature and ' +
+                    'precipitation together account for 82.3% of variable importance, with EVI supplying the ' +
+                    'remaining 17.8%. Validated by partial ROC: pAUC ratio = 1.933 at the 50% area threshold ' +
+                    'and 2.667 at the 30% area threshold (both p&lt;0.001).'
             },
             'enm_cv': {
                 file: 'enm_cv.tif',
                 name: 'ENM Coefficient of Variation (1km)',
                 colors: ['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494'],
-                domain: [0, 374],
+                domain: [7.774, 727.479],
                 labels: ['Low Uncertainty', 'High Uncertainty'],
                 description: '',
                 mode: 'lch',
                 continuousLegend: true,
                 useSdStretch: true,
                 infoDescription: 'Ensemble coefficient of variation (EMcv) from biomod2, representing spatial ' +
-                    'uncertainty across individual model predictions before ensemble aggregation. Low CV indicates ' +
-                    'strong agreement among GLM, MAXNET, and MARS; high CV identifies cells where algorithm ' +
-                    'responses to PC predictors diverge.'
+                    'uncertainty across the 120 individual model predictions before ensemble aggregation. Low CV ' +
+                    'indicates strong agreement among GLM, MAXNET, and MARS; high CV identifies cells where ' +
+                    'algorithm responses to PC predictors diverge. Observed range 7.8–727.5. Because CV is a ' +
+                    'ratio of standard deviation to mean, values inflate wherever mean suitability approaches ' +
+                    'zero, so the highest CV cells largely mark low-suitability background rather than contested ' +
+                    'high-suitability areas; read this layer alongside the suitability surface, not on its own. ' +
+                    'Uncertainty is also structurally higher in the Kerala sub-region, where sparse occurrence ' +
+                    'data (n=10, against n=80 in Bangladesh and West Bengal) produced unstable individual fits. ' +
+                    'Note: this layer is algorithm uncertainty within the niche model, and is distinct from the ' +
+                    'Ensemble CV layer, which measures sensitivity to land-cover weighting parameters.'
             },
             'basic_risk': {
                 file: 'risk_basic.tif',
@@ -444,10 +453,12 @@
                 description: '',
                 infoDescription: 'Product of ENM suitability (0–3) and ambient population (0–3) classes, ' +
                     'yielding seven risk levels {0,1,2,3,4,6,9}. Both layers classified independently using ' +
-                    'Fisher-Jenks natural breaks; population log-transformed before classification to account ' +
-                    'for skewed density distribution. This layer represents a population-exposure surface, ' +
-                    'not biological spillover probability. 131.2M people in High or Very High risk; ' +
-                    'Kerala\'s proportional exposure (52.8%) exceeds Bangladesh\'s (42.5%) despite its smaller population.',
+                    'univariate natural-breaks clustering; population log-transformed before classification to ' +
+                    'account for skewed density distribution. This layer represents a population-exposure ' +
+                    'surface, not biological spillover probability. 137.0M people (46.1% of the study ' +
+                    'population) fall in High or Very High risk; Kerala\'s proportional exposure (50.9%) ' +
+                    'exceeds that of Bangladesh and West Bengal (45.7%) despite Kerala holding only 8.7% ' +
+                    'of the study population.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -474,11 +485,13 @@
                     'where baseline risk is adjusted by empirical land cover weights. Weights compare ' +
                     'outbreak-location land cover frequency against regional background availability, bounded ' +
                     'to [0.7, 1.3]. Separate weights for Bangladesh/West Bengal and Kerala are blended ' +
-                    'spatially via a sigmoid function centered at 78°E. Primary scenario alpha = 0.2, ' +
-                    'selected as most stable by bootstrap uncertainty analysis (n=1,000). Land cover weights ' +
-                    'are association-based modifiers, not causal drivers. Dominant effect: 34.2M people ' +
-                    'reclassified from Moderate to Elevated risk in peri-urban Bangladesh. High and Very ' +
-                    'High classes changed by <1M people.',
+                    'spatially via a sigmoid function centered at 78°E. Built area is the only land cover ' +
+                    'class with a statistically supported association with outbreak locations (permutation ' +
+                    'p=0.002) and the only class carrying an above-neutral weight; it also holds 73.9–76.3% ' +
+                    'of the regional population. Land cover weights are association-based modifiers, not ' +
+                    'causal drivers. Dominant effect: 46.7M people reclassified from Moderate to Elevated ' +
+                    'risk in built and peri-urban Bangladesh, out of 49.8M redistributed overall. High and ' +
+                    'Very High classes retained 98.7% and 99.2% of their baseline populations.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -502,12 +515,15 @@
                 labels: ['Low CV', 'High CV'],
                 description: '',
                 infoDescription: 'Coefficient of variation (SD / mean × 100) across all 25 ensemble scenarios ' +
-                    '(alpha = 0.1–0.8 × blend steepness k = 0.05–0.80). Study-area mean CV = 5.0%, confirming ' +
-                    'high parameter stability across the full tested range. Blend steepness had negligible ' +
-                    'influence within any alpha level; alpha had a small consistent effect bounded by the ' +
-                    '[0.7, 1.3] weight clamping structure. Higher CV cells — primarily in environmental ' +
-                    'transition zones and areas with small outbreak samples (Bangladesh flooded vegetation ' +
-                    'n=2; Kerala built area n=3) — identify where results are more sensitive to parameter selection.',
+                    '(alpha = 0.1–0.8 × blend steepness k = 0.05–0.80). Study-area mean CV = 5.0% (SD 0.30%), ' +
+                    'computed over risk-bearing cells only. Blend steepness had negligible influence within any ' +
+                    'alpha level; alpha had a small consistent effect bounded by the [0.7, 1.3] weight clamping ' +
+                    'structure. This layer measures variation in the continuous risk value, not stability of the ' +
+                    'discrete class assignment: cells sitting near a class boundary can show low CV while still ' +
+                    'changing class between scenarios, so low CV should not be read as classification certainty. ' +
+                    'Higher CV cells — primarily in environmental transition zones and in classes with small ' +
+                    'outbreak samples (Bangladesh flooded vegetation n=3; Kerala built area n=4) — identify ' +
+                    'where results are most sensitive to parameter selection.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
@@ -534,20 +550,20 @@
                 infoDescription: 'Normalized (0–1) difference between the blended ensemble mean and baseline ' +
                     'ENM+Population surface. Positive values indicate cells where land cover weighting increased ' +
                     'risk. Negative values indicate cells where weighting reduced risk. Zero indicates minimal ' +
-                    'land cover effect. Spearman rank correlation between baseline and blended surfaces = 0.999997, ' +
+                    'land cover effect. Spearman rank correlation between baseline and blended surfaces = 0.999998, ' +
                     'confirming global rank order is preserved; this layer isolates the reclassification effect ' +
-                    'concentrated in the Moderate-to-Elevated risk transition zone, corresponding to the 34.2M ' +
-                    'population reclassification in Bangladesh.',
+                    'concentrated in the Moderate-to-Elevated risk transition zone, corresponding to the 46.7M ' +
+                    'population reclassification in built and peri-urban Bangladesh.',
                 customLegend: true,
                 discreteDisplay: true,
                 legendItems: [
-                    { value: 1, color: '#2166ac', label: '-1 – Large Decrease' },
-                    { value: 2, color: '#67a9cf', label: '-2 – Moderate Decrease' },
-                    { value: 3, color: '#92c5de', label: '-3 – Small Decrease' },
-                    { value: 4, color: '#333333', label: '0 – No Change' },
-                    { value: 5, color: '#f4a582', label: '3 – Small Increase' },
-                    { value: 6, color: '#ef8a62', label: '2 – Moderate Increase' },
-                    { value: 7, color: '#b2182b', label: '1 – Large Increase' }
+                    { value: 1, color: '#2166ac', label: 'Large Decrease' },
+                    { value: 2, color: '#67a9cf', label: 'Moderate Decrease' },
+                    { value: 3, color: '#92c5de', label: 'Small Decrease' },
+                    { value: 4, color: '#333333', label: 'No Change' },
+                    { value: 5, color: '#f4a582', label: 'Small Increase' },
+                    { value: 6, color: '#ef8a62', label: 'Moderate Increase' },
+                    { value: 7, color: '#b2182b', label: 'Large Increase' }
                 ]
             }
         };
@@ -667,11 +683,14 @@
 
         // =====================================================================
         // SD STRETCH HELPER
+        // Returns [mean - sd, mean + sd], clamped to the observed data range so
+        // the ramp is never wasted on values that do not occur in the raster.
         // =====================================================================
         function computeSdDomain(georaster, config) {
             var noDataVal = georaster.noDataValue;
             var rawValues = georaster.values[0];
             var sum = 0, count = 0;
+            var dataMin = Infinity, dataMax = -Infinity;
 
             for (var row = 0; row < rawValues.length; row++) {
                 var rowData = rawValues[row];
@@ -681,6 +700,8 @@
                     if (v === 255 || v === -9999 || v === -32768 || v === -3.4e38 || Math.abs(v) > 1e10) continue;
                     if (noDataVal !== null && noDataVal !== undefined && !isNaN(noDataVal) && Math.abs(v - noDataVal) < 0.0001) continue;
                     sum += v; count++;
+                    if (v < dataMin) dataMin = v;
+                    if (v > dataMax) dataMax = v;
                 }
             }
             if (count < 2) return config.domain;
@@ -698,7 +719,11 @@
                 }
             }
             var sd = Math.sqrt(sumSq / count);
-            return [mean - sd, mean + sd];
+
+            var lo = Math.max(mean - sd, dataMin);
+            var hi = Math.min(mean + sd, dataMax);
+            if (!(hi > lo)) return [dataMin, dataMax];
+            return [lo, hi];
         }
 
         // =====================================================================
@@ -1002,6 +1027,7 @@
                         activeLayers[layerId] = true;
                         currentLayer = 'enm';
                         updateLegend();
+                        updateDescriptionBox();
                     }
                 })
                 .catch(function(error) {
@@ -1102,7 +1128,14 @@
                 } else if (config.continuousLegend) {
                     var stops = config.colors.map(function(c, i) { return c + ' ' + (i/(config.colors.length-1)*100) + '%'; });
                     legendDiv.innerHTML += '<div class="gradient-bar" style="background:linear-gradient(to right,' + stops.join(',') + ');"></div>';
-                    legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
+                    var dom = computedDomains[layerId];
+                    if (dom) {
+                        legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] +
+                            ' (' + dom[0].toFixed(3) + ')</span><span>' + config.labels[1] +
+                            ' (' + dom[1].toFixed(3) + ')</span></div>';
+                    } else {
+                        legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
+                    }
                 }
                 if (config.description) legendDiv.innerHTML += '<p style="margin-top:10px;font-size:11px;color:#777;">' + config.description + '</p>';
             });
@@ -1241,6 +1274,12 @@
         // =====================================================================
         // LOAD ALL LAYERS
         // =====================================================================
+        // Show the ENM description immediately, before the raster finishes
+        // downloading, so the box is present the moment the map opens.
+        currentLayer = 'enm';
+        updateDescriptionBox();
+        updateLegend();
+
         Object.keys(layerConfigs).forEach(function(key) { loadLayer(key); });
         loadNipahCases();
         loadAdminBoundaries();
