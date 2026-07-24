@@ -285,7 +285,7 @@
         // =====================================================================
         // MAP INITIALIZATION
         // =====================================================================
-        var map = L.map('map').setView([17.329664, 82.880859], 6);
+        var map = L.map('map').setView([19.601194, 78.376465], 6);
 
         map.createPane('backgroundPane');
         map.getPane('backgroundPane').style.zIndex = 250;
@@ -1128,14 +1128,7 @@
                 } else if (config.continuousLegend) {
                     var stops = config.colors.map(function(c, i) { return c + ' ' + (i/(config.colors.length-1)*100) + '%'; });
                     legendDiv.innerHTML += '<div class="gradient-bar" style="background:linear-gradient(to right,' + stops.join(',') + ');"></div>';
-                    var dom = computedDomains[layerId];
-                    if (dom) {
-                        legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] +
-                            ' (' + dom[0].toFixed(3) + ')</span><span>' + config.labels[1] +
-                            ' (' + dom[1].toFixed(3) + ')</span></div>';
-                    } else {
-                        legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
-                    }
+                    legendDiv.innerHTML += '<div class="gradient-labels"><span>' + config.labels[0] + '</span><span>' + config.labels[1] + '</span></div>';
                 }
                 if (config.description) legendDiv.innerHTML += '<p style="margin-top:10px;font-size:11px;color:#777;">' + config.description + '</p>';
             });
