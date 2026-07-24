@@ -737,9 +737,7 @@
                         pointToLayer: function(feature, latlng) {
                             var size = 14;
                             var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
-                                '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/>' +
-                                '<circle cx="12" cy="12" r="7" fill="none" stroke="#000000" stroke-width="1.5"/>' +
-                                '<circle cx="12" cy="12" r="3" fill="#000000"/></svg>';
+                                '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/></svg>';
                             var icon = L.divIcon({ html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
                             return L.marker(latlng, { icon: icon });
                         },
@@ -1164,9 +1162,7 @@
             if (nipahCasesLayer) {
                 legendDiv.innerHTML += '<div class="plague-cases-section"><div class="item">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
-                    '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/>' +
-                    '<circle cx="12" cy="12" r="7" fill="none" stroke="#000000" stroke-width="1.5"/>' +
-                    '<circle cx="12" cy="12" r="3" fill="#000000"/></svg>' +
+                    '<circle cx="12" cy="12" r="11" fill="white" stroke="#000000" stroke-width="2"/></svg>' +
                     '<span style="font-size:11px;">Nipah Outbreak Locations (2001–2026)</span></div></div>';
             }
         }
