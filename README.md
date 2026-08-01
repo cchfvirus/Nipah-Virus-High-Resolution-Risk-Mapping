@@ -1,4 +1,4 @@
-# Mapping Nipah Virus (NiV) Spillover Risk: An Integrated Geospatial Framework for South Asia
+# Beyond Ecological Suitability: Integrating Population Exposure and Landscape Context for Nipah Virus Spillover Risk Mapping in South Asia
 
 ## 🌐 Interactive Map
 
